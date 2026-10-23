@@ -153,3 +153,32 @@ async def send_message(session_id: UUID, body: MessageRequest, request: Request)
         event_stream(), media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ---- трек C: корзина/оплата и раздача React-сборки ----
+from pathlib import Path  # noqa: E402
+
+from fastapi.responses import FileResponse  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+from app.cart.router import router as cart_router  # noqa: E402
+
+app.include_router(cart_router)
+
+WEB_DIR = Path(os.getenv("WEB_DIR", Path(__file__).resolve().parents[1] / "web" / "dist"))
+if (WEB_DIR / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="assets")
+
+
+@app.get("/{path:path}", include_in_schema=False)
+async def spa(path: str):
+    """SPA-фолбэк: любые не-API пути отдают index.html (роутинг на клиенте)."""
+    if path.startswith("api/"):
+        raise HTTPException(404, detail={"code": "not_found", "message": "Not found"})
+    f = (WEB_DIR / path).resolve()
+    if path and f.is_file() and WEB_DIR.resolve() in f.parents:
+        return FileResponse(f)
+    index = WEB_DIR / "index.html"
+    if not index.is_file():
+        raise HTTPException(404, detail={"code": "web_not_built", "message": "Frontend is not built (web/dist)"})
+    return FileResponse(index)
