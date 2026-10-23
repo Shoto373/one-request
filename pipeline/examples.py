@@ -8,7 +8,7 @@ Not seeded into the DB; use them for UI types, mocks and SSE wiring.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date
 from pathlib import Path
 
@@ -20,6 +20,7 @@ from app.planning.destinations import suggest_destinations_report
 from app.planning.suggest import suggest_destinations
 from app.planning.models import bundle_to_wire
 from app.planning.query import TripQuery
+from app.planning.replan import replan_bundle
 from app.tools.search import search_hotels, search_transfers, search_transport
 
 OUT = Path(__file__).resolve().parent.parent / "data" / "examples"
@@ -71,6 +72,13 @@ def main() -> None:
     dump("changes_dxb_30000.json", {"requirements": DXB_30000, "changes": trip_alternatives(DXB_30000)})
     # What B's orchestrator receives (app/agent/destination_search.py), B's requirement keys.
     dump("suggest_contract_vague.json", {"requirements": B_VAGUE, **suggest_destinations(B_VAGUE)})
+    # Sprint 3: «а если на два дня позже и с нами собака?» over the family bundle «удобнее с ребёнком».
+    family = TripQuery("MOW", "AYT", date(2026, 11, 12), date(2026, 11, 19), Party(adults=2, children_ages=[5]))
+    old = build_trip_bundles(cat, family).bundles[1]
+    moved = replace(family, depart_date=date(2026, 11, 14), return_date=date(2026, 11, 21),
+                    party=Party(adults=2, children_ages=[5], pets=[Pet(weight_kg=7)]))
+    dump("replan_ayt_plus2_dog.json", {"old_bundle": bundle_to_wire(old),
+                                       **replan_bundle(cat, old.items, moved, old.id, old.label).to_wire()})
     party = Party(adults=2)
     flights = search_transport(cat, "MOW", "AER", date(2026, 11, 10), party, ("flight",))
     hotels = search_hotels(cat, "AER", date(2026, 11, 10), date(2026, 11, 17), party, cheapest_per_hotel=True)

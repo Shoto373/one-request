@@ -502,7 +502,7 @@
           {
             "kind": "capacity",
             "status": "ok",
-            "text": "Все позиции на 2 взр. и 1 дет.",
+            "text": "Номера и трансферы вмещают 2 взр. и 1 дет. и багаж.",
             "options": [],
             "offer_ids": [],
             "refs": []
@@ -519,6 +519,16 @@
           }
         ],
         "tradeoffs": [
+          {
+            "text": "Самый дешёвый — 174 140 ₽; чем жертвуем: невозвратный отель.",
+            "refs": [
+              "offer:off_fl_ZF676_20261110_standard_ee9c",
+              "offer:off_trf_SSH_h_SSH_04_taxi_202611100840_to_hotel_ee9c",
+              "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+              "offer:off_trf_SSH_h_SSH_04_taxi_202611170640_to_hub_ee9c",
+              "offer:off_fl_ZF677_20261117_standard_ee9c"
+            ]
+          },
           {
             "text": "Невозвратный тариф отеля: при отмене теряется 66 080 ₽.",
             "refs": [
@@ -1097,7 +1107,7 @@
           {
             "kind": "capacity",
             "status": "ok",
-            "text": "Все позиции на 2 взр. и 1 дет.",
+            "text": "Номера и трансферы вмещают 2 взр. и 1 дет. и багаж.",
             "options": [],
             "offer_ids": [],
             "refs": []
@@ -1114,6 +1124,16 @@
           }
         ],
         "tradeoffs": [
+          {
+            "text": "Самый дешёвый — 92 540 ₽; чем жертвуем: без багажа, трансфер общественным транспортом.",
+            "refs": [
+              "offer:off_fl_DP3736_20261117_standard_ee9c",
+              "offer:off_trf_AYT_h_AYT_06_public_202611171140_to_hotel_ee9c",
+              "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+              "offer:off_trf_AYT_h_AYT_06_public_202611240900_to_hub_ee9c",
+              "offer:off_fl_DP3737_20261124_light_ee9c"
+            ]
+          },
           {
             "text": "Победа DP 3737: тариф без багажа, только ручная кладь 10 кг.",
             "refs": [
@@ -1703,7 +1723,7 @@
           {
             "kind": "capacity",
             "status": "ok",
-            "text": "Все позиции на 2 взр. и 1 дет.",
+            "text": "Номера и трансферы вмещают 2 взр. и 1 дет. и багаж.",
             "options": [],
             "offer_ids": [],
             "refs": []
@@ -1720,6 +1740,16 @@
           }
         ],
         "tradeoffs": [
+          {
+            "text": "Самый дешёвый — 235 430 ₽; чем жертвуем: невозвратный отель, без багажа, трансфер общественным транспортом.",
+            "refs": [
+              "offer:off_fl_FZ1758_20261103_light_ee9c",
+              "offer:off_trf_DXB_h_DXB_06_taxi_202611040040_to_hotel_ee9c",
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+              "offer:off_trf_DXB_h_DXB_06_public_202611092235_to_hub_ee9c",
+              "offer:off_fl_FZ1759_20261110_light_ee9c"
+            ]
+          },
           {
             "text": "flydubai FZ 1758: тариф без багажа, только ручная кладь 10 кг.",
             "refs": [

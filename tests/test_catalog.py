@@ -74,7 +74,8 @@ def test_sprint1_scenario_moscow_sochi(cat: Catalog) -> None:
     """«Из Москвы в Сочи 10–17 ноября, двое взрослых» -> one feasible bundle."""
     q = TripQuery("MOW", "AER", D(2026, 11, 10), D(2026, 11, 17), Party(adults=2))
     res = build_trip_bundles(cat, q)
-    assert len(res.bundles) == 1, res.notes
+    assert 1 <= len(res.bundles) <= 3, res.notes
+    assert res.bundles[0].label == "дешевле" and res.bundles[0].total_rub == min(b.total_rub for b in res.bundles)
     b = res.bundles[0]
     assert [o.kind for o in b.items][1:4] == ["transfer", "hotel", "transfer"]
     assert b.items[0].kind in ("flight", "train") and b.items[-1].kind in ("flight", "train")

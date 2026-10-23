@@ -48,7 +48,7 @@ def test_parsers() -> None:
 def test_orchestrator_contract_returns_state_bundles() -> None:
     state = _state(SOCHI)
     bundles = track_a_build_bundles(SOCHI, state)  # the exact call path of app/agent/orchestrator.py
-    assert len(bundles) == 1
+    assert 1 <= len(bundles) <= 3 and bundles[0].id == "b1"
     b = bundles[0]
     assert isinstance(b, StateBundle)
     assert b.total_rub == sum(o.total_rub for o in b.items)

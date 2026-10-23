@@ -322,7 +322,7 @@
           {
             "kind": "capacity",
             "status": "ok",
-            "text": "Все позиции на 3 взр.",
+            "text": "Номера и трансферы вмещают 3 взр. и багаж.",
             "options": [],
             "offer_ids": [],
             "refs": []
@@ -339,6 +339,16 @@
           }
         ],
         "tradeoffs": [
+          {
+            "text": "Самый дешёвый — 53 786 ₽; чем жертвуем: невозвратный отель, трансфер общественным транспортом.",
+            "refs": [
+              "offer:off_tr_102M_20261110_platzkart_6fdf",
+              "offer:off_trf_st_aer_sochi_h_AER_02_taxi_202611111357_to_hotel_6fdf",
+              "offer:off_h_AER_02_r1_t1_20261111_20261117_6fdf",
+              "offer:off_trf_st_aer_adler_h_AER_02_public_202611171240_to_hub_6fdf",
+              "offer:off_tr_103V_20261117_platzkart_6fdf"
+            ]
+          },
           {
             "text": "Невозвратный тариф отеля: при отмене теряется 35 196 ₽.",
             "refs": [
@@ -697,7 +707,7 @@
           {
             "kind": "capacity",
             "status": "ok",
-            "text": "Все позиции на 3 взр.",
+            "text": "Номера и трансферы вмещают 3 взр. и багаж.",
             "options": [],
             "offer_ids": [],
             "refs": []
@@ -714,6 +724,16 @@
           }
         ],
         "tradeoffs": [
+          {
+            "text": "Самый дешёвый — 349 500 ₽; чем жертвуем: невозвратный отель, без багажа, трансфер общественным транспортом.",
+            "refs": [
+              "offer:off_fl_SU4384_20261110_light_6fdf",
+              "offer:off_trf_DXB_h_DXB_06_taxi_202611110450_to_hotel_6fdf",
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
+              "offer:off_trf_DXB_h_DXB_06_public_202611162235_to_hub_6fdf",
+              "offer:off_fl_FZ1759_20261117_light_6fdf"
+            ]
+          },
           {
             "text": "Аэрофлот SU 4384: тариф без багажа, только ручная кладь 10 кг.",
             "refs": [
