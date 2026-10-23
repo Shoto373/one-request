@@ -1,0 +1,22 @@
+id: s2_01_family_warm_sea
+description: Размытый семейный запрос к морю в ноябре; уточнить блокирующие данные и предложить выполнимые варианты.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов.
+actions:
+  - {type: answer, key: origin, text: Москва}
+  - {type: answer, key: adults, text: двое взрослых}
+  - {type: answer, key: duration_nights, text: 7 ночей}
+  - {type: answer, key: children_ages, text: 5 лет}
+expected:
+  final_stage: select
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: travel_month, kind: hard, value: 11}
+    - {key: adults, kind: hard, value: 2}
+    - {key: children_ages, kind: hard, value: [5]}
+    - {key: budget_preference, kind: soft, value: low_cost}
+    - {key: travel_time_preference, kind: soft, value: short}
+  max_questions_per_turn: 2
+  checks: [questions_only_blockers, no_inferred_child_age, feasible_options_from_tool, climate_claims_are_statistics]
+fixtures: {suggestion_result: family_sea_november_two_feasible}

@@ -1,0 +1,1840 @@
+{
+  "requirements": {
+    "origin": "Москва",
+    "travel_month": 11,
+    "adults": 2,
+    "children_ages": [
+      5
+    ],
+    "duration_nights": 7,
+    "budget_preference": "low_cost",
+    "travel_time_preference": "short",
+    "trip_style": "тёплое море"
+  },
+  "destinations": [
+    {
+      "id": "SSH",
+      "name": "Шарм-эль-Шейх",
+      "country": "Египет",
+      "feasible": true,
+      "est_total_rub": 174140,
+      "dates": {
+        "start": "2026-11-10",
+        "end": "2026-11-17"
+      },
+      "visa": {
+        "regime": "visa_on_arrival",
+        "note": "Только курорты Южного Синая до 15 дней — бесплатный штамп «Синай» в аэропорту; для дольше или за пределы региона — виза по прибытии (25 USD, до 30 дней).",
+        "documents": [
+          "загранпаспорт (действует не менее 6 месяцев на дату въезда)"
+        ]
+      },
+      "score": 0.693,
+      "score_breakdown": [
+        {
+          "factor": "weather",
+          "weight": 0.333,
+          "value": 0.99,
+          "contribution": 0.33,
+          "text": "Море 27°C, воздух днём 29°C в ноябре",
+          "refs": [
+            "climate:SSH:11.sea_temp",
+            "climate:SSH:11.air_temp_day"
+          ]
+        },
+        {
+          "factor": "price",
+          "weight": 0.259,
+          "value": 0.261,
+          "contribution": 0.068,
+          "text": "≈ 174 140 ₽ на 2 взр. и 1 дет. за 7 ноч.: дорога, трансферы, отель",
+          "refs": [
+            "bundle:SSH",
+            "offer:off_fl_ZF676_20261110_standard_ee9c",
+            "offer:off_trf_SSH_h_SSH_04_taxi_202611100840_to_hotel_ee9c",
+            "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+            "offer:off_trf_SSH_h_SSH_04_taxi_202611170640_to_hub_ee9c",
+            "offer:off_fl_ZF677_20261117_standard_ee9c"
+          ]
+        },
+        {
+          "factor": "travel",
+          "weight": 0.222,
+          "value": 0.594,
+          "contribution": 0.132,
+          "text": "Перелёт 4 ч 45 мин, без пересадок",
+          "refs": [
+            "offer:off_fl_ZF676_20261110_standard_ee9c"
+          ]
+        },
+        {
+          "factor": "visa",
+          "weight": 0.074,
+          "value": 0.7,
+          "contribution": 0.052,
+          "text": "Египет: виза по прибытии",
+          "refs": [
+            "city:SSH:visa"
+          ]
+        },
+        {
+          "factor": "match",
+          "weight": 0.111,
+          "value": 1.0,
+          "contribution": 0.111,
+          "text": "Подходит: beach, family, sea",
+          "refs": [
+            "city:SSH:tags"
+          ]
+        }
+      ],
+      "why": [
+        {
+          "text": "Море 27°C, воздух днём 29°C в ноябре",
+          "refs": [
+            "climate:SSH:11.sea_temp",
+            "climate:SSH:11.air_temp_day"
+          ]
+        },
+        {
+          "text": "≈ 174 140 ₽ на 2 взр. и 1 дет. за 7 ноч.: дорога, трансферы, отель",
+          "refs": [
+            "bundle:SSH",
+            "offer:off_fl_ZF676_20261110_standard_ee9c",
+            "offer:off_trf_SSH_h_SSH_04_taxi_202611100840_to_hotel_ee9c",
+            "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+            "offer:off_trf_SSH_h_SSH_04_taxi_202611170640_to_hub_ee9c",
+            "offer:off_fl_ZF677_20261117_standard_ee9c"
+          ]
+        },
+        {
+          "text": "Перелёт 4 ч 45 мин, без пересадок",
+          "refs": [
+            "offer:off_fl_ZF676_20261110_standard_ee9c"
+          ]
+        },
+        {
+          "text": "Египет: виза по прибытии",
+          "refs": [
+            "city:SSH:visa"
+          ]
+        },
+        {
+          "text": "Подходит: beach, family, sea",
+          "refs": [
+            "city:SSH:tags"
+          ]
+        }
+      ],
+      "risks": [
+        {
+          "text": "Прибытие 09:05, заселение с 14:00: ожидание 4 ч 55 мин.",
+          "refs": [
+            "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+            "hotel:h_SSH_04"
+          ]
+        },
+        {
+          "text": "Документы: загранпаспорт (действует не менее 6 месяцев на дату въезда)",
+          "refs": [
+            "city:SSH:visa"
+          ]
+        }
+      ],
+      "travel": {
+        "kind": "flight",
+        "duration_min": 285,
+        "stops": 0,
+        "title": "Azur Air ZF 676"
+      },
+      "climate": {
+        "month": 11,
+        "air_temp_day": 29.2,
+        "air_temp_night": 20.3,
+        "sea_temp": 27.1,
+        "precip_mm": 2.2,
+        "rainy_days": 0.6,
+        "sun_hours": 10.3
+      },
+      "nights": 7,
+      "bundle": {
+        "id": "b_ssh",
+        "label": "дешевле",
+        "items": [
+          {
+            "offer_id": "off_fl_ZF676_20261110_standard_ee9c",
+            "kind": "flight",
+            "item_id": "fl_ZF676_20261110",
+            "title": "Azur Air ZF 676",
+            "variant": {
+              "title": "Azur Air ZF 676",
+              "baggage": {
+                "cabin_kg": 10,
+                "checked_pieces": 1,
+                "checked_kg": 20
+              },
+              "carrier": "ZF",
+              "carrier_name": "Azur Air",
+              "flight_no": "ZF 676",
+              "fare": "standard",
+              "fare_name": "Чартер",
+              "refundable": false,
+              "origin_city": "MOW",
+              "dest_city": "SSH",
+              "from_hub": "VKO",
+              "to_hub": "SSH",
+              "stops": 0,
+              "via": [],
+              "duration_min": 285,
+              "international": true,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 18100,
+            "price_unit": "per_person",
+            "units": 3,
+            "total_rub": 54300,
+            "included": [
+              "cabin_bag_10kg",
+              "checked_bag_1x20kg"
+            ],
+            "baggage": "10 кг ручной клади + 1×20 кг",
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 54300
+            },
+            "times": {
+              "start": "2026-11-10T04:10:00+03:00",
+              "end": "2026-11-10T07:55:00+02:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "flight:fl_ZF676_20261110",
+              "gen:flights@seed42",
+              "formula:block_time=distance/750kmh+40min"
+            ]
+          },
+          {
+            "offer_id": "off_trf_SSH_h_SSH_04_taxi_202611100840_to_hotel_ee9c",
+            "kind": "transfer",
+            "item_id": "trf_SSH_h_SSH_04_taxi",
+            "title": "Такси, 13.5 км, ~25 мин",
+            "variant": {
+              "title": "Такси, 13.5 км, ~25 мин",
+              "mode": "taxi",
+              "provider": "Такси «Комфорт»",
+              "direction": "to_hotel",
+              "hub_id": "SSH",
+              "hotel_id": "h_SSH_04",
+              "distance_km": 13.5,
+              "duration_min": 25,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 1050,
+            "price_unit": "per_vehicle",
+            "units": 1,
+            "total_rub": 1050,
+            "included": [
+              "child_seat"
+            ],
+            "baggage": "3 мест багажа",
+            "cancel_policy": {
+              "free_until": "2026-11-09T08:40:00+02:00",
+              "penalty_rub": 1050
+            },
+            "times": {
+              "start": "2026-11-10T08:40:00+02:00",
+              "end": "2026-11-10T09:05:00+02:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "transfer:trf_SSH_h_SSH_04_taxi",
+              "gen:transfers@seed42",
+              "formula:road_km=1.3*great_circle",
+              "osm:node/6594291551",
+              "ourairports:HESH"
+            ]
+          },
+          {
+            "offer_id": "off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+            "kind": "hotel",
+            "item_id": "h_SSH_04",
+            "title": "Naama Blue Hotel, стандарт, всё включено, невозвратный",
+            "variant": {
+              "title": "Naama Blue Hotel",
+              "hotel_name": "Naama Blue Hotel",
+              "stars": 3,
+              "rating": 8.6,
+              "city_id": "SSH",
+              "room_id": "h_SSH_04_r1",
+              "room_type": "Стандарт",
+              "tariff_id": "t1",
+              "tariff": "Всё включено, невозвратный",
+              "meal": "AI",
+              "refundable": false,
+              "nights": 7,
+              "nightly_rub": [
+                9440,
+                9440,
+                9440,
+                9440,
+                9440,
+                9440,
+                9440
+              ],
+              "dist_beach_km": 0.58,
+              "dist_center_km": 6.65,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 9440,
+            "price_unit": "per_room_night",
+            "units": 7,
+            "total_rub": 66080,
+            "included": [
+              "all_inclusive",
+              "wifi"
+            ],
+            "baggage": null,
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 66080
+            },
+            "times": {
+              "start": "2026-11-10T14:00:00+02:00",
+              "end": "2026-11-17T11:00:00+02:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "hotel:h_SSH_04",
+              "osm:node/6594291551",
+              "gen:hotels@seed42"
+            ]
+          },
+          {
+            "offer_id": "off_trf_SSH_h_SSH_04_taxi_202611170640_to_hub_ee9c",
+            "kind": "transfer",
+            "item_id": "trf_SSH_h_SSH_04_taxi",
+            "title": "Такси, 13.5 км, ~25 мин",
+            "variant": {
+              "title": "Такси, 13.5 км, ~25 мин",
+              "mode": "taxi",
+              "provider": "Такси «Комфорт»",
+              "direction": "to_hub",
+              "hub_id": "SSH",
+              "hotel_id": "h_SSH_04",
+              "distance_km": 13.5,
+              "duration_min": 25,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 1050,
+            "price_unit": "per_vehicle",
+            "units": 1,
+            "total_rub": 1050,
+            "included": [
+              "child_seat"
+            ],
+            "baggage": "3 мест багажа",
+            "cancel_policy": {
+              "free_until": "2026-11-16T06:40:00+02:00",
+              "penalty_rub": 1050
+            },
+            "times": {
+              "start": "2026-11-17T06:40:00+02:00",
+              "end": "2026-11-17T07:05:00+02:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "transfer:trf_SSH_h_SSH_04_taxi",
+              "gen:transfers@seed42",
+              "formula:road_km=1.3*great_circle",
+              "osm:node/6594291551",
+              "ourairports:HESH"
+            ]
+          },
+          {
+            "offer_id": "off_fl_ZF677_20261117_standard_ee9c",
+            "kind": "flight",
+            "item_id": "fl_ZF677_20261117",
+            "title": "Azur Air ZF 677",
+            "variant": {
+              "title": "Azur Air ZF 677",
+              "baggage": {
+                "cabin_kg": 10,
+                "checked_pieces": 1,
+                "checked_kg": 20
+              },
+              "carrier": "ZF",
+              "carrier_name": "Azur Air",
+              "flight_no": "ZF 677",
+              "fare": "standard",
+              "fare_name": "Чартер",
+              "refundable": false,
+              "origin_city": "SSH",
+              "dest_city": "MOW",
+              "from_hub": "SSH",
+              "to_hub": "VKO",
+              "stops": 0,
+              "via": [],
+              "duration_min": 290,
+              "international": true,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 17220,
+            "price_unit": "per_person",
+            "units": 3,
+            "total_rub": 51660,
+            "included": [
+              "cabin_bag_10kg",
+              "checked_bag_1x20kg"
+            ],
+            "baggage": "10 кг ручной клади + 1×20 кг",
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 51660
+            },
+            "times": {
+              "start": "2026-11-17T09:05:00+02:00",
+              "end": "2026-11-17T14:55:00+03:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "flight:fl_ZF677_20261117",
+              "gen:flights@seed42",
+              "formula:block_time=distance/750kmh+40min"
+            ]
+          }
+        ],
+        "total_rub": 174140,
+        "checks": [
+          {
+            "kind": "checkin_date",
+            "status": "ok",
+            "text": "Прибытие в отель 10.11 09:05, заезд 10.11.",
+            "options": [],
+            "offer_ids": [
+              "off_h_SSH_04_r1_t1_20261110_20261117_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+              "hotel:h_SSH_04"
+            ]
+          },
+          {
+            "kind": "late_arrival",
+            "status": "ok",
+            "text": "Круглосуточная стойка.",
+            "options": [],
+            "offer_ids": [
+              "off_h_SSH_04_r1_t1_20261110_20261117_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+              "hotel:h_SSH_04"
+            ]
+          },
+          {
+            "kind": "early_arrival",
+            "status": "warn",
+            "text": "Прибытие 09:05, заселение с 14:00: ожидание 4 ч 55 мин.",
+            "options": [
+              "Ждать заселения 4 ч 55 мин",
+              "Оставить багаж на стойке",
+              "Забронировать ночь накануне — номер готов сразу — 9 440 ₽"
+            ],
+            "offer_ids": [
+              "off_h_SSH_04_r1_t1_20261110_20261117_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+              "hotel:h_SSH_04"
+            ]
+          },
+          {
+            "kind": "return_trip",
+            "status": "ok",
+            "text": "Выезд из отеля 17.11 06:40 — успеваете на обратную дорогу.",
+            "options": [],
+            "offer_ids": [
+              "off_h_SSH_04_r1_t1_20261110_20261117_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+              "hotel:h_SSH_04"
+            ]
+          },
+          {
+            "kind": "transfer_fit",
+            "status": "ok",
+            "text": "Трансферы стыкуются с транспортом.",
+            "options": [],
+            "offer_ids": [],
+            "refs": []
+          },
+          {
+            "kind": "capacity",
+            "status": "ok",
+            "text": "Все позиции на 2 взр. и 1 дет.",
+            "options": [],
+            "offer_ids": [],
+            "refs": []
+          },
+          {
+            "kind": "visa",
+            "status": "warn",
+            "text": "Египет: Только курорты Южного Синая до 15 дней — бесплатный штамп «Синай» в аэропорту; для дольше или за пределы региона — виза по прибытии (25 USD, до 30 дней). Документы: загранпаспорт (действует не менее 6 месяцев на дату въезда).",
+            "options": [],
+            "offer_ids": [],
+            "refs": [
+              "city:SSH:visa"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "text": "Невозвратный тариф отеля: при отмене теряется 66 080 ₽.",
+            "refs": [
+              "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c"
+            ]
+          }
+        ],
+        "risks": [
+          {
+            "text": "Прибытие 09:05, заселение с 14:00: ожидание 4 ч 55 мин.",
+            "refs": [
+              "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+              "hotel:h_SSH_04"
+            ]
+          }
+        ]
+      },
+      "assumptions": [
+        "«без долгих перелётов» = до 5 ч в одну сторону"
+      ],
+      "rank": 1,
+      "evidence": [
+        {
+          "ref": "climate:SSH:11.air_temp_day",
+          "value": 29.2,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:SSH:11.air_temp_night",
+          "value": 20.3,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:SSH:11.sea_temp",
+          "value": 27.1,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:SSH:11.rainy_days",
+          "value": 0.6,
+          "role": "fit"
+        },
+        {
+          "ref": "trip:SSH:total_rub",
+          "value": 174140,
+          "label": "Итоговая цена поездки на весь состав (7 ноч.: дорога, трансферы, отель)",
+          "unit": "₽",
+          "kind": "trip_total",
+          "source": "Расчёт build_bundles по каталогу (условия сгенерированы)",
+          "source_refs": [
+            "offer:off_fl_ZF676_20261110_standard_ee9c",
+            "offer:off_trf_SSH_h_SSH_04_taxi_202611100840_to_hotel_ee9c",
+            "offer:off_h_SSH_04_r1_t1_20261110_20261117_ee9c",
+            "offer:off_trf_SSH_h_SSH_04_taxi_202611170640_to_hub_ee9c",
+            "offer:off_fl_ZF677_20261117_standard_ee9c"
+          ],
+          "synthetic": true,
+          "role": "fit"
+        },
+        {
+          "ref": "trip:SSH:travel_min",
+          "value": 285,
+          "label": "Перелёт в одну сторону, минут",
+          "unit": "мин",
+          "kind": "transport_duration",
+          "source": "Расчёт build_bundles по каталогу (условия сгенерированы)",
+          "source_refs": [
+            "offer:off_fl_ZF676_20261110_standard_ee9c"
+          ],
+          "synthetic": true,
+          "role": "fit"
+        },
+        {
+          "ref": "city:SSH:visa",
+          "value": "виза по прибытии, до 30 дней",
+          "label": "Въезд для граждан РФ (Египет)",
+          "kind": "visa_rule",
+          "source": "Справочник визовых правил для граждан РФ",
+          "source_refs": [
+            "checked_at:2026-10-23"
+          ],
+          "synthetic": false,
+          "role": "risk"
+        }
+      ]
+    },
+    {
+      "id": "AYT",
+      "name": "Анталья",
+      "country": "Турция",
+      "feasible": true,
+      "est_total_rub": 92540,
+      "dates": {
+        "start": "2026-11-17",
+        "end": "2026-11-24"
+      },
+      "visa": {
+        "regime": "visa_free",
+        "note": "Безвиз до 60 дней в течение 180 дней. Срок действия паспорта уточняйте перед поездкой.",
+        "documents": [
+          "загранпаспорт"
+        ]
+      },
+      "score": 0.649,
+      "score_breakdown": [
+        {
+          "factor": "weather",
+          "weight": 0.333,
+          "value": 0.53,
+          "contribution": 0.177,
+          "text": "Море 24°C, воздух днём 22°C в ноябре",
+          "refs": [
+            "climate:AYT:11.sea_temp",
+            "climate:AYT:11.air_temp_day"
+          ]
+        },
+        {
+          "factor": "price",
+          "weight": 0.259,
+          "value": 0.492,
+          "contribution": 0.127,
+          "text": "≈ 92 540 ₽ на 2 взр. и 1 дет. за 7 ноч.: дорога, трансферы, отель",
+          "refs": [
+            "bundle:AYT",
+            "offer:off_fl_DP3736_20261117_standard_ee9c",
+            "offer:off_trf_AYT_h_AYT_06_public_202611171140_to_hotel_ee9c",
+            "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+            "offer:off_trf_AYT_h_AYT_06_public_202611240900_to_hub_ee9c",
+            "offer:off_fl_DP3737_20261124_light_ee9c"
+          ]
+        },
+        {
+          "factor": "travel",
+          "weight": 0.222,
+          "value": 0.75,
+          "contribution": 0.167,
+          "text": "Перелёт 3 ч 30 мин, без пересадок",
+          "refs": [
+            "offer:off_fl_DP3736_20261117_standard_ee9c"
+          ]
+        },
+        {
+          "factor": "visa",
+          "weight": 0.074,
+          "value": 0.9,
+          "contribution": 0.067,
+          "text": "Турция: безвиз",
+          "refs": [
+            "city:AYT:visa"
+          ]
+        },
+        {
+          "factor": "match",
+          "weight": 0.111,
+          "value": 1.0,
+          "contribution": 0.111,
+          "text": "Подходит: beach, family, sea",
+          "refs": [
+            "city:AYT:tags"
+          ]
+        }
+      ],
+      "why": [
+        {
+          "text": "Море 24°C, воздух днём 22°C в ноябре",
+          "refs": [
+            "climate:AYT:11.sea_temp",
+            "climate:AYT:11.air_temp_day"
+          ]
+        },
+        {
+          "text": "≈ 92 540 ₽ на 2 взр. и 1 дет. за 7 ноч.: дорога, трансферы, отель",
+          "refs": [
+            "bundle:AYT",
+            "offer:off_fl_DP3736_20261117_standard_ee9c",
+            "offer:off_trf_AYT_h_AYT_06_public_202611171140_to_hotel_ee9c",
+            "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+            "offer:off_trf_AYT_h_AYT_06_public_202611240900_to_hub_ee9c",
+            "offer:off_fl_DP3737_20261124_light_ee9c"
+          ]
+        },
+        {
+          "text": "Перелёт 3 ч 30 мин, без пересадок",
+          "refs": [
+            "offer:off_fl_DP3736_20261117_standard_ee9c"
+          ]
+        },
+        {
+          "text": "Турция: безвиз",
+          "refs": [
+            "city:AYT:visa"
+          ]
+        },
+        {
+          "text": "Подходит: beach, family, sea",
+          "refs": [
+            "city:AYT:tags"
+          ]
+        }
+      ],
+      "risks": [
+        {
+          "text": "Часто дожди: 10 дней с осадками в месяц",
+          "refs": [
+            "climate:AYT:11.rainy_days"
+          ]
+        },
+        {
+          "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
+          "refs": [
+            "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+            "hotel:h_AYT_06"
+          ]
+        },
+        {
+          "text": "Документы: загранпаспорт",
+          "refs": [
+            "city:AYT:visa"
+          ]
+        }
+      ],
+      "travel": {
+        "kind": "flight",
+        "duration_min": 210,
+        "stops": 0,
+        "title": "Победа DP 3736"
+      },
+      "climate": {
+        "month": 11,
+        "air_temp_day": 21.8,
+        "air_temp_night": 13.6,
+        "sea_temp": 23.6,
+        "precip_mm": 109.8,
+        "rainy_days": 9.8,
+        "sun_hours": 8.3
+      },
+      "nights": 7,
+      "bundle": {
+        "id": "b_ayt",
+        "label": "дешевле",
+        "items": [
+          {
+            "offer_id": "off_fl_DP3736_20261117_standard_ee9c",
+            "kind": "flight",
+            "item_id": "fl_DP3736_20261117",
+            "title": "Победа DP 3736",
+            "variant": {
+              "title": "Победа DP 3736",
+              "baggage": {
+                "cabin_kg": 10,
+                "checked_pieces": 1,
+                "checked_kg": 23
+              },
+              "carrier": "DP",
+              "carrier_name": "Победа",
+              "flight_no": "DP 3736",
+              "fare": "standard",
+              "fare_name": "Стандарт",
+              "refundable": false,
+              "origin_city": "MOW",
+              "dest_city": "AYT",
+              "from_hub": "VKO",
+              "to_hub": "AYT",
+              "stops": 0,
+              "via": [],
+              "duration_min": 210,
+              "international": true,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 11370,
+            "price_unit": "per_person",
+            "units": 3,
+            "total_rub": 34110,
+            "included": [
+              "cabin_bag_10kg",
+              "checked_bag_1x23kg"
+            ],
+            "baggage": "10 кг ручной клади + 1×23 кг",
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 34110
+            },
+            "times": {
+              "start": "2026-11-17T07:25:00+03:00",
+              "end": "2026-11-17T10:55:00+03:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "flight:fl_DP3736_20261117",
+              "gen:flights@seed42",
+              "formula:block_time=distance/750kmh+40min"
+            ]
+          },
+          {
+            "offer_id": "off_trf_AYT_h_AYT_06_public_202611171140_to_hotel_ee9c",
+            "kind": "transfer",
+            "item_id": "trf_AYT_h_AYT_06_public",
+            "title": "Общественный транспорт, 19.8 км, ~75 мин",
+            "variant": {
+              "title": "Общественный транспорт, 19.8 км, ~75 мин",
+              "mode": "public",
+              "provider": "Общественный транспорт",
+              "direction": "to_hotel",
+              "hub_id": "AYT",
+              "hotel_id": "h_AYT_06",
+              "distance_km": 19.8,
+              "duration_min": 75,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 160,
+            "price_unit": "per_person",
+            "units": 2,
+            "total_rub": 320,
+            "included": [],
+            "baggage": "3 мест багажа",
+            "cancel_policy": {
+              "free_until": "2026-11-17T11:40:00+03:00",
+              "penalty_rub": 320
+            },
+            "times": {
+              "start": "2026-11-17T11:40:00+03:00",
+              "end": "2026-11-17T12:55:00+03:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "transfer:trf_AYT_h_AYT_06_public",
+              "gen:transfers@seed42",
+              "formula:road_km=1.3*great_circle",
+              "osm:node/6633132388",
+              "ourairports:LTAI"
+            ]
+          },
+          {
+            "offer_id": "off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+            "kind": "hotel",
+            "item_id": "h_AYT_06",
+            "title": "Eva Butik Otel, стандарт, завтрак, бесплатная отмена",
+            "variant": {
+              "title": "Eva Butik Otel",
+              "hotel_name": "Eva Butik Otel",
+              "stars": 3,
+              "rating": 8.2,
+              "city_id": "AYT",
+              "room_id": "h_AYT_06_r1",
+              "room_type": "Стандарт",
+              "tariff_id": "t3",
+              "tariff": "Завтрак, бесплатная отмена",
+              "meal": "BB",
+              "refundable": true,
+              "nights": 7,
+              "nightly_rub": [
+                4690,
+                4690,
+                4690,
+                4690,
+                4690,
+                4690,
+                4690
+              ],
+              "dist_beach_km": 0.94,
+              "dist_center_km": 7.38,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 4690,
+            "price_unit": "per_room_night",
+            "units": 7,
+            "total_rub": 32830,
+            "included": [
+              "breakfast",
+              "wifi"
+            ],
+            "baggage": null,
+            "cancel_policy": {
+              "free_until": "2026-11-16T23:59:00+03:00",
+              "penalty_rub": 4690
+            },
+            "times": {
+              "start": "2026-11-17T14:00:00+03:00",
+              "end": "2026-11-24T12:00:00+03:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "hotel:h_AYT_06",
+              "osm:node/6633132388",
+              "gen:hotels@seed42"
+            ]
+          },
+          {
+            "offer_id": "off_trf_AYT_h_AYT_06_public_202611240900_to_hub_ee9c",
+            "kind": "transfer",
+            "item_id": "trf_AYT_h_AYT_06_public",
+            "title": "Общественный транспорт, 19.8 км, ~75 мин",
+            "variant": {
+              "title": "Общественный транспорт, 19.8 км, ~75 мин",
+              "mode": "public",
+              "provider": "Общественный транспорт",
+              "direction": "to_hub",
+              "hub_id": "AYT",
+              "hotel_id": "h_AYT_06",
+              "distance_km": 19.8,
+              "duration_min": 75,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 160,
+            "price_unit": "per_person",
+            "units": 2,
+            "total_rub": 320,
+            "included": [],
+            "baggage": "3 мест багажа",
+            "cancel_policy": {
+              "free_until": "2026-11-24T09:00:00+03:00",
+              "penalty_rub": 320
+            },
+            "times": {
+              "start": "2026-11-24T09:00:00+03:00",
+              "end": "2026-11-24T10:15:00+03:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "transfer:trf_AYT_h_AYT_06_public",
+              "gen:transfers@seed42",
+              "formula:road_km=1.3*great_circle",
+              "osm:node/6633132388",
+              "ourairports:LTAI"
+            ]
+          },
+          {
+            "offer_id": "off_fl_DP3737_20261124_light_ee9c",
+            "kind": "flight",
+            "item_id": "fl_DP3737_20261124",
+            "title": "Победа DP 3737",
+            "variant": {
+              "title": "Победа DP 3737",
+              "baggage": {
+                "cabin_kg": 10,
+                "checked_pieces": 0,
+                "checked_kg": null
+              },
+              "carrier": "DP",
+              "carrier_name": "Победа",
+              "flight_no": "DP 3737",
+              "fare": "light",
+              "fare_name": "Лайт",
+              "refundable": false,
+              "origin_city": "AYT",
+              "dest_city": "MOW",
+              "from_hub": "AYT",
+              "to_hub": "VKO",
+              "stops": 0,
+              "via": [],
+              "duration_min": 200,
+              "international": true,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 8320,
+            "price_unit": "per_person",
+            "units": 3,
+            "total_rub": 24960,
+            "included": [
+              "cabin_bag_10kg"
+            ],
+            "baggage": "10 кг ручной клади, без багажа",
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 24960
+            },
+            "times": {
+              "start": "2026-11-24T12:15:00+03:00",
+              "end": "2026-11-24T15:35:00+03:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "flight:fl_DP3737_20261124",
+              "gen:flights@seed42",
+              "formula:block_time=distance/750kmh+40min"
+            ]
+          }
+        ],
+        "total_rub": 92540,
+        "checks": [
+          {
+            "kind": "checkin_date",
+            "status": "ok",
+            "text": "Прибытие в отель 17.11 12:55, заезд 17.11.",
+            "options": [],
+            "offer_ids": [
+              "off_h_AYT_06_r1_t3_20261117_20261124_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+              "hotel:h_AYT_06"
+            ]
+          },
+          {
+            "kind": "late_arrival",
+            "status": "ok",
+            "text": "Стойка открыта в момент прибытия.",
+            "options": [],
+            "offer_ids": [
+              "off_h_AYT_06_r1_t3_20261117_20261124_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+              "hotel:h_AYT_06"
+            ]
+          },
+          {
+            "kind": "early_arrival",
+            "status": "warn",
+            "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
+            "options": [
+              "Ждать заселения 1 ч 05 мин",
+              "Оставить багаж на стойке",
+              "Ранний заезд с 12:55 (по наличию, не гарантирован)",
+              "Забронировать ночь накануне — номер готов сразу — 4 690 ₽"
+            ],
+            "offer_ids": [
+              "off_h_AYT_06_r1_t3_20261117_20261124_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+              "hotel:h_AYT_06"
+            ]
+          },
+          {
+            "kind": "return_trip",
+            "status": "ok",
+            "text": "Выезд из отеля 24.11 09:00 — успеваете на обратную дорогу.",
+            "options": [],
+            "offer_ids": [
+              "off_h_AYT_06_r1_t3_20261117_20261124_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+              "hotel:h_AYT_06"
+            ]
+          },
+          {
+            "kind": "transfer_fit",
+            "status": "ok",
+            "text": "Трансферы стыкуются с транспортом.",
+            "options": [],
+            "offer_ids": [],
+            "refs": []
+          },
+          {
+            "kind": "capacity",
+            "status": "ok",
+            "text": "Все позиции на 2 взр. и 1 дет.",
+            "options": [],
+            "offer_ids": [],
+            "refs": []
+          },
+          {
+            "kind": "visa",
+            "status": "warn",
+            "text": "Турция: Безвиз до 60 дней в течение 180 дней. Срок действия паспорта уточняйте перед поездкой. Документы: загранпаспорт.",
+            "options": [],
+            "offer_ids": [],
+            "refs": [
+              "city:AYT:visa"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "text": "Победа DP 3737: тариф без багажа, только ручная кладь 10 кг.",
+            "refs": [
+              "offer:off_fl_DP3737_20261124_light_ee9c"
+            ]
+          }
+        ],
+        "risks": [
+          {
+            "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
+            "refs": [
+              "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+              "hotel:h_AYT_06"
+            ]
+          }
+        ]
+      },
+      "assumptions": [
+        "«без долгих перелётов» = до 5 ч в одну сторону"
+      ],
+      "rank": 2,
+      "evidence": [
+        {
+          "ref": "climate:AYT:11.air_temp_day",
+          "value": 21.8,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:AYT:11.air_temp_night",
+          "value": 13.6,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:AYT:11.sea_temp",
+          "value": 23.6,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:AYT:11.rainy_days",
+          "value": 9.8,
+          "role": "risk"
+        },
+        {
+          "ref": "trip:AYT:total_rub",
+          "value": 92540,
+          "label": "Итоговая цена поездки на весь состав (7 ноч.: дорога, трансферы, отель)",
+          "unit": "₽",
+          "kind": "trip_total",
+          "source": "Расчёт build_bundles по каталогу (условия сгенерированы)",
+          "source_refs": [
+            "offer:off_fl_DP3736_20261117_standard_ee9c",
+            "offer:off_trf_AYT_h_AYT_06_public_202611171140_to_hotel_ee9c",
+            "offer:off_h_AYT_06_r1_t3_20261117_20261124_ee9c",
+            "offer:off_trf_AYT_h_AYT_06_public_202611240900_to_hub_ee9c",
+            "offer:off_fl_DP3737_20261124_light_ee9c"
+          ],
+          "synthetic": true,
+          "role": "fit"
+        },
+        {
+          "ref": "trip:AYT:travel_min",
+          "value": 210,
+          "label": "Перелёт в одну сторону, минут",
+          "unit": "мин",
+          "kind": "transport_duration",
+          "source": "Расчёт build_bundles по каталогу (условия сгенерированы)",
+          "source_refs": [
+            "offer:off_fl_DP3736_20261117_standard_ee9c"
+          ],
+          "synthetic": true,
+          "role": "fit"
+        },
+        {
+          "ref": "city:AYT:visa",
+          "value": "безвизовый въезд, до 60 дней",
+          "label": "Въезд для граждан РФ (Турция)",
+          "kind": "visa_rule",
+          "source": "Справочник визовых правил для граждан РФ",
+          "source_refs": [
+            "checked_at:2026-10-23"
+          ],
+          "synthetic": false,
+          "role": "risk"
+        }
+      ]
+    },
+    {
+      "id": "DXB",
+      "name": "Дубай",
+      "country": "ОАЭ",
+      "feasible": true,
+      "est_total_rub": 235430,
+      "dates": {
+        "start": "2026-11-03",
+        "end": "2026-11-10"
+      },
+      "visa": {
+        "regime": "visa_free",
+        "note": "Бесплатная отметка о въезде в аэропорту, до 90 дней.",
+        "documents": [
+          "загранпаспорт (действует не менее 6 месяцев на дату въезда)"
+        ]
+      },
+      "score": 0.576,
+      "score_breakdown": [
+        {
+          "factor": "weather",
+          "weight": 0.333,
+          "value": 0.993,
+          "contribution": 0.331,
+          "text": "Море 28°C, воздух днём 31°C в ноябре",
+          "refs": [
+            "climate:DXB:11.sea_temp",
+            "climate:DXB:11.air_temp_day"
+          ]
+        },
+        {
+          "factor": "price",
+          "weight": 0.259,
+          "value": 0.193,
+          "contribution": 0.05,
+          "text": "≈ 235 430 ₽ на 2 взр. и 1 дет. за 6 ноч.: дорога, трансферы, отель",
+          "refs": [
+            "bundle:DXB",
+            "offer:off_fl_FZ1758_20261103_light_ee9c",
+            "offer:off_trf_DXB_h_DXB_06_taxi_202611040040_to_hotel_ee9c",
+            "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+            "offer:off_trf_DXB_h_DXB_06_public_202611092235_to_hub_ee9c",
+            "offer:off_fl_FZ1759_20261110_light_ee9c"
+          ]
+        },
+        {
+          "factor": "travel",
+          "weight": 0.222,
+          "value": 0.245,
+          "contribution": 0.054,
+          "text": "Перелёт 5 ч 35 мин, без пересадок",
+          "refs": [
+            "offer:off_fl_FZ1758_20261103_light_ee9c"
+          ]
+        },
+        {
+          "factor": "visa",
+          "weight": 0.074,
+          "value": 0.9,
+          "contribution": 0.067,
+          "text": "ОАЭ: безвиз",
+          "refs": [
+            "city:DXB:visa"
+          ]
+        },
+        {
+          "factor": "match",
+          "weight": 0.111,
+          "value": 0.667,
+          "contribution": 0.074,
+          "text": "Подходит: beach, sea",
+          "refs": [
+            "city:DXB:tags"
+          ]
+        }
+      ],
+      "why": [
+        {
+          "text": "Море 28°C, воздух днём 31°C в ноябре",
+          "refs": [
+            "climate:DXB:11.sea_temp",
+            "climate:DXB:11.air_temp_day"
+          ]
+        },
+        {
+          "text": "≈ 235 430 ₽ на 2 взр. и 1 дет. за 6 ноч.: дорога, трансферы, отель",
+          "refs": [
+            "bundle:DXB",
+            "offer:off_fl_FZ1758_20261103_light_ee9c",
+            "offer:off_trf_DXB_h_DXB_06_taxi_202611040040_to_hotel_ee9c",
+            "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+            "offer:off_trf_DXB_h_DXB_06_public_202611092235_to_hub_ee9c",
+            "offer:off_fl_FZ1759_20261110_light_ee9c"
+          ]
+        },
+        {
+          "text": "Перелёт 5 ч 35 мин, без пересадок",
+          "refs": [
+            "offer:off_fl_FZ1758_20261103_light_ee9c"
+          ]
+        },
+        {
+          "text": "ОАЭ: безвиз",
+          "refs": [
+            "city:DXB:visa"
+          ]
+        },
+        {
+          "text": "Подходит: beach, sea",
+          "refs": [
+            "city:DXB:tags"
+          ]
+        }
+      ],
+      "risks": [
+        {
+          "text": "Дорога дольше желаемого: 5 ч 35 мин",
+          "refs": [
+            "offer:off_fl_FZ1758_20261103_light_ee9c"
+          ]
+        },
+        {
+          "text": "Прибытие 01:00, заселение с 15:00: ожидание 14 ч 00 мин.",
+          "refs": [
+            "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+            "hotel:h_DXB_06"
+          ]
+        },
+        {
+          "text": "Выезд 09.11 22:35 раньше даты выезда 10.11: последняя ночь не используется.",
+          "refs": [
+            "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+            "hotel:h_DXB_06"
+          ]
+        },
+        {
+          "text": "Не выполнено пожелание «в пути до 5 ч».",
+          "refs": [
+            "offer:off_fl_FZ1758_20261103_light_ee9c"
+          ]
+        },
+        {
+          "text": "Документы: загранпаспорт (действует не менее 6 месяцев на дату въезда)",
+          "refs": [
+            "city:DXB:visa"
+          ]
+        }
+      ],
+      "travel": {
+        "kind": "flight",
+        "duration_min": 335,
+        "stops": 0,
+        "title": "flydubai FZ 1758"
+      },
+      "climate": {
+        "month": 11,
+        "air_temp_day": 31.1,
+        "air_temp_night": 21.5,
+        "sea_temp": 28.4,
+        "precip_mm": 5.0,
+        "rainy_days": 0.4,
+        "sun_hours": 9.9
+      },
+      "nights": 6,
+      "bundle": {
+        "id": "b_dxb",
+        "label": "дешевле",
+        "items": [
+          {
+            "offer_id": "off_fl_FZ1758_20261103_light_ee9c",
+            "kind": "flight",
+            "item_id": "fl_FZ1758_20261103",
+            "title": "flydubai FZ 1758",
+            "variant": {
+              "title": "flydubai FZ 1758",
+              "baggage": {
+                "cabin_kg": 10,
+                "checked_pieces": 0,
+                "checked_kg": null
+              },
+              "carrier": "FZ",
+              "carrier_name": "flydubai",
+              "flight_no": "FZ 1758",
+              "fare": "light",
+              "fare_name": "Лайт",
+              "refundable": false,
+              "origin_city": "MOW",
+              "dest_city": "DXB",
+              "from_hub": "VKO",
+              "to_hub": "DXB",
+              "stops": 0,
+              "via": [],
+              "duration_min": 335,
+              "international": true,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 19410,
+            "price_unit": "per_person",
+            "units": 3,
+            "total_rub": 58230,
+            "included": [
+              "cabin_bag_10kg"
+            ],
+            "baggage": "10 кг ручной клади, без багажа",
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 58230
+            },
+            "times": {
+              "start": "2026-11-03T17:20:00+03:00",
+              "end": "2026-11-03T23:55:00+04:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "flight:fl_FZ1758_20261103",
+              "gen:flights@seed42",
+              "formula:block_time=distance/750kmh+40min"
+            ]
+          },
+          {
+            "offer_id": "off_trf_DXB_h_DXB_06_taxi_202611040040_to_hotel_ee9c",
+            "kind": "transfer",
+            "item_id": "trf_DXB_h_DXB_06_taxi",
+            "title": "Такси, 11.5 км, ~20 мин",
+            "variant": {
+              "title": "Такси, 11.5 км, ~20 мин",
+              "mode": "taxi",
+              "provider": "Такси «Комфорт»",
+              "direction": "to_hotel",
+              "hub_id": "DXB",
+              "hotel_id": "h_DXB_06",
+              "distance_km": 11.5,
+              "duration_min": 20,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 1650,
+            "price_unit": "per_vehicle",
+            "units": 1,
+            "total_rub": 1650,
+            "included": [
+              "child_seat"
+            ],
+            "baggage": "3 мест багажа",
+            "cancel_policy": {
+              "free_until": "2026-11-03T00:40:00+04:00",
+              "penalty_rub": 1650
+            },
+            "times": {
+              "start": "2026-11-04T00:40:00+04:00",
+              "end": "2026-11-04T01:00:00+04:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "transfer:trf_DXB_h_DXB_06_taxi",
+              "gen:transfers@seed42",
+              "formula:road_km=1.3*great_circle",
+              "osm:node/8975092052",
+              "ourairports:OMDB"
+            ]
+          },
+          {
+            "offer_id": "off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+            "kind": "hotel",
+            "item_id": "h_DXB_06",
+            "title": "La Quinta by Wyndham Bur Dubai, стандарт, без питания, невозвратный",
+            "variant": {
+              "title": "La Quinta by Wyndham Bur Dubai",
+              "hotel_name": "La Quinta by Wyndham Bur Dubai",
+              "stars": 4,
+              "rating": 8.3,
+              "city_id": "DXB",
+              "room_id": "h_DXB_06_r1",
+              "room_type": "Стандарт",
+              "tariff_id": "t1",
+              "tariff": "Без питания, невозвратный",
+              "meal": "RO",
+              "refundable": false,
+              "nights": 6,
+              "nightly_rub": [
+                17600,
+                17600,
+                20420,
+                20420,
+                17600,
+                17600
+              ],
+              "dist_beach_km": 1.8,
+              "dist_center_km": 3.5,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 18540,
+            "price_unit": "per_room_night",
+            "units": 6,
+            "total_rub": 111240,
+            "included": [
+              "wifi"
+            ],
+            "baggage": null,
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 111240
+            },
+            "times": {
+              "start": "2026-11-04T15:00:00+04:00",
+              "end": "2026-11-10T12:00:00+04:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "hotel:h_DXB_06",
+              "osm:node/8975092052",
+              "gen:hotels@seed42"
+            ]
+          },
+          {
+            "offer_id": "off_trf_DXB_h_DXB_06_public_202611092235_to_hub_ee9c",
+            "kind": "transfer",
+            "item_id": "trf_DXB_h_DXB_06_public",
+            "title": "Общественный транспорт, 11.5 км, ~55 мин",
+            "variant": {
+              "title": "Общественный транспорт, 11.5 км, ~55 мин",
+              "mode": "public",
+              "provider": "Общественный транспорт",
+              "direction": "to_hub",
+              "hub_id": "DXB",
+              "hotel_id": "h_DXB_06",
+              "distance_km": 11.5,
+              "duration_min": 55,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 190,
+            "price_unit": "per_person",
+            "units": 2,
+            "total_rub": 380,
+            "included": [],
+            "baggage": "3 мест багажа",
+            "cancel_policy": {
+              "free_until": "2026-11-09T22:35:00+04:00",
+              "penalty_rub": 380
+            },
+            "times": {
+              "start": "2026-11-09T22:35:00+04:00",
+              "end": "2026-11-09T23:30:00+04:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "transfer:trf_DXB_h_DXB_06_public",
+              "gen:transfers@seed42",
+              "formula:road_km=1.3*great_circle",
+              "osm:node/8975092052",
+              "ourairports:OMDB"
+            ]
+          },
+          {
+            "offer_id": "off_fl_FZ1759_20261110_light_ee9c",
+            "kind": "flight",
+            "item_id": "fl_FZ1759_20261110",
+            "title": "flydubai FZ 1759",
+            "variant": {
+              "title": "flydubai FZ 1759",
+              "baggage": {
+                "cabin_kg": 10,
+                "checked_pieces": 0,
+                "checked_kg": null
+              },
+              "carrier": "FZ",
+              "carrier_name": "flydubai",
+              "flight_no": "FZ 1759",
+              "fare": "light",
+              "fare_name": "Лайт",
+              "refundable": false,
+              "origin_city": "DXB",
+              "dest_city": "MOW",
+              "from_hub": "DXB",
+              "to_hub": "VKO",
+              "stops": 0,
+              "via": [],
+              "duration_min": 345,
+              "international": true,
+              "extras": []
+            },
+            "capacity": {
+              "adults": 2,
+              "children": 1,
+              "pets": false
+            },
+            "quantity": 1,
+            "unit_price_rub": 21310,
+            "price_unit": "per_person",
+            "units": 3,
+            "total_rub": 63930,
+            "included": [
+              "cabin_bag_10kg"
+            ],
+            "baggage": "10 кг ручной клади, без багажа",
+            "cancel_policy": {
+              "free_until": null,
+              "penalty_rub": 63930
+            },
+            "times": {
+              "start": "2026-11-10T01:30:00+04:00",
+              "end": "2026-11-10T06:15:00+03:00"
+            },
+            "synthetic": true,
+            "source_refs": [
+              "flight:fl_FZ1759_20261110",
+              "gen:flights@seed42",
+              "formula:block_time=distance/750kmh+40min"
+            ]
+          }
+        ],
+        "total_rub": 235430,
+        "checks": [
+          {
+            "kind": "checkin_date",
+            "status": "ok",
+            "text": "Прибытие в отель 04.11 01:00, заезд 04.11.",
+            "options": [],
+            "offer_ids": [
+              "off_h_DXB_06_r1_t1_20261104_20261110_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+              "hotel:h_DXB_06"
+            ]
+          },
+          {
+            "kind": "late_arrival",
+            "status": "ok",
+            "text": "Круглосуточная стойка.",
+            "options": [],
+            "offer_ids": [
+              "off_h_DXB_06_r1_t1_20261104_20261110_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+              "hotel:h_DXB_06"
+            ]
+          },
+          {
+            "kind": "early_arrival",
+            "status": "warn",
+            "text": "Прибытие 01:00, заселение с 15:00: ожидание 14 ч 00 мин.",
+            "options": [
+              "Ждать заселения 14 ч 00 мин",
+              "Оставить багаж на стойке",
+              "Забронировать ночь накануне — номер готов сразу — 18 540 ₽"
+            ],
+            "offer_ids": [
+              "off_h_DXB_06_r1_t1_20261104_20261110_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+              "hotel:h_DXB_06"
+            ]
+          },
+          {
+            "kind": "return_trip",
+            "status": "warn",
+            "text": "Выезд 09.11 22:35 раньше даты выезда 10.11: последняя ночь не используется.",
+            "options": [],
+            "offer_ids": [
+              "off_h_DXB_06_r1_t1_20261104_20261110_ee9c"
+            ],
+            "refs": [
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+              "hotel:h_DXB_06"
+            ]
+          },
+          {
+            "kind": "transfer_fit",
+            "status": "ok",
+            "text": "Трансферы стыкуются с транспортом.",
+            "options": [],
+            "offer_ids": [],
+            "refs": []
+          },
+          {
+            "kind": "capacity",
+            "status": "ok",
+            "text": "Все позиции на 2 взр. и 1 дет.",
+            "options": [],
+            "offer_ids": [],
+            "refs": []
+          },
+          {
+            "kind": "visa",
+            "status": "warn",
+            "text": "ОАЭ: Бесплатная отметка о въезде в аэропорту, до 90 дней. Документы: загранпаспорт (действует не менее 6 месяцев на дату въезда).",
+            "options": [],
+            "offer_ids": [],
+            "refs": [
+              "city:DXB:visa"
+            ]
+          }
+        ],
+        "tradeoffs": [
+          {
+            "text": "flydubai FZ 1758: тариф без багажа, только ручная кладь 10 кг.",
+            "refs": [
+              "offer:off_fl_FZ1758_20261103_light_ee9c"
+            ]
+          },
+          {
+            "text": "Невозвратный тариф отеля: при отмене теряется 111 240 ₽.",
+            "refs": [
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c"
+            ]
+          },
+          {
+            "text": "flydubai FZ 1759: тариф без багажа, только ручная кладь 10 кг.",
+            "refs": [
+              "offer:off_fl_FZ1759_20261110_light_ee9c"
+            ]
+          }
+        ],
+        "risks": [
+          {
+            "text": "Прибытие 01:00, заселение с 15:00: ожидание 14 ч 00 мин.",
+            "refs": [
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+              "hotel:h_DXB_06"
+            ]
+          },
+          {
+            "text": "Выезд 09.11 22:35 раньше даты выезда 10.11: последняя ночь не используется.",
+            "refs": [
+              "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+              "hotel:h_DXB_06"
+            ]
+          },
+          {
+            "text": "Не выполнено пожелание «в пути до 5 ч».",
+            "refs": [
+              "offer:off_fl_FZ1758_20261103_light_ee9c"
+            ]
+          }
+        ]
+      },
+      "assumptions": [
+        "«без долгих перелётов» = до 5 ч в одну сторону"
+      ],
+      "rank": 3,
+      "evidence": [
+        {
+          "ref": "climate:DXB:11.air_temp_day",
+          "value": 31.1,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:DXB:11.air_temp_night",
+          "value": 21.5,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:DXB:11.sea_temp",
+          "value": 28.4,
+          "role": "fit"
+        },
+        {
+          "ref": "climate:DXB:11.rainy_days",
+          "value": 0.4,
+          "role": "fit"
+        },
+        {
+          "ref": "trip:DXB:total_rub",
+          "value": 235430,
+          "label": "Итоговая цена поездки на весь состав (6 ноч.: дорога, трансферы, отель)",
+          "unit": "₽",
+          "kind": "trip_total",
+          "source": "Расчёт build_bundles по каталогу (условия сгенерированы)",
+          "source_refs": [
+            "offer:off_fl_FZ1758_20261103_light_ee9c",
+            "offer:off_trf_DXB_h_DXB_06_taxi_202611040040_to_hotel_ee9c",
+            "offer:off_h_DXB_06_r1_t1_20261104_20261110_ee9c",
+            "offer:off_trf_DXB_h_DXB_06_public_202611092235_to_hub_ee9c",
+            "offer:off_fl_FZ1759_20261110_light_ee9c"
+          ],
+          "synthetic": true,
+          "role": "fit"
+        },
+        {
+          "ref": "trip:DXB:travel_min",
+          "value": 335,
+          "label": "Перелёт в одну сторону, минут",
+          "unit": "мин",
+          "kind": "transport_duration",
+          "source": "Расчёт build_bundles по каталогу (условия сгенерированы)",
+          "source_refs": [
+            "offer:off_fl_FZ1758_20261103_light_ee9c"
+          ],
+          "synthetic": true,
+          "role": "risk"
+        },
+        {
+          "ref": "city:DXB:visa",
+          "value": "безвизовый въезд, до 90 дней",
+          "label": "Въезд для граждан РФ (ОАЭ)",
+          "kind": "visa_rule",
+          "source": "Справочник визовых правил для граждан РФ",
+          "source_refs": [
+            "checked_at:2026-10-23"
+          ],
+          "synthetic": false,
+          "role": "risk"
+        }
+      ]
+    }
+  ],
+  "alternatives": [],
+  "notes": [
+    "Предположение: «без долгих перелётов» = до 5 ч в одну сторону."
+  ],
+  "required_inputs": []
+}

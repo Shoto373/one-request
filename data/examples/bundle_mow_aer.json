@@ -14,7 +14,13 @@
     "budget_hard": false,
     "kinds": [
       "flight"
-    ]
+    ],
+    "max_stops": null,
+    "max_travel_min": null,
+    "limits_hard": false,
+    "dates_hard": false,
+    "date_flex_days": 0,
+    "dest_hard": false
   },
   "bundles": [
     {

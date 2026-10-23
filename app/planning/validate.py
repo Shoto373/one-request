@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from app.catalog.models import Capacity, Hotel, Offer, Party
 from app.catalog.store import Catalog, get_catalog
-from app.planning.models import Check, CheckOption, check_to_wire
+from app.planning.models import Check, CheckOption, check_to_wire, rub
 from app.planning.query import merged_requirements, party_and_budget
 from app.tools.search import flight_offers, hotel_offers, train_offers, transfer_offer
 
@@ -227,10 +227,10 @@ def validate_plan(
         over = total - budget_rub
         if over > 0:
             checks.append(Check(kind="budget", status="block" if budget_hard else "warn",
-                                text=f"Итог {total:,} ₽ выше бюджета на {over:,} ₽.".replace(",", " ")))
+                                text=f"Итог {rub(total)} выше бюджета на {rub(over)}."))
         else:
             checks.append(Check(kind="budget", status="ok",
-                                text=f"Итог {total:,} ₽ в рамках бюджета {budget_rub:,} ₽.".replace(",", " ")))
+                                text=f"Итог {rub(total)} в рамках бюджета {rub(budget_rub)}."))
 
     if h is not None:
         city = cat.cities[h.city_id]
@@ -296,8 +296,7 @@ def availability_checks(cat: Catalog, items: list[Offer], party: Party) -> list[
                                 options=[CheckOption(code="rebuild", text="Пересобрать комплект")]))
         elif now.total_rub != o.total_rub:
             checks.append(Check(kind="availability", status="block", refs=[f"offer:{o.offer_id}"],
-                                text=f"{name}: цена изменилась — было {o.total_rub:,} ₽, стало {now.total_rub:,} ₽."
-                                .replace(",", " "),
+                                text=f"{name}: цена изменилась — было {rub(o.total_rub)}, стало {rub(now.total_rub)}.",
                                 options=[CheckOption(code="rebuild", text="Пересобрать комплект")]))
     if not checks:
         checks.append(Check(kind="availability", status="ok", text="Все предложения актуальны, цены не изменились."))

@@ -39,6 +39,7 @@ USER root
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY tests/ ./tests/
+COPY eval/ ./eval/
 USER 10001
 CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"]
 
