@@ -190,6 +190,78 @@ def _return_checks(legs: Legs, h: Hotel, tz: ZoneInfo) -> list[Check]:
                   text=f"Выезд из отеля {_hm(leave)} — успеваете на обратную дорогу.")]
 
 
+def _capacity_problems(cat: Catalog, o: Offer, party: Party) -> str | None:
+    """Re-check capacity against the catalog object, not only the offer's own label."""
+    name = o.title or o.item_id
+    if o.capacity is None or o.capacity.adults != party.adults or o.capacity.children != party.children:
+        return f"{name}: рассчитано на другой состав"
+    if o.kind == "hotel":
+        h = cat.hotels.get(o.item_id)
+        room = next((r for r in h.rooms if r.id == o.variant.get("room_id")), None) if h else None
+        if room is None:
+            return None
+        with_bed = party.adults + sum(1 for a in party.children_ages if a >= 2)
+        if (party.adults > room.max_adults * o.quantity or party.children > room.max_children * o.quantity
+                or with_bed > room.max_occupancy * o.quantity):
+            return f"{name}: {o.quantity} × «{room.name}» не вмещает {party.people} гостей"
+    if o.kind == "transfer":
+        r = cat.transfers.get(o.item_id)
+        if r is None:
+            return None
+        if r.price_unit == "per_vehicle":
+            if party.people > r.capacity_pax * o.quantity or party.bag_count > r.capacity_bags * o.quantity:
+                return f"{name}: {o.quantity} машин(ы) не вмещают {party.people} чел. и {party.bag_count} мест багажа"
+        elif party.people > r.capacity_pax:
+            return f"{name}: нет мест на {party.people} чел."
+    return None
+
+
+def _capacity_check(cat: Catalog, items: list[Offer], party: Party) -> Check:
+    problems = [(o, p) for o in items if (p := _capacity_problems(cat, o, party))]
+    if problems:
+        return Check(kind="capacity", status="block", refs=[f"offer:{o.offer_id}" for o, _ in problems],
+                     text="; ".join(p for _, p in problems) + ".",
+                     options=[CheckOption(code="more_rooms", text="Добавить номер или машину побольше")])
+    who = f"{party.adults} взр." + (f" и {party.children} дет." if party.children else "")
+    return Check(kind="capacity", status="ok", text=f"Номера и трансферы вмещают {who} и багаж.")
+
+
+def _pet_problem(cat: Catalog, o: Offer, party: Party) -> str | None:
+    """Carrier, hotel and transfer rules from the catalog; every pet must pass all three."""
+    name = o.title or o.item_id
+    for pet in party.pets:
+        if o.kind == "flight":
+            f = cat.flights.get(o.item_id)
+            if f and not ((f.pets.cabin and f.pets.cabin_max_kg and pet.weight_kg <= f.pets.cabin_max_kg) or f.pets.hold):
+                return f"{name}: перевозчик не берёт животное {pet.weight_kg:g} кг" + (f" ({f.pets.note})" if f.pets.note else "")
+        elif o.kind == "train":
+            t = cat.trains.get(o.item_id)
+            car = next((c for c in t.cars if c.car_class == o.variant.get("car_class")), None) if t else None
+            if car and not car.pets_allowed:
+                return f"{name}: в этом вагоне животных не перевозят"
+        elif o.kind == "hotel":
+            h = cat.hotels.get(o.item_id)
+            if h and (not h.pets.allowed or (h.pets.max_weight_kg is not None and pet.weight_kg > h.pets.max_weight_kg)):
+                return f"{name}: отель не принимает животное {pet.weight_kg:g} кг"
+        elif o.kind == "transfer":
+            r = cat.transfers.get(o.item_id)
+            if r and not r.pets_allowed:
+                return f"{name}: трансфер без животных"
+    if o.capacity is not None and not o.capacity.pets:
+        return f"{name}: цена посчитана без животного — сбор за перевозку не учтён"
+    return None
+
+
+def _pets_check(cat: Catalog, items: list[Offer], party: Party) -> Check:
+    problems = [(o, p) for o in items if (p := _pet_problem(cat, o, party))]
+    if problems:
+        return Check(kind="pets", status="block", refs=[f"offer:{o.offer_id}" for o, _ in problems],
+                     text="; ".join(p for _, p in problems) + ".",
+                     options=[CheckOption(code="other_transport", text="Перевозчик, отель и трансфер, которые берут животных")])
+    return Check(kind="pets", status="ok", text="Животное принимают перевозчик, отель и трансферы.",
+                 refs=[f"offer:{o.offer_id}" for o in items])
+
+
 def validate_plan(
     cat: Catalog,
     items: list[Offer],
@@ -210,17 +282,9 @@ def validate_plan(
         checks += _return_checks(legs, h, tz)
     checks += _transfer_checks(legs)
 
-    bad = [o for o in items
-           if o.capacity is None or o.capacity.adults != party.adults or o.capacity.children != party.children]
-    checks.append(Check(kind="capacity", status="block" if bad else "ok", refs=[f"offer:{o.offer_id}" for o in bad],
-                        text="Не все позиции рассчитаны на этот состав." if bad else
-                        f"Все позиции на {party.adults} взр." + (f" и {party.children} дет." if party.children else "")))
-
+    checks.append(_capacity_check(cat, items, party))
     if party.pets:
-        no = [o for o in items if o.capacity is None or not o.capacity.pets]
-        checks.append(Check(kind="pets", status="block" if no else "ok", refs=[f"offer:{o.offer_id}" for o in no],
-                            text="Не все позиции принимают животное." if no else
-                            "Животное принимают перевозчик, отель и трансферы."))
+        checks.append(_pets_check(cat, items, party))
 
     total = sum(o.total_rub for o in items)
     if budget_rub is not None:

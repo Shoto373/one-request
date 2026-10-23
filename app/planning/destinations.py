@@ -386,7 +386,7 @@ def suggest_destinations_for(cat: Catalog, dq: DestinationQuery, limit: int = TO
         best: tuple[Bundle, TripQuery] | None = None
         notes: list[str] = []
         for q in _trip_queries(cat, dq, dest):
-            res = build_trip_bundles(cat, q)
+            res = build_trip_bundles(cat, q, variants=1)
             if res.bundles and (best is None or res.bundles[0].total_rub < best[0].total_rub):
                 best = (res.bundles[0], q)
             notes = notes or res.notes
@@ -433,7 +433,7 @@ def closest_trip_query(cat: Catalog, dq: DestinationQuery, candidates: list[str]
     best: tuple[int, TripQuery] | None = None
     for dest in candidates:
         for q in _trip_queries(cat, dq, dest):
-            res = build_trip_bundles(cat, replace(q, budget_rub=None, budget_hard=False))
+            res = build_trip_bundles(cat, replace(q, budget_rub=None, budget_hard=False), variants=1)
             if res.bundles and (best is None or res.bundles[0].total_rub < best[0]):
                 best = (res.bundles[0].total_rub, q)
     if best is not None:

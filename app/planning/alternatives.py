@@ -55,7 +55,7 @@ class Change:
 
 def _cheapest(cat: Catalog, q: TripQuery) -> Bundle | None:
     """Cheapest feasible bundle with the budget ignored (budget is accounted separately)."""
-    res = build_trip_bundles(cat, replace(q, budget_rub=None, budget_hard=False))
+    res = build_trip_bundles(cat, replace(q, budget_rub=None, budget_hard=False), variants=1)
     return res.bundles[0] if res.bundles else None
 
 
@@ -136,7 +136,7 @@ def candidate_changes(cat: Catalog, q: TripQuery) -> list[Change]:
 
 def is_satisfied(cat: Catalog, q: TripQuery) -> bool:
     """A feasible bundle exists and fits the budget (a soft budget only warns in the bundle)."""
-    res = build_trip_bundles(cat, q)
+    res = build_trip_bundles(cat, q, variants=1)
     if not res.bundles:
         return False
     return q.budget_rub is None or res.bundles[0].total_rub <= q.budget_rub
