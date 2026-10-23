@@ -1,0 +1,10 @@
+.git
+.env
+plan
+Контекст
+**/node_modules
+web/dist
+**/__pycache__
+**/.pytest_cache
+.venv
+pipeline/.cache
