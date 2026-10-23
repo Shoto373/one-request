@@ -70,10 +70,20 @@ class Bundle(Model):
         return all(c.status != "block" for c in self.checks)
 
 
+def rub(n: int) -> str:
+    """12 345 ₽ — thousands separated by a space; never touches the surrounding text."""
+    return f"{n:,} ₽".replace(",", " ")
+
+
+CHECK_KIND_RU = {
+    "checkin_date": "дата заезда", "early_arrival": "раннее прибытие", "late_arrival": "ночное прибытие и стойка",
+    "transfer_fit": "трансфер", "return_trip": "обратная дорога", "capacity": "вместимость", "pets": "животное",
+    "budget": "бюджет", "visa": "виза", "availability": "наличие",
+}
+
+
 def option_text(o: CheckOption) -> str:
-    if o.price_rub:
-        return f"{o.text} — {o.price_rub:,} ₽".replace(",", " ")
-    return o.text
+    return f"{o.text} — {rub(o.price_rub)}" if o.price_rub else o.text
 
 
 def check_to_wire(c: Check) -> dict[str, Any]:

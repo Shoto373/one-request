@@ -29,6 +29,12 @@ class TripQuery:
     budget_rub: int | None = None
     budget_hard: bool = False
     kinds: tuple[TransportKind, ...] = ("flight", "train")
+    max_stops: int | None = None  # "без пересадок" -> 0
+    max_travel_min: int | None = None  # "без долгих перелётов" -> one-way limit
+    limits_hard: bool = False  # soft limits fall back to any transport (with a note)
+    dates_hard: bool = False  # alternatives never move hard dates without consent
+    date_flex_days: int = 0  # user-stated flexibility: shifts within it need no consent
+    dest_hard: bool = False
 
 
 # Forms an LLM or a user may leave unnormalized; stems below cover most case endings.
@@ -188,6 +194,47 @@ def parse_kinds(value: Any) -> tuple[TransportKind, ...] | None:
     return None
 
 
+def parse_transport(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple[TransportKind, ...]:
+    """Soft/assumed transport preferences rank results; only a hard transport requirement filters."""
+    transport_key, transport_value = _pick(req, "transport", "transport_mode", "transport_type", "by")
+    if transport_key and kinds_by_key.get(transport_key) == "hard":
+        return parse_kinds(transport_value) or ("flight", "train")
+    return ("flight", "train")
+
+
+def requirement_text(req: dict[str, Any]) -> str:
+    """All keys and values as one lowercase string, for keyword preferences."""
+    return " ".join(f"{k} {v}" for k, v in req.items()).lower().replace("ё", "е")
+
+
+LONG_TRAVEL_DEFAULT_MIN = 300  # "без долгих перелётов" without a number: up to 5 hours one way
+
+
+def parse_travel_limits(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple[int | None, int | None, bool]:
+    """(max_stops, max_travel_min, hard) from explicit numbers or phrases."""
+    text = requirement_text(req)
+    key, value = _pick(req, "max_duration_min")
+    max_min = parse_int(value) if value is not None else None
+    if max_min is None:
+        key, value = _pick(req, "max_flight_hours", "max_travel_hours", "flight_hours", "max_flight_duration",
+                           "travel_time", "flight_duration")
+        hours = parse_int(value) if value is not None else None
+        max_min = hours * 60 if hours else None
+    hard = bool(key and kinds_by_key.get(key) == "hard")
+    if max_min is None and str(req.get("travel_time_preference", "")).lower() in ("short", "короткий", "короткие"):
+        max_min = LONG_TRAVEL_DEFAULT_MIN
+    if max_min is None and re.search(r"без долг\w* (перел|дорог|поезд)|короткий перел|недолг\w* перел|short flight", text):
+        max_min = LONG_TRAVEL_DEFAULT_MIN
+    stops_key, stops_value = _pick(req, "max_stops", "stops", "direct", "direct_flight", "no_transfers")
+    max_stops = None
+    if stops_key in ("max_stops", "stops"):
+        max_stops = parse_int(stops_value)
+    elif stops_key or re.search(r"без пересад|прям\w* рейс|direct", text):
+        max_stops = 0
+    hard = hard or bool(stops_key and kinds_by_key.get(stops_key) == "hard")
+    return max_stops, max_min, hard
+
+
 def _items(state: Any) -> list[tuple[str, Any, str]]:
     """(key, value, kind) from a TripState model or its JSON dict."""
     reqs = getattr(state, "requirements", None)
@@ -221,6 +268,9 @@ def party_and_budget(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple
     adults = parse_int(_pick(req, "adults", "adults_count", "travelers", "people")[1]) or 1
     children = parse_children(_pick(req, "children_ages", "children", "kids", "child_age", "children_count")[1])
     pets = parse_pets(_pick(req, "pets", "pet", "animals", "with_pet", "dog")[1])
+    weight = parse_int(req.get("pet_weight_kg"))
+    if pets and weight:
+        pets = [p.model_copy(update={"weight_kg": float(weight)}) for p in pets]
     party = Party(adults=max(1, min(adults, 9)), children_ages=children, pets=pets)
     budget_key, budget_value = _pick(req, "budget_total_rub", "budget_per_person_rub", "budget_rub", "budget", "max_budget", "budget_total")
     budget = parse_budget(budget_value)
@@ -238,7 +288,8 @@ def query_from_requirements(
     problems = []
 
     origin = resolve_city(cat, _pick(req, "origin", "origin_city", "from", "departure_city")[1])
-    dest = resolve_city(cat, _pick(req, "destination", "dest", "destination_city", "to", "city")[1])
+    dest_key, dest_value = _pick(req, "destination", "dest", "destination_city", "to", "city")
+    dest = resolve_city(cat, dest_value)
     if origin is None:
         problems.append(f"Город отправления не распознан: {req.get('origin')!r}.")
     elif "origin" not in cat.cities[origin].roles:
@@ -248,7 +299,8 @@ def query_from_requirements(
     elif "destination" not in cat.cities[dest].roles:
         problems.append(f"{cat.cities[dest].name} пока не направление каталога.")
 
-    dates = parse_dates(_pick(req, "dates", "date_range", "trip_dates")[1])
+    dates_key, dates_value = _pick(req, "dates", "date_range", "trip_dates")
+    dates = parse_dates(dates_value)
     if dates is None:
         start = _to_date(_pick(req, "depart_date", "date_from", "start_date", "checkin")[1])
         end = _to_date(_pick(req, "return_date", "date_to", "end_date", "checkout")[1])
@@ -261,13 +313,8 @@ def query_from_requirements(
     elif dates[1] <= dates[0]:
         problems.append("Дата обратной дороги раньше даты отправления.")
 
-    transport_key, transport_value = _pick(req, "transport", "transport_mode", "transport_type", "by")
-    # Soft/assumed transport preferences rank results; only an explicitly hard
-    # transport requirement filters the search space.
-    if transport_key and kinds_by_key.get(transport_key) == "hard":
-        kinds = parse_kinds(transport_value) or ("flight", "train")
-    else:
-        kinds = ("flight", "train")
+    kinds = parse_transport(req, kinds_by_key)
+    max_stops, max_travel_min, limits_hard = parse_travel_limits(req, kinds_by_key)
 
     if problems:
         return None, problems
@@ -278,4 +325,7 @@ def query_from_requirements(
     return TripQuery(
         origin_city=origin, dest_city=dest, depart_date=dates[0], return_date=dates[1], party=party,
         budget_rub=budget, budget_hard=hard, kinds=kinds,
+        max_stops=max_stops, max_travel_min=max_travel_min, limits_hard=limits_hard,
+        dates_hard=kinds_by_key.get(dates_key) == "hard", dest_hard=kinds_by_key.get(dest_key) == "hard",
+        date_flex_days=parse_int(req.get("date_flex_days")) or 0,
     ), []
