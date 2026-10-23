@@ -19,6 +19,7 @@ from app.catalog.store import Catalog
 from app.planning.alternatives import minimal_changes
 from app.planning.build import build_trip_bundles
 from app.planning.models import Bundle, Claim, bundle_to_wire
+from app.planning.models import rub as _rub
 from app.planning.query import (
     TransportKind,
     TripQuery,
@@ -107,10 +108,6 @@ class DestinationResult:
 
 def _clamp(x: float) -> float:
     return max(0.0, min(1.0, x))
-
-
-def _rub(n: int) -> str:
-    return f"{n:,} ₽".replace(",", " ")
 
 
 def _hours(minutes: int) -> str:

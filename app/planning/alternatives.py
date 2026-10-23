@@ -17,15 +17,11 @@ from typing import Any
 
 from app.catalog.store import Catalog
 from app.planning.build import build_trip_bundles, limits_text
-from app.planning.models import Bundle, bundle_to_wire
+from app.planning.models import Bundle, bundle_to_wire, rub
 from app.planning.query import TripQuery
 
 DATE_SHIFTS = (1, -1, 2, -2, 3, -3)
 MAX_SHORTER_NIGHTS = 3
-
-
-def rub(n: int) -> str:
-    return f"{n:,} ₽".replace(",", " ")
 
 
 def plural_days(n: int) -> str:

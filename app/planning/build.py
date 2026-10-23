@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 
 from app.catalog.models import Offer
 from app.catalog.store import Catalog, get_catalog
-from app.planning.models import Bundle, Check, Claim, bundle_to_wire
+from app.planning.models import CHECK_KIND_RU, Bundle, Check, Claim, bundle_to_wire, rub
 from app.planning.query import TripQuery, query_from_requirements
 from app.planning.validate import DEPART_BUFFER_MIN, EXIT_MIN, hub_class, validate_plan
 from app.tools.search import search_hotels, search_transfers, search_transport
@@ -64,8 +64,8 @@ def _tradeoffs(items: list[Offer]) -> list[Claim]:
     for o in items:
         ref = [f"offer:{o.offer_id}"]
         if o.kind == "hotel" and not o.variant.get("refundable"):
-            out.append(Claim(text=f"Невозвратный тариф отеля: при отмене теряется {o.cancel_policy.penalty_rub:,} ₽."
-                             .replace(",", " "), refs=ref))
+            out.append(Claim(text=f"Невозвратный тариф отеля: при отмене теряется {rub(o.cancel_policy.penalty_rub)}.",
+                             refs=ref))
         bag = o.variant.get("baggage") or {}
         if o.kind == "flight" and bag and not bag.get("checked_pieces"):
             out.append(Claim(text=f"{o.variant['title']}: тариф без багажа, только ручная кладь {bag['cabin_kg']} кг.",
@@ -159,7 +159,10 @@ def _build(cat: Catalog, q: TripQuery, limited: bool) -> BuildResult:
                      + (" с животным." if q.party.pets else "."))
     if best is None:
         if blocks:
-            notes.append("Все сочетания не прошли проверку: " + ", ".join(f"{k} ×{n}" for k, n in blocks.most_common()))
+            # Two check-in dates are tried around midnight arrivals; the wrong one always fails "checkin_date".
+            kinds = [k for k, _ in blocks.most_common() if k != "checkin_date" or len(blocks) == 1]
+            reasons = ", ".join(CHECK_KIND_RU.get(k, k) for k in kinds)
+            notes.append(f"Ни одно сочетание транспорта и отеля не прошло проверку ({reasons}).")
         return BuildResult([], notes, cheapest_total_rub=cheapest_any)
 
     total, items, checks = best
@@ -202,6 +205,5 @@ def explain_no_bundles(requirements: dict[str, Any], state: Any = None) -> list[
     notes = list(result.notes)
     if query.budget_rub is not None and result.cheapest_total_rub and result.cheapest_total_rub > query.budget_rub:
         diff = result.cheapest_total_rub - query.budget_rub
-        notes.append(f"Самый дешёвый вариант — {result.cheapest_total_rub:,} ₽, это на {diff:,} ₽ больше бюджета."
-                     .replace(",", " "))
+        notes.append(f"Самый дешёвый вариант — {rub(result.cheapest_total_rub)}, это на {rub(diff)} больше бюджета.")
     return notes
