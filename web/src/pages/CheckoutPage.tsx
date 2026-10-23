@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, ApiError } from '../api/client'
-import { Checks, OfferRow, SyntheticBadge } from '../components/BundleCard'
+import { Checks, OfferRow, SyntheticBadge, attachChecks } from '../components/BundleCard'
 import Icon from '../components/Icon'
 import { rub } from '../lib/format'
 
@@ -16,11 +16,23 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState('')
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState<{ code: string; message: string } | null>(null)
+  // C4: следим, не ушёл ли план вперёд, пока пользователь на странице оплаты
+  const sessionId = cart?.snapshot.session_id
+  const { data: live } = useQuery({
+    queryKey: ['session-version', sessionId],
+    queryFn: () => api.getSession(sessionId!),
+    enabled: !!sessionId && cart?.status === 'open',
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+  })
 
   if (isLoading) return <div className="p-6 text-sm text-ink-muted">Загрузка…</div>
   if (error || !cart) return <div className="p-6 text-sm text-bad">Корзина не найдена</div>
 
   const b = cart.snapshot.bundle
+  const { byOffer, general } = attachChecks(b)
+  const liveVersion = live?.state.version
+  const stale = cart.status === 'open' && liveVersion != null && liveVersion !== cart.snapshot.version
 
   const pay = async (e: FormEvent) => {
     e.preventDefault()
@@ -55,12 +67,14 @@ export default function CheckoutPage() {
             </div>
             <ol className="px-4 pt-4">
               {b.items.map((o, i) => (
-                <OfferRow key={o.offer_id + i} o={o} last={i === b.items.length - 1} markSynthetic={false} />
+                <OfferRow key={o.offer_id + i} o={o} last={i === b.items.length - 1} markSynthetic={false} checks={byOffer.get(o.offer_id)} />
               ))}
             </ol>
-            <div className="border-t border-black/[.05] bg-canvas/50 p-4">
-              <Checks checks={b.checks} />
-            </div>
+            {general.length > 0 && (
+              <div className="border-t border-black/[.05] bg-canvas/50 p-4">
+                <Checks checks={general} />
+              </div>
+            )}
           </div>
         </section>
 
@@ -86,6 +100,16 @@ export default function CheckoutPage() {
                   <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ivan@example.com"
                     className="w-full rounded-2xl border border-black/10 px-4 py-3 text-[15px] outline-none transition focus:border-brand focus:shadow-lift" />
                 </label>
+                {stale && (
+                  <div className="flex gap-2.5 rounded-xl bg-warn-bg p-3 text-sm text-[#8a4b00]">
+                    <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                      <b>План обновился</b> (версия {cart.snapshot.version} → {liveVersion}). Оплатить устаревший нельзя —
+                      проверьте новую версию и оформите её.
+                      <Link to="/" className="mt-1 block font-semibold underline">Открыть актуальный план</Link>
+                    </div>
+                  </div>
+                )}
                 {payError && (
                   <div className="rounded-xl bg-bad-bg p-3 text-sm text-bad">
                     {payError.message}
@@ -94,7 +118,7 @@ export default function CheckoutPage() {
                     )}
                   </div>
                 )}
-                <button type="submit" disabled={paying} className="btn-primary w-full py-3.5 text-base">
+                <button type="submit" disabled={paying || stale} className="btn-primary w-full py-3.5 text-base">
                   {paying ? 'Оплачиваю…' : `Оплатить ${rub(cart.total_rub)}`}
                 </button>
               </form>

@@ -1,5 +1,8 @@
-import type { DestinationOption, ProposedChange, Requirement, Stage, TripState } from '../api/types'
+import type { Bundle, DestinationOption, ProposedChange, Requirement, Stage, TripState } from '../api/types'
+import type { PlanDiff } from '../lib/diff'
 import BundleCard from './BundleCard'
+import CompareTable from './CompareTable'
+import ReplanDiff from './ReplanDiff'
 import { Destinations, NoOptions } from './Destinations'
 import Icon from './Icon'
 import Requirements from './Requirements'
@@ -44,13 +47,19 @@ interface Props {
   onConfirmRequirement: (r: Requirement) => void
   onSelectDestination: (d: DestinationOption) => void
   onApplyChange: (r: ProposedChange) => void
+  onSelectBundle: (b: Bundle) => void
   onCheckout: (bundleId: string) => void
+  diff: PlanDiff | null
+  onCloseDiff: () => void
 }
 
 export default function TripCanvas(p: Props) {
   const s = p.state
   const noOptions = !!s?.proposed_changes?.length
   const empty = !s?.requirements.length && !s?.bundles.length && !s?.destinations.length && !noOptions
+  const selectedId = s?.selected_bundle_id ?? null
+  // выбранный комплект — первым
+  const bundles = [...(s?.bundles ?? [])].sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId))
 
   return (
     <div className="h-full overflow-y-auto">
@@ -75,15 +84,27 @@ export default function TripCanvas(p: Props) {
 
             {!!s?.destinations.length && <Destinations items={s.destinations} busy={p.busy} onSelect={p.onSelectDestination} />}
 
-            {!!s?.bundles.length && (
+            {p.diff && !!s?.bundles.length && <ReplanDiff diff={p.diff} onClose={p.onCloseDiff} />}
+
+            {bundles.length > 1 && (
+              <CompareTable
+                bundles={s!.bundles}
+                requirements={s!.requirements}
+                selectedId={selectedId}
+                busy={p.busy}
+                onSelect={p.onSelectBundle}
+              />
+            )}
+
+            {bundles.length > 0 && (
               <section>
                 <div className="mb-3 flex items-baseline justify-between gap-3">
-                  <h2 className="text-[17px] font-bold">Комплекты поездки</h2>
+                  <h2 className="text-[17px] font-bold">{selectedId ? 'Ваша поездка по шагам' : 'Комплекты поездки по шагам'}</h2>
                   <span className="hidden text-xs text-ink-muted sm:inline">дорога туда и обратно, трансферы и отель — проверены вместе</span>
                 </div>
                 <div className="grid gap-4 xl:grid-cols-2">
-                  {s.bundles.map((b, i) => (
-                    <BundleCard key={b.id} bundle={b} best={i === 0 && s.bundles.length > 1} checkoutBusy={p.checkoutBusyId === b.id} onCheckout={() => p.onCheckout(b.id)} />
+                  {bundles.map((b) => (
+                    <BundleCard key={b.id} bundle={b} selected={b.id === selectedId} checkoutBusy={p.checkoutBusyId === b.id} onCheckout={() => p.onCheckout(b.id)} />
                   ))}
                 </div>
               </section>

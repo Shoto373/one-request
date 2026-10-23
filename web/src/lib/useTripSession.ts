@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { ChatMessage, CommandIn, StreamEvent, TraceStep, TripState } from '../api/types'
+import { diffPlans, type PlanDiff } from './diff'
 
 const KEY = 'trip_session_id'
 
@@ -53,10 +54,20 @@ export function useTripSession() {
   const [trace, setTrace] = useState<TraceStep[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** последняя пересборка: что сохранено, что заменено */
+  const [diff, setDiff] = useState<PlanDiff | null>(null)
   const versionRef = useRef(0)
+  const stateRef = useRef<TripState | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const apply = useCallback((s: TripState) => {
+    const prev = stateRef.current
+    if (prev && prev.session_id === s.session_id && prev.version !== s.version) {
+      const d = diffPlans(prev, s)
+      if (d) setDiff(d)
+      else if (!s.bundles.length) setDiff(null)
+    }
+    stateRef.current = s
     versionRef.current = s.version
     setState(s)
   }, [])
@@ -96,6 +107,8 @@ export function useTripSession() {
       setMessages([])
       setSteps([])
       setTrace([])
+      setDiff(null)
+      stateRef.current = null
       await reload(created.session_id).catch(() => undefined)
     } catch (e) {
       setError(e instanceof ApiError ? `Агент недоступен: ${e.message}` : 'Агент недоступен — бэкенд ещё не отвечает')
@@ -172,7 +185,7 @@ export function useTripSession() {
     }), [run, sessionId, onEvent, chat])
 
   return {
-    sessionId, state, messages, steps, trace, busy, error,
+    sessionId, state, messages, steps, trace, busy, error, diff, clearDiff: () => setDiff(null),
     send, act, restart: () => start(true), setError,
   }
 }
