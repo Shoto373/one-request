@@ -53,7 +53,7 @@ async def test_full_request_calls_builder_and_saves_explicit_year_assumption():
     assert next(r for r in state.requirements if r.key == "travel_year").kind == "assumption"
     assert next(r for r in state.requirements if r.key == "dates").value == {"start": "2026-11-10", "end": "2026-11-17"}
     assert "1 комплект" in reply
-    assert [x["name"] for x in trace] == ["parse_request", "build_bundles", "build_bundles_result", "state_diff"]
+    assert [x["name"] for x in trace] == ["parse_request", "build_bundles", "explain_bundle", "build_bundles_result", "state_diff"]
 
 
 @pytest.mark.asyncio

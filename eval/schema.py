@@ -34,7 +34,7 @@ class ExpectedRequirement(BaseModel):
 
 class ScenarioExpected(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    final_stage: Literal["clarify", "inspire", "select"]
+    final_stage: Literal["clarify", "inspire", "select", "compare", "assemble", "checkout"]
     requirements: list[ExpectedRequirement] = Field(default_factory=list)
     max_questions_per_turn: int = Field(default=2, ge=0, le=2)
     checks: list[str] = Field(min_length=1)
@@ -42,7 +42,7 @@ class ScenarioExpected(BaseModel):
 
 class Scenario(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    id: str = Field(pattern=r"^s2_[0-9]{2}_[a-z0-9_]+$")
+    id: str = Field(pattern=r"^s[23]_[0-9]{2}_[a-z0-9_]+$")
     description: str = Field(min_length=8)
     now: datetime
     timezone: str = Field(min_length=3)

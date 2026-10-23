@@ -69,6 +69,7 @@ class CommandRequest(BaseModel):
             "select_destination": {"destination_id"},
             "accept_alternative": {"alternative_id"},
             "select_bundle": {"bundle_id"},
+            "request_checkout": set(),
         }
         if self.type not in required:
             raise ValueError(f"unsupported command type: {self.type}")

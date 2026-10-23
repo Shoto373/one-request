@@ -102,6 +102,21 @@ def test_plan_changed_after_cart(client):
     assert r.status_code == 409 and r.json()["detail"]["code"] == "plan_changed"
 
 
+def test_cart_from_pre_replan_version_cannot_be_paid(client):
+    sid = make_session(version=3)
+    cart = new_cart(client, sid, version=3).json()
+    with psycopg.connect(DATABASE_URL) as c:
+        row = c.execute("SELECT state FROM sessions WHERE id=%s", (sid,)).fetchone()
+        state = row[0]
+        state["version"] = 4
+        state["stage"] = "select"
+        state["requirements"].append({"key": "pets", "value": {"kind": "dog"}, "kind": "hard", "source": "user_text"})
+        state["bundles"] = [bundle("b2")]
+        c.execute("UPDATE sessions SET state=%s, version=4 WHERE id=%s", (Jsonb(state), sid))
+    response = pay(client, cart["cart_id"])
+    assert response.status_code == 409 and response.json()["detail"]["code"] == "plan_changed"
+
+
 def test_double_pay_same_key_one_order(client):
     cart = new_cart(client, make_session()).json()
     key = "key-" + uuid.uuid4().hex

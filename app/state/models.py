@@ -24,10 +24,13 @@ class Claim(BaseModel):
 
 
 class Check(BaseModel):
+    id: str | None = None
     kind: str
     status: Literal["ok", "warn", "block"]
     text: str
     options: list[str] = Field(default_factory=list)
+    refs: list[str] = Field(default_factory=list)
+    offer_ids: list[str] = Field(default_factory=list)
 
 
 class Bundle(BaseModel):
@@ -36,6 +39,7 @@ class Bundle(BaseModel):
     items: list[Offer] = Field(default_factory=list)
     total_rub: int | float
     checks: list[Check] = Field(default_factory=list)
+    advantages: list[Claim] = Field(default_factory=list)
     tradeoffs: list[Claim] = Field(default_factory=list)
     risks: list[Claim] = Field(default_factory=list)
 
@@ -53,6 +57,17 @@ class HistoryEntry(BaseModel):
     kept: list[str] = Field(default_factory=list)
     replaced: list[str] = Field(default_factory=list)
     price_delta_rub: int | float | None = None
+    reasons: list[str] = Field(default_factory=list)
+    item_reasons: dict[str, str] = Field(default_factory=dict)
+    previous_bundle: dict[str, Any] | None = None
+    resulting_bundle_id: str | None = None
+
+
+class PendingReplan(BaseModel):
+    status: Literal["stale_source"] = "stale_source"
+    source_bundle: Bundle
+    previous_requirements: list[Requirement] = Field(default_factory=list)
+    change: str = ""
 
 
 class TripState(BaseModel):
@@ -69,6 +84,7 @@ class TripState(BaseModel):
     selected_destination_id: str | None = None
     bundles: list[Bundle] = Field(default_factory=list)
     selected_bundle_id: str | None = None
+    pending_replan: PendingReplan | None = None
     history: list[HistoryEntry] = Field(default_factory=list)
 
 
