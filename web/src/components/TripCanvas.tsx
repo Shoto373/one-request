@@ -1,6 +1,8 @@
-import type { Requirement, Stage, TripState } from '../api/types'
-import { REQ_KIND } from '../lib/format'
+import type { DestinationOption, Relaxation, Requirement, Stage, TripState } from '../api/types'
 import BundleCard from './BundleCard'
+import { Destinations, NoOptions } from './Destinations'
+import Icon from './Icon'
+import Requirements from './Requirements'
 
 const STAGES: { key: Stage; label: string }[] = [
   { key: 'clarify', label: 'Уточнение' },
@@ -9,109 +11,110 @@ const STAGES: { key: Stage; label: string }[] = [
   { key: 'compare', label: 'Сравнение' },
   { key: 'assemble', label: 'Сборка' },
   { key: 'checkout', label: 'Оформление' },
-  { key: 'booked', label: 'Куплено' },
+  { key: 'booked', label: 'Готово' },
 ]
 
-function reqText(r: Requirement): string {
-  if (r.label) return r.label
-  return `${r.key}: ${typeof r.value === 'object' ? JSON.stringify(r.value) : String(r.value)}`
+function Stepper({ stage }: { stage?: Stage }) {
+  const idx = Math.max(0, STAGES.findIndex((s) => s.key === stage))
+  return (
+    <ol className="flex items-center gap-1 overflow-x-auto pb-1 text-[12px] font-medium">
+      {STAGES.map((s, i) => (
+        <li key={s.key} className="flex shrink-0 items-center gap-1">
+          <span
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 ${
+              i === idx ? 'bg-brand text-white shadow-lift' : i < idx ? 'bg-brand-light text-brand' : 'bg-white text-ink-muted'
+            }`}
+          >
+            {i < idx ? <Icon name="check" className="h-3.5 w-3.5" strokeWidth={2.6} /> : <span className="tabular-nums">{i + 1}</span>}
+            {s.label}
+          </span>
+          {i < STAGES.length - 1 && <span className={`h-px w-3 ${i < idx ? 'bg-brand/40' : 'bg-black/10'}`} />}
+        </li>
+      ))}
+    </ol>
+  )
 }
 
 interface Props {
   state: TripState | null
   busy: boolean
   checkoutBusyId: string | null
-  onRemoveRequirement: (key: string) => void
+  onEditRequirement: (r: Requirement, text: string) => void
+  onRemoveRequirement: (r: Requirement) => void
+  onConfirmRequirement: (r: Requirement) => void
+  onSelectDestination: (d: DestinationOption) => void
+  onApplyRelaxation: (r: Relaxation) => void
   onCheckout: (bundleId: string) => void
 }
 
-export default function TripCanvas({ state, busy, checkoutBusyId, onRemoveRequirement, onCheckout }: Props) {
-  const stageIdx = STAGES.findIndex((s) => s.key === state?.stage)
+export default function TripCanvas(p: Props) {
+  const s = p.state
+  const noOptions = !!(s?.relaxations?.length || s?.no_options_reasons?.length)
+  const empty = !s?.requirements.length && !s?.bundles.length && !s?.destinations.length && !noOptions
 
   return (
-    <div className="h-full space-y-5 overflow-y-auto p-5">
-      <ol className="flex flex-wrap gap-1 text-[11px]">
-        {STAGES.map((s, i) => (
-          <li
-            key={s.key}
-            className={`rounded-full px-2.5 py-1 ${
-              i === stageIdx ? 'bg-brand text-white' : i < stageIdx ? 'bg-brand-light text-brand' : 'bg-slate-100 text-slate-400'
-            }`}
-          >
-            {s.label}
-          </li>
-        ))}
-      </ol>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-page space-y-5 p-4 md:p-6">
+        <Stepper stage={s?.stage} />
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">Что агент понял</h2>
-        {!state?.requirements.length ? (
-          <p className="text-sm text-slate-400">Пока ничего — напишите, какую поездку хотите.</p>
+        {empty ? (
+          <EmptyCanvas />
         ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {state.requirements.map((r) => {
-              const k = REQ_KIND[r.kind]
-              return (
-                <span
-                  key={r.key}
-                  className={`group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${k.cls}`}
-                  title={`${k.label}. ${k.hint}${r.quote ? `\nИз вашего сообщения: «${r.quote}»` : ''}`}
-                >
-                  {reqText(r)}
-                  {r.kind !== 'hard' && (
-                    <button
-                      onClick={() => onRemoveRequirement(r.key)}
-                      disabled={busy}
-                      className="opacity-50 hover:opacity-100 disabled:opacity-20"
-                      aria-label="Убрать"
-                      title="Убрать — агент перепроверит план"
-                    >
-                      ×
-                    </button>
-                  )}
-                </span>
-              )
-            })}
-          </div>
+          <>
+            <Requirements
+              requirements={s?.requirements ?? []}
+              busy={p.busy}
+              onEdit={p.onEditRequirement}
+              onRemove={p.onRemoveRequirement}
+              onConfirm={p.onConfirmRequirement}
+            />
+
+            {noOptions && (
+              <NoOptions reasons={s?.no_options_reasons ?? []} relaxations={s?.relaxations ?? []} busy={p.busy} onApply={p.onApplyRelaxation} />
+            )}
+
+            {!!s?.destinations.length && <Destinations items={s.destinations} busy={p.busy} onSelect={p.onSelectDestination} />}
+
+            {!!s?.bundles.length && (
+              <section>
+                <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <h2 className="text-[17px] font-bold">Комплекты поездки</h2>
+                  <span className="hidden text-xs text-ink-muted sm:inline">дорога туда и обратно, трансферы и отель — проверены вместе</span>
+                </div>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {s.bundles.map((b, i) => (
+                    <BundleCard key={b.id} bundle={b} best={i === 0 && s.bundles.length > 1} checkoutBusy={p.checkoutBusyId === b.id} onCheckout={() => p.onCheckout(b.id)} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
-        <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
-          {(['hard', 'soft', 'assumption'] as const).map((k) => (
-            <span key={k} className="inline-flex items-center gap-1">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full border ${REQ_KIND[k].cls}`} />
-              {REQ_KIND[k].label}
-            </span>
-          ))}
+      </div>
+    </div>
+  )
+}
+
+function EmptyCanvas() {
+  const steps = [
+    { icon: 'sparkle' as const, title: 'Поймёт запрос', text: 'Отделит ваши требования от своих догадок и спросит только главное' },
+    { icon: 'sun' as const, title: 'Предложит, куда', text: 'Погода, цена поездки целиком, время в пути и виза — по каждому месту' },
+    { icon: 'shield' as const, title: 'Проверит стыковки', text: 'Прилёт, трансфер и заселение, обратная дорога — до оплаты' },
+    { icon: 'wallet' as const, title: 'Соберёт в один заказ', text: 'Перелёт или поезд, трансферы и отель — одной оплатой' },
+  ]
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {steps.map((s, i) => (
+        <div key={s.title} className="card flex gap-3 p-4">
+          <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${i === 0 ? 'guru-gradient text-white' : 'bg-brand-light text-brand'}`}>
+            <Icon name={s.icon} className="h-5 w-5" />
+          </span>
+          <div>
+            <div className="font-semibold">{s.title}</div>
+            <div className="text-sm text-ink-grey">{s.text}</div>
+          </div>
         </div>
-      </section>
-
-      {state?.open_questions.length ? (
-        <section className="rounded-lg border border-brand/30 bg-brand-light p-3 text-sm">
-          <div className="mb-1 font-medium text-brand-dark">Агенту нужно уточнить</div>
-          {state.open_questions.map((q) => (
-            <div key={q.key}>
-              {q.question} <span className="text-xs text-slate-500">— {q.why}</span>
-            </div>
-          ))}
-        </section>
-      ) : null}
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-700">Комплекты поездки</h2>
-        {!state?.bundles.length ? (
-          <p className="text-sm text-slate-400">Здесь появятся проверенные комплекты: дорога туда и обратно, трансферы и отель.</p>
-        ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {state.bundles.map((b) => (
-              <BundleCard
-                key={b.id}
-                bundle={b}
-                checkoutBusy={checkoutBusyId === b.id}
-                onCheckout={() => onCheckout(b.id)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      ))}
     </div>
   )
 }

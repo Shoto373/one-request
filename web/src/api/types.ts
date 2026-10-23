@@ -51,6 +51,7 @@ export interface OpenQuestion {
   key: string
   question: string
   why: string
+  /** быстрые ответы кнопками (спринт 2, B); нет — только свободный текст */
   options?: string[]
 }
 
@@ -70,6 +71,7 @@ export interface Check {
   text: string
   options?: string[]
   offer_ids?: string[]
+  refs?: string[]
 }
 
 export interface Bundle {
@@ -82,15 +84,41 @@ export interface Bundle {
   risks: Claim[]
 }
 
-/** формат направлений ещё не зафиксирован (спринт 2) — в бэкенде пока dict */
+/**
+ * Направление-кандидат (спринт 2, A suggest_destinations → B state.destinations).
+ * Обязательны id и name; остальное фронт показывает, если пришло.
+ */
 export interface DestinationOption {
-  id: string
-  name?: string
+  id: string // IATA города: AYT, SSH, DXB
+  name: string
+  country?: string
   feasible?: boolean
+  /** оценка поездки целиком на весь состав, ₽ */
   est_total_rub?: number
+  /** погода в месяц поездки */
+  climate?: { month: number; air_temp_day?: number; sea_temp?: number | null; rainy_days?: number }
+  /** дорога в одну сторону */
+  travel?: { kind: 'flight' | 'train'; minutes: number; direct?: boolean }
+  visa?: { regime: 'domestic' | 'visa_free' | 'visa_on_arrival' | 'evisa' | 'visa_required'; note?: string }
+  tags?: string[]
   why?: Claim[]
   risks?: Claim[]
   [k: string]: unknown
+}
+
+/**
+ * «Под все условия вариантов нет — вот минимальные изменения» (спринт 2, A3).
+ * Жёсткие требования сами не ослабляются: пользователь выбирает изменение кнопкой.
+ */
+export interface Relaxation {
+  id: string
+  /** что меняем: «Бюджет до 360 000 ₽», «Вылет 13 ноября» */
+  text: string
+  /** какое требование трогаем */
+  key: string
+  value?: unknown
+  est_total_rub?: number
+  refs?: string[]
 }
 
 export type Stage = 'clarify' | 'inspire' | 'select' | 'compare' | 'assemble' | 'checkout' | 'booked'
@@ -113,6 +141,10 @@ export interface TripState {
   bundles: Bundle[]
   selected_bundle_id: string | null
   history: HistoryEntry[]
+  /** честный ответ на невыполнимый запрос (спринт 2) */
+  relaxations?: Relaxation[]
+  /** причины, почему ничего не собралось (A explain_no_bundles) */
+  no_options_reasons?: string[]
 }
 
 // ---------- сессии и поток событий (п.10) ----------
@@ -141,6 +173,16 @@ export interface TraceStep {
   input?: unknown
   output?: unknown
   status: 'ok' | 'error' | string
+  /** есть в GET /trace */
+  version?: number
+  step_no?: number
+  created_at?: string
+}
+
+/** GET /api/sessions/{id}/trace */
+export interface TraceView {
+  session_id: string
+  steps: TraceStep[]
 }
 
 /**
@@ -160,7 +202,16 @@ export interface MessageIn {
 }
 
 export interface CommandIn {
-  type: 'edit_requirement' | 'remove_requirement' | 'select_bundle' | 'replace_item' | string
+  type:
+    | 'edit_requirement' // {key, value}
+    | 'remove_requirement' // {key}
+    | 'confirm_requirement' // {key} — предположение → hard
+    | 'answer_question' // {key, value}
+    | 'select_destination' // {destination_id}
+    | 'apply_relaxation' // {relaxation_id}
+    | 'select_bundle'
+    | 'replace_item'
+    | string
   payload: Record<string, unknown>
   expected_version: number
 }

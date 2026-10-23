@@ -1,59 +1,73 @@
 import type { Bundle, Check, Offer } from '../api/types'
-import { CHECK_STYLE, KIND_ICON, PRICE_UNIT, localParts, rub, when } from '../lib/format'
+import { CHECK_STYLE, KIND_LABEL, PRICE_UNIT, localParts, rub, when } from '../lib/format'
+import Icon, { KIND_ICON } from './Icon'
 
 export function SyntheticBadge() {
   return (
     <span
-      className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-violet-700"
+      className="rounded-md bg-[#f0f1ff] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-guru-from"
       title="Цена и условия сгенерированы для демо — это не реальные данные поставщика"
     >
-      сгенерировано
+      демо-данные
     </span>
   )
 }
 
-const KIND_LABEL: Record<Offer['kind'], string> = { flight: 'Перелёт', train: 'Поезд', transfer: 'Трансфер', hotel: 'Отель' }
-
-/** У Offer из бэкенда нет title — собираем подпись из variant (тип номера, тариф, класс) */
+/** У старых Offer нет title — собираем подпись из variant (тип номера, тариф, класс) */
 export function offerTitle(o: Offer): string {
   if (o.title) return o.title
-  const v = Object.values(o.variant ?? {}).filter(Boolean).join(', ')
+  const v = Object.values(o.variant ?? {}).filter((x) => typeof x === 'string').join(', ')
   return `${KIND_LABEL[o.kind]} ${o.item_id}${v ? ` · ${v}` : ''}`
 }
 
-export function OfferRow({ o }: { o: Offer }) {
+const KIND_TINT: Record<Offer['kind'], string> = {
+  flight: 'bg-brand-light text-brand',
+  train: 'bg-brand-light text-brand',
+  transfer: 'bg-canvas text-ink-grey',
+  hotel: 'bg-lime-soft text-[#2f6b0f]',
+}
+
+export function OfferRow({ o, last, markSynthetic = true }: { o: Offer; last?: boolean; markSynthetic?: boolean }) {
   const start = o.times && localParts(o.times.start)
   const end = o.times && localParts(o.times.end)
   return (
-    <li className="flex gap-3 py-2">
-      <div className="w-6 shrink-0 pt-0.5 text-center">{KIND_ICON[o.kind]}</div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
-          {offerTitle(o)}
-          {o.synthetic && <SyntheticBadge />}
-        </div>
-        {start && end && (
-          <div className="text-xs text-slate-500">
-            {start.date} {start.time} → {end.date === start.date ? '' : end.date + ' '}
-            {end.time} <span className="text-slate-400">({start.tz})</span>
+    <li className="relative flex gap-3 pb-4">
+      {!last && <span className="absolute bottom-0 left-[17px] top-10 w-px bg-black/10" aria-hidden />}
+      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${KIND_TINT[o.kind]}`}>
+        <Icon name={KIND_ICON[o.kind]} className="h-[18px] w-[18px]" />
+      </span>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 text-[14px] font-semibold leading-snug">
+              {offerTitle(o)}
+              {markSynthetic && o.synthetic && <SyntheticBadge />}
+            </div>
+            {start && end && (
+              <div className="mt-0.5 text-[13px] text-ink-grey">
+                <span className="font-medium text-ink">{start.time}</span> {start.date} →{' '}
+                <span className="font-medium text-ink">{end.time}</span> {end.date === start.date ? '' : end.date}
+                <span className="ml-1 text-[11px] text-ink-muted">UTC{start.tz}</span>
+              </div>
+            )}
           </div>
-        )}
-        <div className="text-xs text-slate-500">
-          {rub(o.unit_price_rub)} {PRICE_UNIT[o.price_unit]}
-          {o.units > 1 && <> × {o.units}</>}
-          {o.quantity > 1 && <> × {o.quantity} шт.</>}
-          {o.included?.length ? <> · {o.included.join(', ')}</> : null}
-          {o.baggage ? <> · багаж {o.baggage}</> : null}
+          <div className="price shrink-0 text-[15px]">{rub(o.total_rub)}</div>
         </div>
-        {o.cancel_policy && (
-          <div className="text-xs text-slate-500">
-            {o.cancel_policy.free_until
-              ? `Бесплатная отмена до ${when(o.cancel_policy.free_until)}`
-              : `Невозвратный: штраф ${rub(o.cancel_policy.penalty_rub)}`}
-          </div>
-        )}
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-muted">
+          <span>
+            {rub(o.unit_price_rub)} {PRICE_UNIT[o.price_unit]}
+            {o.units > 1 && ` × ${o.units}`}
+            {o.quantity > 1 && ` × ${o.quantity} шт.`}
+          </span>
+          {o.included?.length ? <span>{o.included.join(', ')}</span> : null}
+          {o.baggage ? <span>багаж {o.baggage}</span> : null}
+          {o.cancel_policy && (
+            <span className={o.cancel_policy.free_until ? 'text-ok' : ''}>
+              {o.cancel_policy.free_until ? `бесплатная отмена до ${when(o.cancel_policy.free_until)}` : 'невозвратный'}
+            </span>
+          )}
+        </div>
       </div>
-      <div className="shrink-0 text-right text-sm font-medium">{rub(o.total_rub)}</div>
     </li>
   )
 }
@@ -65,16 +79,22 @@ export function Checks({ checks }: { checks: Check[] }) {
       {checks.map((c, i) => {
         const st = CHECK_STYLE[c.status]
         return (
-          <li key={i} className={`rounded-md border px-2.5 py-1.5 text-xs ${st.cls}`}>
-            <span className="mr-1.5 font-bold">{st.icon}</span>
-            {c.text}
-            {c.options?.length ? (
-              <ul className="mt-1 list-disc pl-5 text-slate-700">
-                {c.options.map((o) => (
-                  <li key={o}>{o}</li>
-                ))}
-              </ul>
-            ) : null}
+          <li key={i} className="flex gap-2.5 text-[13px]">
+            <span className={`mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full ${st.cls}`}>
+              <Icon name={st.icon} className="h-3 w-3" strokeWidth={2.6} />
+            </span>
+            <div className="min-w-0">
+              <div className={c.status === 'ok' ? 'text-ink-grey' : 'font-medium text-ink'}>{c.text}</div>
+              {c.options?.length ? (
+                <ul className="mt-1 space-y-0.5">
+                  {c.options.map((o) => (
+                    <li key={o} className="text-xs text-ink-grey before:mr-1.5 before:text-brand before:content-['→']">
+                      {o}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           </li>
         )
       })}
@@ -84,57 +104,70 @@ export function Checks({ checks }: { checks: Check[] }) {
 
 interface Props {
   bundle: Bundle
+  best?: boolean
   onCheckout: () => void
   checkoutBusy: boolean
 }
 
-export default function BundleCard({ bundle, onCheckout, checkoutBusy }: Props) {
+export default function BundleCard({ bundle, best, onCheckout, checkoutBusy }: Props) {
   const blocked = bundle.checks.some((c) => c.status === 'block')
+  const warns = bundle.checks.filter((c) => c.status === 'warn').length
+  const allSynthetic = bundle.items.every((o) => o.synthetic)
   return (
-    <article className="rounded-xl border bg-white shadow-sm">
-      <header className="flex items-baseline justify-between gap-3 border-b px-4 py-3">
-        <h3 className="font-semibold capitalize">{bundle.label}</h3>
+    <article className={`card flex flex-col overflow-hidden ${best ? 'ring-2 ring-brand' : ''}`}>
+      <header className="flex items-start justify-between gap-3 p-4 pb-3">
+        <div>
+          <span className="rounded-full bg-brand-light px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-brand">{bundle.label}</span>
+          {allSynthetic && (
+            <span className="ml-1.5 align-middle">
+              <SyntheticBadge />
+            </span>
+          )}
+          <div className="mt-2 text-xs text-ink-muted">
+            {blocked ? 'есть блокирующая проблема' : warns ? `${warns} ${warns === 1 ? 'момент' : 'момента'} на заметку` : 'все стыковки проверены'}
+          </div>
+        </div>
         <div className="text-right">
-          <div className="text-lg font-semibold">{rub(bundle.total_rub)}</div>
-          <div className="text-[11px] text-slate-500">итого за всех и весь период</div>
+          <div className="price text-[26px] leading-none">{rub(bundle.total_rub)}</div>
+          <div className="mt-1 text-[11px] text-ink-muted">за всех и весь период</div>
         </div>
       </header>
 
-      <ul className="divide-y px-4">
+      <ol className="px-4 pt-1">
         {bundle.items.map((o, i) => (
-          <OfferRow key={o.offer_id + i} o={o} />
+          <OfferRow key={o.offer_id + i} o={o} last={i === bundle.items.length - 1} markSynthetic={!allSynthetic} />
         ))}
-      </ul>
+      </ol>
 
-      <div className="space-y-3 border-t px-4 py-3">
+      <div className="mt-auto space-y-3 border-t border-black/[.05] bg-canvas/50 p-4">
         <Checks checks={bundle.checks} />
-        {bundle.tradeoffs.length > 0 && (
-          <div className="text-xs">
-            <div className="font-medium text-slate-700">Чем жертвуем</div>
-            {bundle.tradeoffs.map((t, i) => (
-              <div key={i} className="text-slate-600" title={t.refs.join(', ')}>
-                — {t.text}
+        {(bundle.tradeoffs.length > 0 || bundle.risks.length > 0) && (
+          <div className={`grid gap-3 text-[13px] ${bundle.tradeoffs.length && bundle.risks.length ? 'sm:grid-cols-2' : ''}`}>
+            {bundle.tradeoffs.length > 0 && (
+              <div>
+                <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Чем жертвуем</div>
+                {bundle.tradeoffs.map((t, i) => (
+                  <div key={i} className="text-ink-grey" title={t.refs.join(', ')}>{t.text}</div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-        {bundle.risks.length > 0 && (
-          <div className="text-xs">
-            <div className="font-medium text-slate-700">Риски</div>
-            {bundle.risks.map((t, i) => (
-              <div key={i} className="text-slate-600" title={t.refs.join(', ')}>
-                — {t.text}
+            )}
+            {bundle.risks.length > 0 && (
+              <div>
+                <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Риски</div>
+                {bundle.risks.map((t, i) => (
+                  <div key={i} className="text-ink-grey" title={t.refs.join(', ')}>{t.text}</div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
         <button
           onClick={onCheckout}
           disabled={blocked || checkoutBusy}
-          className="w-full rounded-lg bg-brand py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40"
+          className="btn-primary w-full py-3 text-[15px]"
           title={blocked ? 'Сначала исправьте блокирующие проблемы' : undefined}
         >
-          {blocked ? 'Есть блокирующие проблемы' : checkoutBusy ? 'Проверяю план…' : 'Оформить этот комплект'}
+          {blocked ? 'Есть блокирующие проблемы' : checkoutBusy ? 'Проверяю план…' : `Оформить за ${rub(bundle.total_rub)}`}
         </button>
       </div>
     </article>

@@ -9,7 +9,7 @@ const ERROR_TEXT: Record<string, string> = {
   llm_not_configured: 'Агенту не задан ключ LLM (LLM_API_KEY в .env) — понять запрос пока нечем.',
   llm_request_failed: 'LLM не ответила — попробуйте ещё раз.',
   invalid_llm_response: 'LLM вернула некорректный ответ — попробуйте переформулировать.',
-  catalog_integration_missing: 'Агент понял запрос, но каталог поездок ещё не подключён (трек A).',
+  catalog_integration_missing: 'Агент понял запрос, но каталог поездок не подключён.',
   agent_error: 'Агент не смог обработать запрос.',
   database_unavailable: 'База данных недоступна.',
 }
@@ -30,6 +30,11 @@ function store(id: string | null) {
   }
 }
 
+/** Команды ещё не поддержаны бэкендом → действие уходит обычным сообщением в чат */
+function unsupported(e: unknown): boolean {
+  return e instanceof ApiError && (e.status === 404 || e.status === 405) && e.detail.code !== 'session_not_found'
+}
+
 /**
  * Сессия поездки: создать/восстановить, отправить сообщение или команду (SSE), держать актуальный TripState.
  * Состояние меняет только агент — мы шлём expected_version; на 409 перечитываем сессию.
@@ -38,7 +43,10 @@ export function useTripSession() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [state, setState] = useState<TripState | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  /** шаги текущего хода (живые) */
   const [steps, setSteps] = useState<TraceStep[]>([])
+  /** вся история шагов сессии (GET /trace + живые) */
+  const [trace, setTrace] = useState<TraceStep[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const versionRef = useRef(0)
@@ -49,11 +57,20 @@ export function useTripSession() {
     setState(s)
   }, [])
 
+  const loadTrace = useCallback(async (id: string) => {
+    try {
+      setTrace((await api.getTrace(id)).steps)
+    } catch {
+      /* трейс вторичен — не мешаем основному сценарию */
+    }
+  }, [])
+
   const reload = useCallback(async (id: string) => {
     const v = await api.getSession(id)
     apply(v.state)
     setMessages(v.messages)
-  }, [apply])
+    loadTrace(id)
+  }, [apply, loadTrace])
 
   const start = useCallback(async (fresh = false) => {
     setError(null)
@@ -72,9 +89,9 @@ export function useTripSession() {
       store(created.session_id)
       setSessionId(created.session_id)
       versionRef.current = created.version
-      setState(null)
       setMessages([])
       setSteps([])
+      setTrace([])
       await reload(created.session_id).catch(() => undefined)
     } catch (e) {
       setError(e instanceof ApiError ? `Агент недоступен: ${e.message}` : 'Агент недоступен — бэкенд ещё не отвечает')
@@ -90,6 +107,7 @@ export function useTripSession() {
     switch (e.event) {
       case 'step':
         setSteps((s) => [...s, e.data])
+        setTrace((t) => [...t, e.data])
         break
       case 'state':
         apply(e.data.state)
@@ -117,8 +135,6 @@ export function useTripSession() {
       if (e instanceof ApiError && e.status === 409) {
         await reload(sessionId)
         setError('План обновился в другой вкладке — показываю актуальную версию. Повторите действие.')
-      } else if (e instanceof ApiError && (e.status === 404 || e.status === 405) && e.detail.code !== 'session_not_found') {
-        setError('Это действие агент пока не поддерживает.')
       } else if (e instanceof ApiError) {
         setError(ERROR_TEXT[e.detail.code] ?? e.message)
       } else if (!(e instanceof DOMException && e.name === 'AbortError')) {
@@ -126,17 +142,33 @@ export function useTripSession() {
       }
     } finally {
       setBusy(false)
+      loadTrace(sessionId)
     }
-  }, [sessionId, reload])
+  }, [sessionId, reload, loadTrace])
 
-  const send = useCallback((text: string) => run(async (signal) => {
+  const chat = useCallback(async (text: string, signal: AbortSignal) => {
     setMessages((m) => [...m, { role: 'user', text }])
     await api.sendMessage(sessionId!, { text, expected_version: versionRef.current }, onEvent, signal)
-  }), [run, sessionId, onEvent])
+  }, [sessionId, onEvent])
 
-  const command = useCallback((type: CommandIn['type'], payload: CommandIn['payload']) => run((signal) =>
-    api.sendCommand(sessionId!, { type, payload, expected_version: versionRef.current }, onEvent, signal),
-  ), [run, sessionId, onEvent])
+  const send = useCallback((text: string) => run((signal) => chat(text, signal)), [run, chat])
 
-  return { sessionId, state, messages, steps, busy, error, send, command, restart: () => start(true), setError }
+  /**
+   * Действие из интерфейса (выбор направления, быстрый ответ, правка требования).
+   * Сначала команда агенту; если бэкенд её ещё не знает — то же самое словами в чат.
+   */
+  const act = useCallback((type: CommandIn['type'], payload: CommandIn['payload'], asText: string) =>
+    run(async (signal) => {
+      try {
+        await api.sendCommand(sessionId!, { type, payload, expected_version: versionRef.current }, onEvent, signal)
+      } catch (e) {
+        if (!unsupported(e)) throw e
+        await chat(asText, signal)
+      }
+    }), [run, sessionId, onEvent, chat])
+
+  return {
+    sessionId, state, messages, steps, trace, busy, error,
+    send, act, restart: () => start(true), setError,
+  }
 }
