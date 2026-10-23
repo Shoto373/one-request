@@ -1,0 +1,14 @@
+id: s2_08_outside_catalog
+description: Запрос за пределами каталога получает честное ограничение без выдуманных вариантов.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Париж 10–17 ноября 2026, двое взрослых.
+actions: []
+expected:
+  final_stage: inspire
+  requirements:
+    - {key: destination, kind: hard, value: Париж}
+    - {key: origin, kind: hard, value: Москва}
+  max_questions_per_turn: 2
+  checks: [destination_not_covered_reported, zero_fabricated_bundles, no_unsupported_alternatives]
+fixtures: {catalog: none_for_paris}

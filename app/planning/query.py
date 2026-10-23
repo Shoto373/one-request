@@ -193,6 +193,14 @@ def parse_kinds(value: Any) -> tuple[TransportKind, ...] | None:
     return None
 
 
+def parse_transport(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple[TransportKind, ...]:
+    """Soft/assumed transport preferences rank results; only a hard transport requirement filters."""
+    transport_key, transport_value = _pick(req, "transport", "transport_mode", "transport_type", "by")
+    if transport_key and kinds_by_key.get(transport_key) == "hard":
+        return parse_kinds(transport_value) or ("flight", "train")
+    return ("flight", "train")
+
+
 def requirement_text(req: dict[str, Any]) -> str:
     """All keys and values as one lowercase string, for keyword preferences."""
     return " ".join(f"{k} {v}" for k, v in req.items()).lower().replace("ё", "е")
@@ -255,8 +263,11 @@ def party_and_budget(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple
     children = parse_children(_pick(req, "children_ages", "children", "kids", "child_age", "children_count")[1])
     pets = parse_pets(_pick(req, "pets", "pet", "animals", "with_pet", "dog")[1])
     party = Party(adults=max(1, min(adults, 9)), children_ages=children, pets=pets)
-    budget_key, budget_value = _pick(req, "budget_total_rub", "budget_rub", "budget", "max_budget", "budget_total")
+    budget_key, budget_value = _pick(req, "budget_total_rub", "budget_per_person_rub", "budget_rub", "budget", "max_budget", "budget_total")
     budget = parse_budget(budget_value)
+    if budget is not None and budget_key == "budget_per_person_rub":
+        # The user-facing scope is per traveller; A converts it to a total trip ceiling.
+        budget *= party.people
     return party, budget, budget is not None and kinds_by_key.get(budget_key) == "hard"
 
 
@@ -293,7 +304,7 @@ def query_from_requirements(
     elif dates[1] <= dates[0]:
         problems.append("Дата обратной дороги раньше даты отправления.")
 
-    kinds = parse_kinds(_pick(req, "transport", "transport_mode", "transport_type", "by")[1]) or ("flight", "train")
+    kinds = parse_transport(req, kinds_by_key)
     max_stops, max_travel_min, limits_hard = parse_travel_limits(req, kinds_by_key)
 
     if problems:
