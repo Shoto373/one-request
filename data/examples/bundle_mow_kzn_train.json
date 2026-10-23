@@ -339,7 +339,7 @@
         {
           "kind": "capacity",
           "status": "ok",
-          "text": "Все позиции на 2 взр.",
+          "text": "Номера и трансферы вмещают 2 взр. и багаж.",
           "options": [],
           "offer_ids": [],
           "refs": []
@@ -356,6 +356,16 @@
         }
       ],
       "tradeoffs": [
+        {
+          "text": "Самый дешёвый — 10 120 ₽; чем жертвуем: невозвратный отель, трансфер общественным транспортом.",
+          "refs": [
+            "offer:off_tr_054G_20261113_platzkart_4be5",
+            "offer:off_trf_st_kzn_h_KZN_04_public_202611141113_to_hotel_4be5",
+            "offer:off_h_KZN_04_r1_t1_20261114_20261115_4be5",
+            "offer:off_trf_st_kzn_h_KZN_04_public_202611152005_to_hub_4be5",
+            "offer:off_tr_053G_20261115_platzkart_4be5"
+          ]
+        },
         {
           "text": "Невозвратный тариф отеля: при отмене теряется 4 380 ₽.",
           "refs": [
@@ -376,6 +386,378 @@
           "refs": [
             "offer:off_h_KZN_04_r1_t1_20261114_20261115_4be5",
             "hotel:h_KZN_04"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "label": "удобнее",
+      "items": [
+        {
+          "offer_id": "off_tr_054G_20261113_kupe_4be5",
+          "kind": "train",
+          "item_id": "tr_054G_20261113",
+          "title": "Поезд 054Г, купе",
+          "variant": {
+            "title": "Поезд 054Г",
+            "train_no": "054Г",
+            "train_name": null,
+            "car_class": "kupe",
+            "car_name": "Купе",
+            "origin_city": "MOW",
+            "dest_city": "KZN",
+            "from_hub": "st_mow_kaz",
+            "to_hub": "st_kzn",
+            "duration_min": 733,
+            "international": false,
+            "extras": []
+          },
+          "capacity": {
+            "adults": 2,
+            "children": 0,
+            "pets": false
+          },
+          "quantity": 1,
+          "unit_price_rub": 2310,
+          "price_unit": "per_person",
+          "units": 2,
+          "total_rub": 4620,
+          "included": [
+            "bedding"
+          ],
+          "baggage": "ручная кладь до 36 кг",
+          "cancel_policy": {
+            "free_until": null,
+            "penalty_rub": 600
+          },
+          "times": {
+            "start": "2026-11-13T22:45:00+03:00",
+            "end": "2026-11-14T10:58:00+03:00"
+          },
+          "synthetic": true,
+          "source_refs": [
+            "train:tr_054G_20261113",
+            "gen:trains@seed42",
+            "wikidata:Q1432585",
+            "wikidata:Q34085"
+          ]
+        },
+        {
+          "offer_id": "off_trf_st_kzn_h_KZN_05_public_202611141113_to_hotel_4be5",
+          "kind": "transfer",
+          "item_id": "trf_st_kzn_h_KZN_05_public",
+          "title": "Общественный транспорт, 2.1 км, ~40 мин",
+          "variant": {
+            "title": "Общественный транспорт, 2.1 км, ~40 мин",
+            "mode": "public",
+            "provider": "Общественный транспорт",
+            "direction": "to_hotel",
+            "hub_id": "st_kzn",
+            "hotel_id": "h_KZN_05",
+            "distance_km": 2.1,
+            "duration_min": 40,
+            "extras": []
+          },
+          "capacity": {
+            "adults": 2,
+            "children": 0,
+            "pets": false
+          },
+          "quantity": 1,
+          "unit_price_rub": 110,
+          "price_unit": "per_person",
+          "units": 2,
+          "total_rub": 220,
+          "included": [],
+          "baggage": "2 мест багажа",
+          "cancel_policy": {
+            "free_until": "2026-11-14T11:13:00+03:00",
+            "penalty_rub": 220
+          },
+          "times": {
+            "start": "2026-11-14T11:13:00+03:00",
+            "end": "2026-11-14T11:53:00+03:00"
+          },
+          "synthetic": true,
+          "source_refs": [
+            "transfer:trf_st_kzn_h_KZN_05_public",
+            "gen:transfers@seed42",
+            "formula:road_km=1.3*great_circle",
+            "osm:node/1974744920",
+            "wikidata:Q34085"
+          ]
+        },
+        {
+          "offer_id": "off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+          "kind": "hotel",
+          "item_id": "h_KZN_05",
+          "title": "Регина, стандарт, без питания, невозвратный",
+          "variant": {
+            "title": "Регина",
+            "hotel_name": "Регина",
+            "stars": 3,
+            "rating": 8.2,
+            "city_id": "KZN",
+            "room_id": "h_KZN_05_r1",
+            "room_type": "Стандарт",
+            "tariff_id": "t1",
+            "tariff": "Без питания, невозвратный",
+            "meal": "RO",
+            "refundable": false,
+            "nights": 1,
+            "nightly_rub": [
+              4900
+            ],
+            "dist_beach_km": null,
+            "dist_center_km": 0.92,
+            "extras": []
+          },
+          "capacity": {
+            "adults": 2,
+            "children": 0,
+            "pets": false
+          },
+          "quantity": 1,
+          "unit_price_rub": 4900,
+          "price_unit": "per_room_night",
+          "units": 1,
+          "total_rub": 4900,
+          "included": [
+            "wifi"
+          ],
+          "baggage": null,
+          "cancel_policy": {
+            "free_until": null,
+            "penalty_rub": 4900
+          },
+          "times": {
+            "start": "2026-11-14T14:00:00+03:00",
+            "end": "2026-11-15T12:00:00+03:00"
+          },
+          "synthetic": true,
+          "source_refs": [
+            "hotel:h_KZN_05",
+            "osm:node/1974744920",
+            "gen:hotels@seed42"
+          ]
+        },
+        {
+          "offer_id": "off_trf_st_kzn_h_KZN_05_public_202611151825_to_hub_4be5",
+          "kind": "transfer",
+          "item_id": "trf_st_kzn_h_KZN_05_public",
+          "title": "Общественный транспорт, 2.1 км, ~40 мин",
+          "variant": {
+            "title": "Общественный транспорт, 2.1 км, ~40 мин",
+            "mode": "public",
+            "provider": "Общественный транспорт",
+            "direction": "to_hub",
+            "hub_id": "st_kzn",
+            "hotel_id": "h_KZN_05",
+            "distance_km": 2.1,
+            "duration_min": 40,
+            "extras": []
+          },
+          "capacity": {
+            "adults": 2,
+            "children": 0,
+            "pets": false
+          },
+          "quantity": 1,
+          "unit_price_rub": 110,
+          "price_unit": "per_person",
+          "units": 2,
+          "total_rub": 220,
+          "included": [],
+          "baggage": "2 мест багажа",
+          "cancel_policy": {
+            "free_until": "2026-11-15T18:25:00+03:00",
+            "penalty_rub": 220
+          },
+          "times": {
+            "start": "2026-11-15T18:25:00+03:00",
+            "end": "2026-11-15T19:05:00+03:00"
+          },
+          "synthetic": true,
+          "source_refs": [
+            "transfer:trf_st_kzn_h_KZN_05_public",
+            "gen:transfers@seed42",
+            "formula:road_km=1.3*great_circle",
+            "osm:node/1974744920",
+            "wikidata:Q34085"
+          ]
+        },
+        {
+          "offer_id": "off_tr_001J_20261115_kupe_4be5",
+          "kind": "train",
+          "item_id": "tr_001J_20261115",
+          "title": "Поезд 001Й «Премиум», купе",
+          "variant": {
+            "title": "Поезд 001Й «Премиум»",
+            "train_no": "001Й",
+            "train_name": "Премиум",
+            "car_class": "kupe",
+            "car_name": "Купе",
+            "origin_city": "KZN",
+            "dest_city": "MOW",
+            "from_hub": "st_kzn",
+            "to_hub": "st_mow_kaz",
+            "duration_min": 683,
+            "international": false,
+            "extras": []
+          },
+          "capacity": {
+            "adults": 2,
+            "children": 0,
+            "pets": false
+          },
+          "quantity": 1,
+          "unit_price_rub": 2990,
+          "price_unit": "per_person",
+          "units": 2,
+          "total_rub": 5980,
+          "included": [
+            "bedding"
+          ],
+          "baggage": "ручная кладь до 36 кг",
+          "cancel_policy": {
+            "free_until": null,
+            "penalty_rub": 600
+          },
+          "times": {
+            "start": "2026-11-15T19:45:00+03:00",
+            "end": "2026-11-16T07:08:00+03:00"
+          },
+          "synthetic": true,
+          "source_refs": [
+            "train:tr_001J_20261115",
+            "gen:trains@seed42",
+            "wikidata:Q34085",
+            "wikidata:Q1432585"
+          ]
+        }
+      ],
+      "total_rub": 15940,
+      "checks": [
+        {
+          "kind": "checkin_date",
+          "status": "ok",
+          "text": "Прибытие в отель 14.11 11:53, заезд 14.11.",
+          "options": [],
+          "offer_ids": [
+            "off_h_KZN_05_r1_t1_20261114_20261115_4be5"
+          ],
+          "refs": [
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+            "hotel:h_KZN_05"
+          ]
+        },
+        {
+          "kind": "late_arrival",
+          "status": "ok",
+          "text": "Круглосуточная стойка.",
+          "options": [],
+          "offer_ids": [
+            "off_h_KZN_05_r1_t1_20261114_20261115_4be5"
+          ],
+          "refs": [
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+            "hotel:h_KZN_05"
+          ]
+        },
+        {
+          "kind": "early_arrival",
+          "status": "warn",
+          "text": "Прибытие 11:53, заселение с 14:00: ожидание 2 ч 07 мин.",
+          "options": [
+            "Ждать заселения 2 ч 07 мин",
+            "Оставить багаж на стойке",
+            "Ранний заезд с 11:53 (по наличию, не гарантирован)",
+            "Забронировать ночь накануне — номер готов сразу — 4 900 ₽"
+          ],
+          "offer_ids": [
+            "off_h_KZN_05_r1_t1_20261114_20261115_4be5"
+          ],
+          "refs": [
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+            "hotel:h_KZN_05"
+          ]
+        },
+        {
+          "kind": "return_trip",
+          "status": "warn",
+          "text": "Выезд из номера в 12:00, из отеля — в 18:25: 6 ч 25 мин без номера.",
+          "options": [
+            "Поздний выезд до 18:00 (гарантирован) — 2 000 ₽",
+            "Оставить багаж в отеле",
+            "Погулять до выезда"
+          ],
+          "offer_ids": [
+            "off_h_KZN_05_r1_t1_20261114_20261115_4be5"
+          ],
+          "refs": [
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+            "hotel:h_KZN_05"
+          ]
+        },
+        {
+          "kind": "transfer_fit",
+          "status": "ok",
+          "text": "Трансферы стыкуются с транспортом.",
+          "options": [],
+          "offer_ids": [],
+          "refs": []
+        },
+        {
+          "kind": "capacity",
+          "status": "ok",
+          "text": "Номера и трансферы вмещают 2 взр. и багаж.",
+          "options": [],
+          "offer_ids": [],
+          "refs": []
+        },
+        {
+          "kind": "visa",
+          "status": "ok",
+          "text": "Поездка по России, виза не нужна.",
+          "options": [],
+          "offer_ids": [],
+          "refs": [
+            "city:KZN:visa"
+          ]
+        }
+      ],
+      "tradeoffs": [
+        {
+          "text": "+5 820 ₽ к самому дешёвому: отель с рейтингом 8.2 вместо 7.4.",
+          "refs": [
+            "offer:off_tr_054G_20261113_kupe_4be5",
+            "offer:off_trf_st_kzn_h_KZN_05_public_202611141113_to_hotel_4be5",
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+            "offer:off_trf_st_kzn_h_KZN_05_public_202611151825_to_hub_4be5",
+            "offer:off_tr_001J_20261115_kupe_4be5"
+          ]
+        },
+        {
+          "text": "Невозвратный тариф отеля: при отмене теряется 4 900 ₽.",
+          "refs": [
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5"
+          ]
+        }
+      ],
+      "risks": [
+        {
+          "text": "Прибытие 11:53, заселение с 14:00: ожидание 2 ч 07 мин.",
+          "refs": [
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+            "hotel:h_KZN_05"
+          ]
+        },
+        {
+          "text": "Выезд из номера в 12:00, из отеля — в 18:25: 6 ч 25 мин без номера.",
+          "refs": [
+            "offer:off_h_KZN_05_r1_t1_20261114_20261115_4be5",
+            "hotel:h_KZN_05"
           ]
         }
       ]

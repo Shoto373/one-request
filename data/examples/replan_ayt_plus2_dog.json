@@ -1,0 +1,856 @@
+{
+  "old_bundle": {
+    "id": "b2",
+    "label": "удобнее с ребёнком",
+    "items": [
+      {
+        "offer_id": "off_fl_DP3736_20261112_standard_ee9c",
+        "kind": "flight",
+        "item_id": "fl_DP3736_20261112",
+        "title": "Победа DP 3736",
+        "variant": {
+          "title": "Победа DP 3736",
+          "baggage": {
+            "cabin_kg": 10,
+            "checked_pieces": 1,
+            "checked_kg": 23
+          },
+          "carrier": "DP",
+          "carrier_name": "Победа",
+          "flight_no": "DP 3736",
+          "fare": "standard",
+          "fare_name": "Стандарт",
+          "refundable": false,
+          "origin_city": "MOW",
+          "dest_city": "AYT",
+          "from_hub": "VKO",
+          "to_hub": "AYT",
+          "stops": 0,
+          "via": [],
+          "duration_min": 210,
+          "international": true,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": false
+        },
+        "quantity": 1,
+        "unit_price_rub": 11090,
+        "price_unit": "per_person",
+        "units": 3,
+        "total_rub": 33270,
+        "included": [
+          "cabin_bag_10kg",
+          "checked_bag_1x23kg"
+        ],
+        "baggage": "10 кг ручной клади + 1×23 кг",
+        "cancel_policy": {
+          "free_until": null,
+          "penalty_rub": 33270
+        },
+        "times": {
+          "start": "2026-11-12T07:25:00+03:00",
+          "end": "2026-11-12T10:55:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "flight:fl_DP3736_20261112",
+          "gen:flights@seed42",
+          "formula:block_time=distance/750kmh+40min"
+        ]
+      },
+      {
+        "offer_id": "off_trf_AYT_h_AYT_06_public_202611121140_to_hotel_ee9c",
+        "kind": "transfer",
+        "item_id": "trf_AYT_h_AYT_06_public",
+        "title": "Общественный транспорт, 19.8 км, ~75 мин",
+        "variant": {
+          "title": "Общественный транспорт, 19.8 км, ~75 мин",
+          "mode": "public",
+          "provider": "Общественный транспорт",
+          "direction": "to_hotel",
+          "hub_id": "AYT",
+          "hotel_id": "h_AYT_06",
+          "distance_km": 19.8,
+          "duration_min": 75,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": false
+        },
+        "quantity": 1,
+        "unit_price_rub": 160,
+        "price_unit": "per_person",
+        "units": 2,
+        "total_rub": 320,
+        "included": [],
+        "baggage": "3 мест багажа",
+        "cancel_policy": {
+          "free_until": "2026-11-12T11:40:00+03:00",
+          "penalty_rub": 320
+        },
+        "times": {
+          "start": "2026-11-12T11:40:00+03:00",
+          "end": "2026-11-12T12:55:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "transfer:trf_AYT_h_AYT_06_public",
+          "gen:transfers@seed42",
+          "formula:road_km=1.3*great_circle",
+          "osm:node/6633132388",
+          "ourairports:LTAI"
+        ]
+      },
+      {
+        "offer_id": "off_h_AYT_06_r1_t3_20261112_20261119_ee9c",
+        "kind": "hotel",
+        "item_id": "h_AYT_06",
+        "title": "Eva Butik Otel, стандарт, завтрак, бесплатная отмена",
+        "variant": {
+          "title": "Eva Butik Otel",
+          "hotel_name": "Eva Butik Otel",
+          "stars": 3,
+          "rating": 8.2,
+          "city_id": "AYT",
+          "room_id": "h_AYT_06_r1",
+          "room_type": "Стандарт",
+          "tariff_id": "t3",
+          "tariff": "Завтрак, бесплатная отмена",
+          "meal": "BB",
+          "refundable": true,
+          "nights": 7,
+          "nightly_rub": [
+            4690,
+            4690,
+            4690,
+            4690,
+            4690,
+            4690,
+            4690
+          ],
+          "dist_beach_km": 0.94,
+          "dist_center_km": 7.38,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": false
+        },
+        "quantity": 1,
+        "unit_price_rub": 4690,
+        "price_unit": "per_room_night",
+        "units": 7,
+        "total_rub": 32830,
+        "included": [
+          "breakfast",
+          "wifi"
+        ],
+        "baggage": null,
+        "cancel_policy": {
+          "free_until": "2026-11-11T23:59:00+03:00",
+          "penalty_rub": 4690
+        },
+        "times": {
+          "start": "2026-11-12T14:00:00+03:00",
+          "end": "2026-11-19T12:00:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "hotel:h_AYT_06",
+          "osm:node/6633132388",
+          "gen:hotels@seed42"
+        ]
+      },
+      {
+        "offer_id": "off_trf_AYT_h_AYT_06_public_202611191030_to_hub_ee9c",
+        "kind": "transfer",
+        "item_id": "trf_AYT_h_AYT_06_public",
+        "title": "Общественный транспорт, 19.8 км, ~75 мин",
+        "variant": {
+          "title": "Общественный транспорт, 19.8 км, ~75 мин",
+          "mode": "public",
+          "provider": "Общественный транспорт",
+          "direction": "to_hub",
+          "hub_id": "AYT",
+          "hotel_id": "h_AYT_06",
+          "distance_km": 19.8,
+          "duration_min": 75,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": false
+        },
+        "quantity": 1,
+        "unit_price_rub": 160,
+        "price_unit": "per_person",
+        "units": 2,
+        "total_rub": 320,
+        "included": [],
+        "baggage": "3 мест багажа",
+        "cancel_policy": {
+          "free_until": "2026-11-19T10:30:00+03:00",
+          "penalty_rub": 320
+        },
+        "times": {
+          "start": "2026-11-19T10:30:00+03:00",
+          "end": "2026-11-19T11:45:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "transfer:trf_AYT_h_AYT_06_public",
+          "gen:transfers@seed42",
+          "formula:road_km=1.3*great_circle",
+          "osm:node/6633132388",
+          "ourairports:LTAI"
+        ]
+      },
+      {
+        "offer_id": "off_fl_SU259_20261119_light_ee9c",
+        "kind": "flight",
+        "item_id": "fl_SU259_20261119",
+        "title": "Аэрофлот SU 259",
+        "variant": {
+          "title": "Аэрофлот SU 259",
+          "baggage": {
+            "cabin_kg": 10,
+            "checked_pieces": 0,
+            "checked_kg": null
+          },
+          "carrier": "SU",
+          "carrier_name": "Аэрофлот",
+          "flight_no": "SU 259",
+          "fare": "light",
+          "fare_name": "Лайт",
+          "refundable": false,
+          "origin_city": "AYT",
+          "dest_city": "MOW",
+          "from_hub": "AYT",
+          "to_hub": "SVO",
+          "stops": 0,
+          "via": [],
+          "duration_min": 215,
+          "international": true,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": false
+        },
+        "quantity": 1,
+        "unit_price_rub": 16300,
+        "price_unit": "per_person",
+        "units": 3,
+        "total_rub": 48900,
+        "included": [
+          "cabin_bag_10kg"
+        ],
+        "baggage": "10 кг ручной клади, без багажа",
+        "cancel_policy": {
+          "free_until": null,
+          "penalty_rub": 48900
+        },
+        "times": {
+          "start": "2026-11-19T13:45:00+03:00",
+          "end": "2026-11-19T17:20:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "flight:fl_SU259_20261119",
+          "gen:flights@seed42",
+          "formula:block_time=distance/750kmh+40min"
+        ]
+      }
+    ],
+    "total_rub": 115640,
+    "checks": [
+      {
+        "kind": "checkin_date",
+        "status": "ok",
+        "text": "Прибытие в отель 12.11 12:55, заезд 12.11.",
+        "options": [],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261112_20261119_ee9c"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261112_20261119_ee9c",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "late_arrival",
+        "status": "ok",
+        "text": "Стойка открыта в момент прибытия.",
+        "options": [],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261112_20261119_ee9c"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261112_20261119_ee9c",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "early_arrival",
+        "status": "warn",
+        "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
+        "options": [
+          "Ждать заселения 1 ч 05 мин",
+          "Оставить багаж на стойке",
+          "Ранний заезд с 12:55 (по наличию, не гарантирован)",
+          "Забронировать ночь накануне — номер готов сразу — 4 690 ₽"
+        ],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261112_20261119_ee9c"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261112_20261119_ee9c",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "return_trip",
+        "status": "ok",
+        "text": "Выезд из отеля 19.11 10:30 — успеваете на обратную дорогу.",
+        "options": [],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261112_20261119_ee9c"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261112_20261119_ee9c",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "transfer_fit",
+        "status": "ok",
+        "text": "Трансферы стыкуются с транспортом.",
+        "options": [],
+        "offer_ids": [],
+        "refs": []
+      },
+      {
+        "kind": "capacity",
+        "status": "ok",
+        "text": "Номера и трансферы вмещают 2 взр. и 1 дет. и багаж.",
+        "options": [],
+        "offer_ids": [],
+        "refs": []
+      },
+      {
+        "kind": "visa",
+        "status": "warn",
+        "text": "Турция: Безвиз до 60 дней в течение 180 дней. Срок действия паспорта уточняйте перед поездкой. Документы: загранпаспорт.",
+        "options": [],
+        "offer_ids": [],
+        "refs": [
+          "city:AYT:visa"
+        ]
+      }
+    ],
+    "tradeoffs": [
+      {
+        "text": "+4 440 ₽ к самому дешёвому: удобнее по времени и условиям.",
+        "refs": [
+          "offer:off_fl_DP3736_20261112_standard_ee9c",
+          "offer:off_trf_AYT_h_AYT_06_public_202611121140_to_hotel_ee9c",
+          "offer:off_h_AYT_06_r1_t3_20261112_20261119_ee9c",
+          "offer:off_trf_AYT_h_AYT_06_public_202611191030_to_hub_ee9c",
+          "offer:off_fl_SU259_20261119_light_ee9c"
+        ]
+      },
+      {
+        "text": "Аэрофлот SU 259: тариф без багажа, только ручная кладь 10 кг.",
+        "refs": [
+          "offer:off_fl_SU259_20261119_light_ee9c"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261112_20261119_ee9c",
+          "hotel:h_AYT_06"
+        ]
+      }
+    ]
+  },
+  "bundle": {
+    "id": "b2",
+    "label": "удобнее с ребёнком",
+    "items": [
+      {
+        "offer_id": "off_fl_DP3736_20261114_standard_dd27",
+        "kind": "flight",
+        "item_id": "fl_DP3736_20261114",
+        "title": "Победа DP 3736",
+        "variant": {
+          "title": "Победа DP 3736",
+          "baggage": {
+            "cabin_kg": 10,
+            "checked_pieces": 1,
+            "checked_kg": 23
+          },
+          "carrier": "DP",
+          "carrier_name": "Победа",
+          "flight_no": "DP 3736",
+          "fare": "standard",
+          "fare_name": "Стандарт",
+          "refundable": false,
+          "origin_city": "MOW",
+          "dest_city": "AYT",
+          "from_hub": "VKO",
+          "to_hub": "AYT",
+          "stops": 0,
+          "via": [],
+          "duration_min": 210,
+          "international": true,
+          "extras": [
+            {
+              "code": "pet_cabin",
+              "title": "Животное в салоне (7 кг)",
+              "price_rub": 2999
+            }
+          ]
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": true
+        },
+        "quantity": 1,
+        "unit_price_rub": 13330,
+        "price_unit": "per_person",
+        "units": 3,
+        "total_rub": 42989,
+        "included": [
+          "cabin_bag_10kg",
+          "checked_bag_1x23kg"
+        ],
+        "baggage": "10 кг ручной клади + 1×23 кг",
+        "cancel_policy": {
+          "free_until": null,
+          "penalty_rub": 42989
+        },
+        "times": {
+          "start": "2026-11-14T07:25:00+03:00",
+          "end": "2026-11-14T10:55:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "flight:fl_DP3736_20261114",
+          "gen:flights@seed42",
+          "formula:block_time=distance/750kmh+40min"
+        ]
+      },
+      {
+        "offer_id": "off_trf_AYT_h_AYT_06_public_202611141140_to_hotel_dd27",
+        "kind": "transfer",
+        "item_id": "trf_AYT_h_AYT_06_public",
+        "title": "Общественный транспорт, 19.8 км, ~75 мин",
+        "variant": {
+          "title": "Общественный транспорт, 19.8 км, ~75 мин",
+          "mode": "public",
+          "provider": "Общественный транспорт",
+          "direction": "to_hotel",
+          "hub_id": "AYT",
+          "hotel_id": "h_AYT_06",
+          "distance_km": 19.8,
+          "duration_min": 75,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": true
+        },
+        "quantity": 1,
+        "unit_price_rub": 160,
+        "price_unit": "per_person",
+        "units": 2,
+        "total_rub": 320,
+        "included": [],
+        "baggage": "3 мест багажа",
+        "cancel_policy": {
+          "free_until": "2026-11-14T11:40:00+03:00",
+          "penalty_rub": 320
+        },
+        "times": {
+          "start": "2026-11-14T11:40:00+03:00",
+          "end": "2026-11-14T12:55:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "transfer:trf_AYT_h_AYT_06_public",
+          "gen:transfers@seed42",
+          "formula:road_km=1.3*great_circle",
+          "osm:node/6633132388",
+          "ourairports:LTAI"
+        ]
+      },
+      {
+        "offer_id": "off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+        "kind": "hotel",
+        "item_id": "h_AYT_06",
+        "title": "Eva Butik Otel, стандарт, завтрак, бесплатная отмена",
+        "variant": {
+          "title": "Eva Butik Otel",
+          "hotel_name": "Eva Butik Otel",
+          "stars": 3,
+          "rating": 8.2,
+          "city_id": "AYT",
+          "room_id": "h_AYT_06_r1",
+          "room_type": "Стандарт",
+          "tariff_id": "t3",
+          "tariff": "Завтрак, бесплатная отмена",
+          "meal": "BB",
+          "refundable": true,
+          "nights": 7,
+          "nightly_rub": [
+            4690,
+            4690,
+            4690,
+            4690,
+            4690,
+            4690,
+            4690
+          ],
+          "dist_beach_km": 0.94,
+          "dist_center_km": 7.38,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": true
+        },
+        "quantity": 1,
+        "unit_price_rub": 4690,
+        "price_unit": "per_room_night",
+        "units": 7,
+        "total_rub": 32830,
+        "included": [
+          "breakfast",
+          "wifi"
+        ],
+        "baggage": null,
+        "cancel_policy": {
+          "free_until": "2026-11-13T23:59:00+03:00",
+          "penalty_rub": 4690
+        },
+        "times": {
+          "start": "2026-11-14T14:00:00+03:00",
+          "end": "2026-11-21T12:00:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "hotel:h_AYT_06",
+          "osm:node/6633132388",
+          "gen:hotels@seed42"
+        ]
+      },
+      {
+        "offer_id": "off_trf_AYT_h_AYT_06_public_202611211030_to_hub_dd27",
+        "kind": "transfer",
+        "item_id": "trf_AYT_h_AYT_06_public",
+        "title": "Общественный транспорт, 19.8 км, ~75 мин",
+        "variant": {
+          "title": "Общественный транспорт, 19.8 км, ~75 мин",
+          "mode": "public",
+          "provider": "Общественный транспорт",
+          "direction": "to_hub",
+          "hub_id": "AYT",
+          "hotel_id": "h_AYT_06",
+          "distance_km": 19.8,
+          "duration_min": 75,
+          "extras": []
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": true
+        },
+        "quantity": 1,
+        "unit_price_rub": 160,
+        "price_unit": "per_person",
+        "units": 2,
+        "total_rub": 320,
+        "included": [],
+        "baggage": "3 мест багажа",
+        "cancel_policy": {
+          "free_until": "2026-11-21T10:30:00+03:00",
+          "penalty_rub": 320
+        },
+        "times": {
+          "start": "2026-11-21T10:30:00+03:00",
+          "end": "2026-11-21T11:45:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "transfer:trf_AYT_h_AYT_06_public",
+          "gen:transfers@seed42",
+          "formula:road_km=1.3*great_circle",
+          "osm:node/6633132388",
+          "ourairports:LTAI"
+        ]
+      },
+      {
+        "offer_id": "off_fl_SU259_20261121_light_dd27",
+        "kind": "flight",
+        "item_id": "fl_SU259_20261121",
+        "title": "Аэрофлот SU 259",
+        "variant": {
+          "title": "Аэрофлот SU 259",
+          "baggage": {
+            "cabin_kg": 10,
+            "checked_pieces": 0,
+            "checked_kg": null
+          },
+          "carrier": "SU",
+          "carrier_name": "Аэрофлот",
+          "flight_no": "SU 259",
+          "fare": "light",
+          "fare_name": "Лайт",
+          "refundable": false,
+          "origin_city": "AYT",
+          "dest_city": "MOW",
+          "from_hub": "AYT",
+          "to_hub": "SVO",
+          "stops": 0,
+          "via": [],
+          "duration_min": 215,
+          "international": true,
+          "extras": [
+            {
+              "code": "pet_cabin",
+              "title": "Животное в салоне (7 кг)",
+              "price_rub": 5000
+            }
+          ]
+        },
+        "capacity": {
+          "adults": 2,
+          "children": 1,
+          "pets": true
+        },
+        "quantity": 1,
+        "unit_price_rub": 17540,
+        "price_unit": "per_person",
+        "units": 3,
+        "total_rub": 57620,
+        "included": [
+          "cabin_bag_10kg"
+        ],
+        "baggage": "10 кг ручной клади, без багажа",
+        "cancel_policy": {
+          "free_until": null,
+          "penalty_rub": 57620
+        },
+        "times": {
+          "start": "2026-11-21T13:45:00+03:00",
+          "end": "2026-11-21T17:20:00+03:00"
+        },
+        "synthetic": true,
+        "source_refs": [
+          "flight:fl_SU259_20261121",
+          "gen:flights@seed42",
+          "formula:block_time=distance/750kmh+40min"
+        ]
+      }
+    ],
+    "total_rub": 134079,
+    "checks": [
+      {
+        "kind": "checkin_date",
+        "status": "ok",
+        "text": "Прибытие в отель 14.11 12:55, заезд 14.11.",
+        "options": [],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261114_20261121_dd27"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "late_arrival",
+        "status": "ok",
+        "text": "Стойка открыта в момент прибытия.",
+        "options": [],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261114_20261121_dd27"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "early_arrival",
+        "status": "warn",
+        "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
+        "options": [
+          "Ждать заселения 1 ч 05 мин",
+          "Оставить багаж на стойке",
+          "Ранний заезд с 12:55 (по наличию, не гарантирован)",
+          "Забронировать ночь накануне — номер готов сразу — 4 690 ₽"
+        ],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261114_20261121_dd27"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "return_trip",
+        "status": "ok",
+        "text": "Выезд из отеля 21.11 10:30 — успеваете на обратную дорогу.",
+        "options": [],
+        "offer_ids": [
+          "off_h_AYT_06_r1_t3_20261114_20261121_dd27"
+        ],
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "hotel:h_AYT_06"
+        ]
+      },
+      {
+        "kind": "transfer_fit",
+        "status": "ok",
+        "text": "Трансферы стыкуются с транспортом.",
+        "options": [],
+        "offer_ids": [],
+        "refs": []
+      },
+      {
+        "kind": "capacity",
+        "status": "ok",
+        "text": "Номера и трансферы вмещают 2 взр. и 1 дет. и багаж.",
+        "options": [],
+        "offer_ids": [],
+        "refs": []
+      },
+      {
+        "kind": "pets",
+        "status": "ok",
+        "text": "Животное принимают перевозчик, отель и трансферы.",
+        "options": [],
+        "offer_ids": [
+          "off_fl_DP3736_20261114_standard_dd27",
+          "off_trf_AYT_h_AYT_06_public_202611141140_to_hotel_dd27",
+          "off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "off_trf_AYT_h_AYT_06_public_202611211030_to_hub_dd27",
+          "off_fl_SU259_20261121_light_dd27"
+        ],
+        "refs": [
+          "offer:off_fl_DP3736_20261114_standard_dd27",
+          "offer:off_trf_AYT_h_AYT_06_public_202611141140_to_hotel_dd27",
+          "offer:off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "offer:off_trf_AYT_h_AYT_06_public_202611211030_to_hub_dd27",
+          "offer:off_fl_SU259_20261121_light_dd27"
+        ]
+      },
+      {
+        "kind": "visa",
+        "status": "warn",
+        "text": "Турция: Безвиз до 60 дней в течение 180 дней. Срок действия паспорта уточняйте перед поездкой. Документы: загранпаспорт.",
+        "options": [],
+        "offer_ids": [],
+        "refs": [
+          "city:AYT:visa"
+        ]
+      }
+    ],
+    "tradeoffs": [
+      {
+        "text": "Пересборка (даты на 2 дн. позже, с животным): сохранено 5, заменено 0, итог 134 079 ₽ (+18 439 ₽).",
+        "refs": [
+          "offer:off_fl_DP3736_20261114_standard_dd27",
+          "offer:off_trf_AYT_h_AYT_06_public_202611141140_to_hotel_dd27",
+          "offer:off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "offer:off_trf_AYT_h_AYT_06_public_202611211030_to_hub_dd27",
+          "offer:off_fl_SU259_20261121_light_dd27"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
+        "refs": [
+          "offer:off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+          "hotel:h_AYT_06"
+        ]
+      }
+    ]
+  },
+  "kept": [
+    {
+      "offer_id": "off_fl_DP3736_20261114_standard_dd27",
+      "kind": "flight",
+      "title": "Победа DP 3736",
+      "start": "2026-11-14T07:25:00+03:00",
+      "total_rub": 42989,
+      "note": "тот же вариант на новую дату 14.11; цена 33 270 ₽ → 42 989 ₽"
+    },
+    {
+      "offer_id": "off_trf_AYT_h_AYT_06_public_202611141140_to_hotel_dd27",
+      "kind": "transfer",
+      "title": "Общественный транспорт, 19.8 км, ~75 мин",
+      "start": "2026-11-14T11:40:00+03:00",
+      "total_rub": 320,
+      "note": "тот же вариант на новую дату 14.11"
+    },
+    {
+      "offer_id": "off_h_AYT_06_r1_t3_20261114_20261121_dd27",
+      "kind": "hotel",
+      "title": "Eva Butik Otel, стандарт, завтрак, бесплатная отмена",
+      "start": "2026-11-14T14:00:00+03:00",
+      "total_rub": 32830,
+      "note": "тот же вариант на новую дату 14.11"
+    },
+    {
+      "offer_id": "off_trf_AYT_h_AYT_06_public_202611211030_to_hub_dd27",
+      "kind": "transfer",
+      "title": "Общественный транспорт, 19.8 км, ~75 мин",
+      "start": "2026-11-21T10:30:00+03:00",
+      "total_rub": 320,
+      "note": "тот же вариант на новую дату 21.11"
+    },
+    {
+      "offer_id": "off_fl_SU259_20261121_light_dd27",
+      "kind": "flight",
+      "title": "Аэрофлот SU 259",
+      "start": "2026-11-21T13:45:00+03:00",
+      "total_rub": 57620,
+      "note": "тот же вариант на новую дату 21.11; цена 48 900 ₽ → 57 620 ₽"
+    }
+  ],
+  "replaced": [],
+  "price_delta_rub": 18439,
+  "change": "даты на 2 дн. позже, с животным",
+  "notes": [],
+  "history_entry": {
+    "change": "даты на 2 дн. позже, с животным",
+    "kept": [
+      "Победа DP 3736",
+      "Общественный транспорт, 19.8 км, ~75 мин",
+      "Eva Butik Otel, стандарт, завтрак, бесплатная отмена",
+      "Общественный транспорт, 19.8 км, ~75 мин",
+      "Аэрофлот SU 259"
+    ],
+    "replaced": [],
+    "price_delta_rub": 18439
+  }
+}

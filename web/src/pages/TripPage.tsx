@@ -113,6 +113,9 @@ export default function TripPage() {
             }
             onSelectDestination={(d) => s.act('select_destination', { destination_id: d.id }, `Выбираю ${d.name}`)}
             onApplyChange={(c) => s.act('accept_alternative', { alternative_id: c.id }, `Согласен: ${c.label}`)}
+            onSelectBundle={(b) => s.act('select_bundle', { bundle_id: b.id }, `Выбираю комплект «${b.label}»`)}
+            diff={s.diff}
+            onCloseDiff={s.clearDiff}
             onCheckout={toCart}
           />
         </section>

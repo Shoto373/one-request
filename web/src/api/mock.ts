@@ -18,6 +18,7 @@ interface MockSession {
   state: TripState
   messages: ChatMessage[]
   trace: TraceStep[]
+  opts: TripOpts
 }
 const sessions = new Map<string, MockSession>()
 const carts = new Map<string, Cart>()
@@ -41,43 +42,118 @@ function offer(o: Partial<Offer> & Pick<Offer, 'kind' | 'title' | 'total_rub'>):
 }
 const sum = (xs: Offer[]) => xs.reduce((s, x) => s + x.total_rub, 0)
 
-function bundlesSochi(): Bundle[] {
-  const hotel = offer({
-    kind: 'hotel', title: 'Ривьера Парк · Стандарт, завтрак', total_rub: 54600, unit_price_rub: 7800,
-    price_unit: 'per_room_night', units: 7, included: ['завтрак', 'wi-fi'],
-    cancel_policy: { free_until: '2026-11-07T23:59:00+03:00', penalty_rub: 7800 },
-    times: { start: '2026-11-10T14:00:00+03:00', end: '2026-11-17T12:00:00+03:00' },
-  })
-  const fast: Offer[] = [
-    offer({ kind: 'flight', title: 'SU 1120 · Шереметьево → Сочи', total_rub: 19800, unit_price_rub: 9900, price_unit: 'per_person', units: 2, baggage: '1 × 23 кг', times: { start: '2026-11-10T07:30:00+03:00', end: '2026-11-10T10:05:00+03:00' }, cancel_policy: { free_until: null, penalty_rub: 19800 } }),
-    offer({ kind: 'transfer', title: 'Такси · аэропорт → отель', total_rub: 2400, price_unit: 'per_vehicle', times: { start: '2026-11-10T10:25:00+03:00', end: '2026-11-10T11:05:00+03:00' } }),
+interface TripOpts {
+  /** сдвиг поездки в днях */
+  shift: number
+  pets: boolean
+  cheaper: boolean
+}
+const BASE: TripOpts = { shift: 0, pets: false, cheaper: false }
+
+/** ISO-время с поясом Сочи (+03:00) от базовой даты 2026-11-10 со сдвигом */
+function at(day: number, hm: string): string {
+  const d = new Date(Date.UTC(2026, 10, 10 + day))
+  return `${d.toISOString().slice(0, 10)}T${hm}:00+03:00`
+}
+
+/** стабильный offer_id из содержания — одинаковое предложение в двух версиях плана = «сохранено» */
+function fixed(o: Partial<Offer> & Pick<Offer, 'kind' | 'title' | 'total_rub'>): Offer {
+  const key = `${o.kind}_${o.title}_${o.times?.start ?? ''}`.replace(/[^\wа-яё]+/gi, '_').toLowerCase()
+  return offer({ ...o, offer_id: `off_${key}` })
+}
+
+function bundlesSochi(opt: TripOpts = BASE): Bundle[] {
+  const s = opt.shift
+  const n = 7
+  const hotel = opt.pets
+    ? fixed({
+        kind: 'hotel', title: 'Морская звезда · Студия, можно с собакой до 15 кг', total_rub: 61600, unit_price_rub: 8800,
+        price_unit: 'per_room_night', units: n, included: ['завтрак', 'wi-fi', 'питомец'],
+        cancel_policy: { free_until: at(s - 3, '23:59'), penalty_rub: 8800 },
+        times: { start: at(s, '14:00'), end: at(s + n, '12:00') },
+      })
+    : opt.cheaper
+      ? fixed({
+          kind: 'hotel', title: 'Гостевой дом «Магнолия» · Стандарт', total_rub: 33600, unit_price_rub: 4800,
+          price_unit: 'per_room_night', units: n, included: ['wi-fi'],
+          cancel_policy: { free_until: at(s - 1, '23:59'), penalty_rub: 4800 },
+          times: { start: at(s, '14:00'), end: at(s + n, '12:00') },
+        })
+      : fixed({
+          kind: 'hotel', title: 'Ривьера Парк · Стандарт, завтрак', total_rub: 54600, unit_price_rub: 7800,
+          price_unit: 'per_room_night', units: n, included: ['завтрак', 'wi-fi'],
+          cancel_policy: { free_until: at(s - 3, '23:59'), penalty_rub: 7800 },
+          times: { start: at(s, '14:00'), end: at(s + n, '12:00') },
+        })
+  const taxi = (title: string, start: string, end: string, price: number) =>
+    fixed({ kind: 'transfer', title: opt.pets ? `${title}, с переноской` : title, total_rub: opt.pets ? price + 500 : price, price_unit: 'per_vehicle', times: { start, end } })
+
+  const flightOut = (flex: boolean) =>
+    fixed({
+      kind: 'flight', title: `SU 1120 · Шереметьево → Сочи${flex ? ', гибкий тариф' : ''}`, total_rub: flex ? 25800 : 19800,
+      unit_price_rub: flex ? 12900 : 9900, price_unit: 'per_person', units: 2, baggage: '1 × 23 кг',
+      times: { start: at(s, '07:30'), end: at(s, '10:05') },
+      cancel_policy: flex ? { free_until: at(s - 1, '07:30'), penalty_rub: 0 } : { free_until: null, penalty_rub: 19800 },
+    })
+  const flightBack = (flex: boolean) =>
+    fixed({
+      kind: 'flight', title: `SU 1125 · Сочи → Шереметьево${flex ? ', гибкий тариф' : ''}`, total_rub: flex ? 27400 : 21400,
+      unit_price_rub: flex ? 13700 : 10700, price_unit: 'per_person', units: 2, baggage: '1 × 23 кг',
+      times: { start: at(s + n, '15:20'), end: at(s + n, '17:55') },
+      cancel_policy: flex ? { free_until: at(s + n - 1, '15:20'), penalty_rub: 0 } : { free_until: null, penalty_rub: 21400 },
+    })
+
+  const fly = (flex: boolean) => {
+    const items = [
+      flightOut(flex),
+      taxi('Такси · аэропорт → отель', at(s, '10:25'), at(s, '11:05'), 2400),
+      hotel,
+      taxi('Такси · отель → аэропорт', at(s + n, '12:30'), at(s + n, '13:10'), 2400),
+      flightBack(flex),
+    ]
+    return items
+  }
+  const rail = [
+    fixed({ kind: 'train', title: 'Поезд 104В · Москва → Сочи, купе', total_rub: 14600, unit_price_rub: 7300, price_unit: 'per_person', units: 2, times: { start: at(s - 1, '09:10'), end: at(s, '09:58') } }),
+    taxi('Такси · вокзал → отель', at(s, '10:10'), at(s, '10:25'), 900),
     hotel,
-    offer({ kind: 'transfer', title: 'Такси · отель → аэропорт', total_rub: 2400, price_unit: 'per_vehicle', times: { start: '2026-11-17T12:30:00+03:00', end: '2026-11-17T13:10:00+03:00' } }),
-    offer({ kind: 'flight', title: 'SU 1125 · Сочи → Шереметьево', total_rub: 21400, unit_price_rub: 10700, price_unit: 'per_person', units: 2, baggage: '1 × 23 кг', times: { start: '2026-11-17T15:20:00+03:00', end: '2026-11-17T17:55:00+03:00' } }),
+    taxi('Такси · отель → вокзал', at(s + n, '12:30'), at(s + n, '12:45'), 900),
+    fixed({ kind: 'train', title: 'Поезд 103С · Сочи → Москва, купе', total_rub: 15200, unit_price_rub: 7600, price_unit: 'per_person', units: 2, times: { start: at(s + n, '14:05'), end: at(s + n + 1, '15:20') } }),
   ]
-  const cheap: Offer[] = [
-    offer({ kind: 'train', title: 'Поезд 104В · Москва → Сочи, купе', total_rub: 14600, unit_price_rub: 7300, price_unit: 'per_person', units: 2, times: { start: '2026-11-09T09:10:00+03:00', end: '2026-11-10T09:58:00+03:00' } }),
-    offer({ kind: 'transfer', title: 'Такси · вокзал → отель', total_rub: 900, price_unit: 'per_vehicle', times: { start: '2026-11-10T10:10:00+03:00', end: '2026-11-10T10:25:00+03:00' } }),
-    hotel,
-    offer({ kind: 'transfer', title: 'Такси · отель → вокзал', total_rub: 900, price_unit: 'per_vehicle', times: { start: '2026-11-17T12:30:00+03:00', end: '2026-11-17T12:45:00+03:00' } }),
-    offer({ kind: 'train', title: 'Поезд 103С · Сочи → Москва, купе', total_rub: 15200, unit_price_rub: 7600, price_unit: 'per_person', units: 2, times: { start: '2026-11-17T14:05:00+03:00', end: '2026-11-18T15:20:00+03:00' } }),
-  ]
-  const early = (at: string) => ({
-    kind: 'early_arrival', status: 'warn' as const, text: `В отеле в ${at}, заселение с 14:00`,
+
+  const early = (items: Offer[], time: string): Bundle['checks'][number] => ({
+    kind: 'early_arrival', status: 'warn', text: `В отеле в ${time}, заселение с 14:00`,
     options: ['Оставить багаж на стойке — бесплатно', 'Ранний заезд с 11:00 — 2 500 ₽, не гарантирован'],
+    offer_ids: [items[1].offer_id, items[2].offer_id],
   })
+  const back = (items: Offer[], text: string): Bundle['checks'][number] => ({
+    kind: 'return_trip', status: 'ok', text, offer_ids: [items[2].offer_id, items[3].offer_id, items[4].offer_id],
+  })
+  const pets = (items: Offer[]): Bundle['checks'][number][] =>
+    opt.pets ? [{ kind: 'pets', status: 'ok', text: 'Собаку берут перевозчик, отель и трансфер', offer_ids: items.map((o) => o.offer_id) }] : []
+  const budget: Bundle['checks'][number] = { kind: 'budget', status: 'ok', text: 'Укладывается в бюджет' }
+
+  const cheap = rail
+  const fast = fly(false)
+  const flex = fly(true)
   return [
     {
       id: 'b-cheap', label: 'дешевле', items: cheap, total_rub: sum(cheap),
-      checks: [early('10:25'), { kind: 'return_trip', status: 'ok', text: 'Выезд в 12:00, поезд в 14:05 — запас 1 ч 20 мин' }, { kind: 'budget', status: 'ok', text: 'Укладывается в бюджет' }],
+      checks: [early(cheap, '10:25'), back(cheap, 'Выезд в 12:00, поезд в 14:05 — запас 1 ч 20 мин'), ...pets(cheap), budget],
       tradeoffs: [{ text: 'Сутки в поезде в каждую сторону — минус почти два дня отдыха', refs: ['offer:train'] }],
       risks: [],
     },
     {
       id: 'b-fast', label: 'быстрее', items: fast, total_rub: sum(fast),
-      checks: [early('11:05'), { kind: 'return_trip', status: 'ok', text: 'Выезд в 12:00, вылет в 15:20 — в аэропорту за 2 ч 10 мин' }, { kind: 'budget', status: 'ok', text: 'Укладывается в бюджет' }],
-      tradeoffs: [{ text: 'Дороже на 14 400 ₽, зато 2,5 часа в пути вместо суток', refs: ['offer:flight', 'offer:train'] }],
+      checks: [early(fast, '11:05'), back(fast, 'Выезд в 12:00, вылет в 15:20 — в аэропорту за 2 ч 10 мин'), ...pets(fast), budget],
+      tradeoffs: [{ text: `Дороже «дешевле» на ${(sum(fast) - sum(cheap)).toLocaleString('ru-RU')} ₽, зато 2,5 часа в пути вместо суток`, refs: ['offer:flight', 'offer:train'] }],
       risks: [{ text: 'Невозвратный тариф перелёта', refs: ['offer:SU1120.cancel_policy'] }],
+    },
+    {
+      id: 'b-flex', label: 'гибче отмена', items: flex, total_rub: sum(flex),
+      checks: [early(flex, '11:05'), back(flex, 'Выезд в 12:00, вылет в 15:20 — в аэропорту за 2 ч 10 мин'), ...pets(flex), budget],
+      tradeoffs: [{ text: 'Гибкий тариф дороже на 12 000 ₽ — зато всё можно отменить без штрафа', refs: ['offer:flight'] }],
+      risks: [],
     },
   ]
 }
@@ -179,6 +255,38 @@ function think(s: MockSession, text: string): Turn {
     }
   }
 
+  // пересборка готового плана при изменении условий
+  if (st.bundles.length && /(позже|раньше|собак|кошк|животн|дешевле|бюджет меньше)/.test(t)) {
+    const prevOpts = s.opts
+    const opts: TripOpts = {
+      shift: prevOpts.shift + (/(\d)\s*дн[яей]* позже/.test(t) ? Number(t.match(/(\d)\s*дн/)![1]) : /позже/.test(t) ? 2 : 0),
+      pets: prevOpts.pets || /собак|кошк|животн/.test(t),
+      cheaper: prevOpts.cheaper || /дешевле|бюджет меньше/.test(t),
+    }
+    s.opts = opts
+    const bundles = bundlesSochi(opts)
+    const prevSel = st.bundles.find((b) => b.id === st.selected_bundle_id) ?? st.bundles[0]
+    const nextSel = bundles.find((b) => b.id === prevSel.id) ?? bundles[0]
+    const what = [opts.shift !== prevOpts.shift && `даты +${opts.shift - prevOpts.shift} дн.`, opts.pets && !prevOpts.pets && 'едет собака', opts.cheaper && !prevOpts.cheaper && 'бюджет меньше'].filter(Boolean).join(', ')
+    const reqs = [
+      ...(opts.shift !== prevOpts.shift ? [req('dates', { from: at(opts.shift, '00:00').slice(0, 10), to: at(opts.shift + 7, '00:00').slice(0, 10) }, 'hard', `${10 + opts.shift}–${17 + opts.shift} ноября`, 'на два дня позже')] : []),
+      ...(opts.pets && !prevOpts.pets ? [req('pets', [{ kind: 'dog', weight_kg: 10 }], 'hard', 'С собакой', 'с собакой')] : []),
+    ]
+    const replaced = [
+      ...(opts.pets && !prevOpts.pets ? ['Ривьера Парк не принимает собак → Морская звезда (до 15 кг)', 'Такси → с переноской для собаки'] : []),
+      ...(opts.shift !== prevOpts.shift ? ['Рейсы и поезда — на новые даты'] : []),
+      ...(opts.cheaper && !prevOpts.cheaper ? ['Отель → гостевой дом «Магнолия», дорога без изменений'] : []),
+    ]
+    return {
+      steps: [step('llm', 'parse_request', { text }, { changed: what }), step('tool', 'replan', { changed: what }, { recheck: 5 }), step('tool', 'search_transport', {}, { offers: 12 }), step('tool', 'search_hotels', { pets: opts.pets }, { offers: 4 }), step('tool', 'validate_plan', {}, { block: 0 })],
+      patch: {
+        stage: 'assemble', requirements: upsert(st.requirements, reqs), bundles, selected_bundle_id: st.selected_bundle_id,
+        history: [...st.history, { version: st.version + 1, change: what.charAt(0).toUpperCase() + what.slice(1), kept: [], replaced, price_delta_rub: nextSel.total_rub - prevSel.total_rub }],
+      },
+      reply: `Пересобрал план (${what}): перепроверил дорогу, трансферы и отель, заменил только то, что перестало подходить. Разница видна в блоке «Агент пересобрал план».`,
+    }
+  }
+
   // выбор направления или конкретный запрос → комплекты
   if (/сочи|анталь|шарм|выбира/.test(t) || /из\s/.test(t)) {
     const reqs = /из москв/.test(t)
@@ -186,8 +294,8 @@ function think(s: MockSession, text: string): Turn {
       : [req('destination', 'AER', 'hard', 'Сочи', text)]
     return {
       steps: [step('llm', 'parse_request', { text }), step('tool', 'search_transport', { from: 'MOW', to: 'AER' }, { offers: 14 }), step('tool', 'search_hotels', { city: 'AER', nights: 7 }, { offers: 9 }), step('tool', 'build_bundles', {}, { bundles: 2 }), step('tool', 'validate_plan', {}, { warn: 1, block: 0 })],
-      patch: { stage: 'assemble', requirements: upsert(st.requirements, reqs), destinations: [], open_questions: [], proposed_changes: [], bundles: bundlesSochi() },
-      reply: 'Собрал два проверенных комплекта на 10–17 ноября: «дешевле» — поездом, «быстрее» — самолётом. В обоих вы будете в отеле раньше заселения — показал варианты.',
+      patch: { stage: 'assemble', requirements: upsert(st.requirements, reqs), destinations: [], open_questions: [], proposed_changes: [], bundles: bundlesSochi(s.opts) },
+      reply: 'Собрал три проверенных комплекта на 10–17 ноября: «дешевле» — поездом, «быстрее» и «гибче отмена» — самолётом. Сравнил их по вашим критериям; везде вы будете в отеле раньше заселения — показал варианты.',
     }
   }
 
@@ -227,7 +335,7 @@ function checkVersion(s: MockSession, expected: number) {
 export const mockApi: Api = {
   async createSession(): Promise<SessionCreated> {
     const id = uid()
-    sessions.set(id, { state: emptyState(id), messages: [], trace: [] })
+    sessions.set(id, { state: emptyState(id), messages: [], trace: [], opts: { ...BASE } })
     return { session_id: id, version: 0 }
   },
   async getSession(id): Promise<SessionView> {
@@ -257,12 +365,18 @@ export const mockApi: Api = {
       case 'edit_requirement':
         turn = { steps: [step('state', 'edit_requirement', p)], patch: { requirements: s.state.requirements.map((r) => (r.key === p.key ? { ...r, value: p.value, kind: (p.kind as Requirement['kind']) ?? 'hard', source: 'user_edit', label: p.label ?? r.label } : r)) }, reply: 'Зафиксировал — теперь это ваше требование, а не моя догадка.' }
         break
+      case 'select_bundle': {
+        const b = s.state.bundles.find((x) => x.id === p.bundle_id)
+        if (!b) err(422, 'invalid_command', 'bundle_id must identify a current bundle')
+        turn = { steps: [step('state', 'select_bundle', p)], patch: { selected_bundle_id: b.id, stage: 'assemble' }, reply: `Отлично, берём «${b.label}». Таймлайн поездки и проверки стыковок — ниже; можно оформлять.` }
+        break
+      }
       case 'select_destination':
         turn = think(s, 'выбираю Сочи')
         break
       case 'accept_alternative': {
         const r = s.state.proposed_changes?.find((x) => x.id === p.alternative_id)
-        turn = { steps: [step('tool', 'accept_alternative', p), step('tool', 'build_bundles', {}, { bundles: 2 })], patch: { proposed_changes: [], stage: 'assemble', bundles: bundlesSochi() }, reply: `Принято: ${r?.label ?? 'изменение'}. Собрал варианты (в моке — на примере Сочи).` }
+        turn = { steps: [step('tool', 'accept_alternative', p), step('tool', 'build_bundles', {}, { bundles: 2 })], patch: { proposed_changes: [], stage: 'assemble', bundles: bundlesSochi(s.opts) }, reply: `Принято: ${r?.label ?? 'изменение'}. Собрал варианты (в моке — на примере Сочи).` }
         break
       }
       case 'select_bundle': {

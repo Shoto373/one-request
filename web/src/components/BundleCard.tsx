@@ -27,7 +27,7 @@ const KIND_TINT: Record<Offer['kind'], string> = {
   hotel: 'bg-lime-soft text-[#2f6b0f]',
 }
 
-export function OfferRow({ o, last, markSynthetic = true }: { o: Offer; last?: boolean; markSynthetic?: boolean }) {
+export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Offer; last?: boolean; markSynthetic?: boolean; checks?: Check[] }) {
   const start = o.times && localParts(o.times.start)
   const end = o.times && localParts(o.times.end)
   return (
@@ -67,9 +67,31 @@ export function OfferRow({ o, last, markSynthetic = true }: { o: Offer; last?: b
             </span>
           )}
         </div>
+        {checks.length > 0 && (
+          <div className="mt-2 rounded-xl border border-black/[.05] bg-white p-2.5">
+            <Checks checks={checks} />
+          </div>
+        )}
       </div>
     </li>
   )
+}
+
+/** Проверка относится к последней из своих позиций в таймлайне: «прибытие vs заселение» — к отелю, «обратная дорога» — к рейсу назад */
+export function attachChecks(b: Bundle): { byOffer: Map<string, Check[]>; general: Check[] } {
+  const order = new Map(b.items.map((o, i) => [o.offer_id, i]))
+  const byOffer = new Map<string, Check[]>()
+  const general: Check[] = []
+  for (const c of b.checks) {
+    const idx = (c.offer_ids ?? []).map((id) => order.get(id)).filter((i): i is number => i != null)
+    if (!idx.length) {
+      general.push(c)
+      continue
+    }
+    const id = b.items[Math.max(...idx)].offer_id
+    byOffer.set(id, [...(byOffer.get(id) ?? []), c])
+  }
+  return { byOffer, general }
 }
 
 export function Checks({ checks }: { checks: Check[] }) {
@@ -104,20 +126,22 @@ export function Checks({ checks }: { checks: Check[] }) {
 
 interface Props {
   bundle: Bundle
-  best?: boolean
+  selected?: boolean
   onCheckout: () => void
   checkoutBusy: boolean
 }
 
-export default function BundleCard({ bundle, best, onCheckout, checkoutBusy }: Props) {
+export default function BundleCard({ bundle, selected, onCheckout, checkoutBusy }: Props) {
+  const { byOffer, general } = attachChecks(bundle)
   const blocked = bundle.checks.some((c) => c.status === 'block')
   const warns = bundle.checks.filter((c) => c.status === 'warn').length
   const allSynthetic = bundle.items.every((o) => o.synthetic)
   return (
-    <article className={`card flex flex-col overflow-hidden ${best ? 'ring-2 ring-brand' : ''}`}>
+    <article className={`card flex flex-col overflow-hidden ${selected ? 'ring-2 ring-brand' : ''}`}>
       <header className="flex items-start justify-between gap-3 p-4 pb-3">
         <div>
           <span className="rounded-full bg-brand-light px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-brand">{bundle.label}</span>
+          {selected && <span className="ml-1.5 rounded-full bg-brand px-2 py-0.5 align-middle text-[10px] font-bold text-white">ваш выбор</span>}
           {allSynthetic && (
             <span className="ml-1.5 align-middle">
               <SyntheticBadge />
@@ -135,12 +159,12 @@ export default function BundleCard({ bundle, best, onCheckout, checkoutBusy }: P
 
       <ol className="px-4 pt-1">
         {bundle.items.map((o, i) => (
-          <OfferRow key={o.offer_id + i} o={o} last={i === bundle.items.length - 1} markSynthetic={!allSynthetic} />
+          <OfferRow key={o.offer_id + i} o={o} last={i === bundle.items.length - 1} markSynthetic={!allSynthetic} checks={byOffer.get(o.offer_id)} />
         ))}
       </ol>
 
       <div className="mt-auto space-y-3 border-t border-black/[.05] bg-canvas/50 p-4">
-        <Checks checks={bundle.checks} />
+        <Checks checks={general} />
         {!!bundle.advantages?.length && (
           <div className="text-[13px]">
             <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Почему подходит</div>
