@@ -1,0 +1,23 @@
+[
+{"id":"SVO","kind":"airport","city_id":"MOW","name":"Шереметьево","coord":{"lat":55.977486,"lon":37.386677},"timezone":"Europe/Moscow","international":true,"source_refs":["ourairports:UUEE"]},
+{"id":"DME","kind":"airport","city_id":"MOW","name":"Домодедово","coord":{"lat":55.408798,"lon":37.9063},"timezone":"Europe/Moscow","international":true,"source_refs":["ourairports:UUDD"]},
+{"id":"VKO","kind":"airport","city_id":"MOW","name":"Внуково","coord":{"lat":55.591499,"lon":37.261501},"timezone":"Europe/Moscow","international":true,"source_refs":["ourairports:UUWW"]},
+{"id":"st_mow_kaz","kind":"station","city_id":"MOW","name":"Москва, Казанский вокзал","coord":{"lat":55.773611,"lon":37.65567},"timezone":"Europe/Moscow","international":false,"source_refs":["wikidata:Q1432585"]},
+{"id":"st_mow_len","kind":"station","city_id":"MOW","name":"Москва, Ленинградский вокзал","coord":{"lat":55.776261,"lon":37.655328},"timezone":"Europe/Moscow","international":false,"source_refs":["wikidata:Q1344454"]},
+{"id":"LED","kind":"airport","city_id":"LED","name":"Пулково","coord":{"lat":59.800301,"lon":30.262501},"timezone":"Europe/Moscow","international":true,"source_refs":["ourairports:ULLI"]},
+{"id":"st_led_msk","kind":"station","city_id":"LED","name":"Санкт-Петербург, Московский вокзал","coord":{"lat":59.928717,"lon":30.362433},"timezone":"Europe/Moscow","international":false,"source_refs":["wikidata:Q139318"]},
+{"id":"SVX","kind":"airport","city_id":"SVX","name":"Кольцово","coord":{"lat":56.743099,"lon":60.8027},"timezone":"Asia/Yekaterinburg","international":true,"source_refs":["ourairports:USSS"]},
+{"id":"st_svx","kind":"station","city_id":"SVX","name":"Екатеринбург-Пассажирский","coord":{"lat":56.858844,"lon":60.604122},"timezone":"Asia/Yekaterinburg","international":false,"source_refs":["wikidata:Q3180012"]},
+{"id":"AER","kind":"airport","city_id":"AER","name":"Сочи (Адлер)","coord":{"lat":43.449902,"lon":39.9566},"timezone":"Europe/Moscow","international":true,"source_refs":["ourairports:URSS"]},
+{"id":"st_aer_sochi","kind":"station","city_id":"AER","name":"Сочи, ж/д вокзал","coord":{"lat":43.591389,"lon":39.728056},"timezone":"Europe/Moscow","international":false,"source_refs":["wikidata:Q3180156"]},
+{"id":"st_aer_adler","kind":"station","city_id":"AER","name":"Адлер, ж/д вокзал","coord":{"lat":43.4475,"lon":39.904722},"timezone":"Europe/Moscow","international":false,"source_refs":["wikidata:Q4057610"]},
+{"id":"KGD","kind":"airport","city_id":"KGD","name":"Храброво","coord":{"lat":54.89161,"lon":20.598559},"timezone":"Europe/Kaliningrad","international":true,"source_refs":["ourairports:UMKK"]},
+{"id":"KZN","kind":"airport","city_id":"KZN","name":"Казань","coord":{"lat":55.606201,"lon":49.278702},"timezone":"Europe/Moscow","international":true,"source_refs":["ourairports:UWKD"]},
+{"id":"st_kzn","kind":"station","city_id":"KZN","name":"Казань-Пассажирская","coord":{"lat":55.788229,"lon":49.100121},"timezone":"Europe/Moscow","international":false,"source_refs":["wikidata:Q34085"]},
+{"id":"IST","kind":"airport","city_id":"IST","name":"Стамбул (новый)","coord":{"lat":41.274874,"lon":28.732136},"timezone":"Europe/Istanbul","international":true,"source_refs":["ourairports:LTFM"]},
+{"id":"SAW","kind":"airport","city_id":"IST","name":"Сабиха Гёкчен","coord":{"lat":40.898602,"lon":29.3092},"timezone":"Europe/Istanbul","international":true,"source_refs":["ourairports:LTFJ"]},
+{"id":"AYT","kind":"airport","city_id":"AYT","name":"Анталья","coord":{"lat":36.898701,"lon":30.800501},"timezone":"Europe/Istanbul","international":true,"source_refs":["ourairports:LTAI"]},
+{"id":"SSH","kind":"airport","city_id":"SSH","name":"Шарм-эль-Шейх","coord":{"lat":27.977272,"lon":34.394717},"timezone":"Africa/Cairo","international":true,"source_refs":["ourairports:HESH"]},
+{"id":"DXB","kind":"airport","city_id":"DXB","name":"Дубай","coord":{"lat":25.24979,"lon":55.370992},"timezone":"Asia/Dubai","international":true,"source_refs":["ourairports:OMDB"]},
+{"id":"EVN","kind":"airport","city_id":"EVN","name":"Звартноц","coord":{"lat":40.148941,"lon":44.397887},"timezone":"Asia/Yerevan","international":true,"source_refs":["ourairports:UDYZ"]}
+]

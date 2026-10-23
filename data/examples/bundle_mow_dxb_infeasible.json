@@ -1,0 +1,25 @@
+{
+  "query": {
+    "origin_city": "MOW",
+    "dest_city": "DXB",
+    "depart_date": "2026-11-10",
+    "return_date": "2026-11-17",
+    "party": {
+      "adults": 3,
+      "children_ages": [],
+      "pets": [],
+      "bags": null
+    },
+    "budget_rub": 30000,
+    "budget_hard": true,
+    "kinds": [
+      "flight",
+      "train"
+    ]
+  },
+  "bundles": [],
+  "notes": [
+    "Все сочетания не прошли проверку: budget ×2700, checkin_date ×540"
+  ],
+  "cheapest_total_rub": 349500
+}

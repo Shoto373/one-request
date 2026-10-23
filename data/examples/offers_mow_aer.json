@@ -1,0 +1,895 @@
+{
+  "flights": [
+    {
+      "offer_id": "off_fl_DP2512_20261110_light_4be5",
+      "kind": "flight",
+      "item_id": "fl_DP2512_20261110",
+      "title": "Победа DP 2512",
+      "variant": {
+        "title": "Победа DP 2512",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 0,
+          "checked_kg": null
+        },
+        "carrier": "DP",
+        "carrier_name": "Победа",
+        "flight_no": "DP 2512",
+        "fare": "light",
+        "fare_name": "Лайт",
+        "refundable": false,
+        "origin_city": "MOW",
+        "dest_city": "AER",
+        "from_hub": "VKO",
+        "to_hub": "AER",
+        "stops": 0,
+        "via": [],
+        "duration_min": 150,
+        "international": false,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 5570,
+      "price_unit": "per_person",
+      "units": 2,
+      "total_rub": 11140,
+      "included": [
+        "cabin_bag_10kg"
+      ],
+      "baggage": "10 кг ручной клади, без багажа",
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 11140
+      },
+      "times": {
+        "start": "2026-11-10T06:10:00+03:00",
+        "end": "2026-11-10T08:40:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "flight:fl_DP2512_20261110",
+        "gen:flights@seed42",
+        "formula:block_time=distance/750kmh+40min"
+      ]
+    },
+    {
+      "offer_id": "off_fl_DP4334_20261110_light_4be5",
+      "kind": "flight",
+      "item_id": "fl_DP4334_20261110",
+      "title": "Победа DP 4334",
+      "variant": {
+        "title": "Победа DP 4334",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 0,
+          "checked_kg": null
+        },
+        "carrier": "DP",
+        "carrier_name": "Победа",
+        "flight_no": "DP 4334",
+        "fare": "light",
+        "fare_name": "Лайт",
+        "refundable": false,
+        "origin_city": "MOW",
+        "dest_city": "AER",
+        "from_hub": "VKO",
+        "to_hub": "AER",
+        "stops": 0,
+        "via": [],
+        "duration_min": 150,
+        "international": false,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 6110,
+      "price_unit": "per_person",
+      "units": 2,
+      "total_rub": 12220,
+      "included": [
+        "cabin_bag_10kg"
+      ],
+      "baggage": "10 кг ручной клади, без багажа",
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 12220
+      },
+      "times": {
+        "start": "2026-11-10T19:30:00+03:00",
+        "end": "2026-11-10T22:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "flight:fl_DP4334_20261110",
+        "gen:flights@seed42",
+        "formula:block_time=distance/750kmh+40min"
+      ]
+    },
+    {
+      "offer_id": "off_fl_DP2450_20261110_standard_4be5",
+      "kind": "flight",
+      "item_id": "fl_DP2450_20261110",
+      "title": "Победа DP 2450",
+      "variant": {
+        "title": "Победа DP 2450",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 1,
+          "checked_kg": 23
+        },
+        "carrier": "DP",
+        "carrier_name": "Победа",
+        "flight_no": "DP 2450",
+        "fare": "standard",
+        "fare_name": "Стандарт",
+        "refundable": false,
+        "origin_city": "MOW",
+        "dest_city": "AER",
+        "from_hub": "VKO",
+        "to_hub": "AER",
+        "stops": 0,
+        "via": [],
+        "duration_min": 150,
+        "international": false,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 6530,
+      "price_unit": "per_person",
+      "units": 2,
+      "total_rub": 13060,
+      "included": [
+        "cabin_bag_10kg",
+        "checked_bag_1x23kg"
+      ],
+      "baggage": "10 кг ручной клади + 1×23 кг",
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 13060
+      },
+      "times": {
+        "start": "2026-11-10T11:45:00+03:00",
+        "end": "2026-11-10T14:15:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "flight:fl_DP2450_20261110",
+        "gen:flights@seed42",
+        "formula:block_time=distance/750kmh+40min"
+      ]
+    },
+    {
+      "offer_id": "off_fl_S72410_20261110_light_4be5",
+      "kind": "flight",
+      "item_id": "fl_S72410_20261110",
+      "title": "S7 Airlines S7 2410",
+      "variant": {
+        "title": "S7 Airlines S7 2410",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 0,
+          "checked_kg": null
+        },
+        "carrier": "S7",
+        "carrier_name": "S7 Airlines",
+        "flight_no": "S7 2410",
+        "fare": "light",
+        "fare_name": "Лайт",
+        "refundable": false,
+        "origin_city": "MOW",
+        "dest_city": "AER",
+        "from_hub": "DME",
+        "to_hub": "AER",
+        "stops": 0,
+        "via": [],
+        "duration_min": 145,
+        "international": false,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 6610,
+      "price_unit": "per_person",
+      "units": 2,
+      "total_rub": 13220,
+      "included": [
+        "cabin_bag_10kg"
+      ],
+      "baggage": "10 кг ручной клади, без багажа",
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 13220
+      },
+      "times": {
+        "start": "2026-11-10T09:15:00+03:00",
+        "end": "2026-11-10T11:40:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "flight:fl_S72410_20261110",
+        "gen:flights@seed42",
+        "formula:block_time=distance/750kmh+40min"
+      ]
+    },
+    {
+      "offer_id": "off_fl_DP2512_20261110_standard_4be5",
+      "kind": "flight",
+      "item_id": "fl_DP2512_20261110",
+      "title": "Победа DP 2512",
+      "variant": {
+        "title": "Победа DP 2512",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 1,
+          "checked_kg": 23
+        },
+        "carrier": "DP",
+        "carrier_name": "Победа",
+        "flight_no": "DP 2512",
+        "fare": "standard",
+        "fare_name": "Стандарт",
+        "refundable": false,
+        "origin_city": "MOW",
+        "dest_city": "AER",
+        "from_hub": "VKO",
+        "to_hub": "AER",
+        "stops": 0,
+        "via": [],
+        "duration_min": 150,
+        "international": false,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 7480,
+      "price_unit": "per_person",
+      "units": 2,
+      "total_rub": 14960,
+      "included": [
+        "cabin_bag_10kg",
+        "checked_bag_1x23kg"
+      ],
+      "baggage": "10 кг ручной клади + 1×23 кг",
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 14960
+      },
+      "times": {
+        "start": "2026-11-10T06:10:00+03:00",
+        "end": "2026-11-10T08:40:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "flight:fl_DP2512_20261110",
+        "gen:flights@seed42",
+        "formula:block_time=distance/750kmh+40min"
+      ]
+    }
+  ],
+  "hotels": [
+    {
+      "offer_id": "off_h_AER_02_r1_t1_20261110_20261117_4be5",
+      "kind": "hotel",
+      "item_id": "h_AER_02",
+      "title": "Marina Yacht by Stellar, стандарт, без питания, невозвратный",
+      "variant": {
+        "title": "Marina Yacht by Stellar",
+        "hotel_name": "Marina Yacht by Stellar",
+        "stars": 2,
+        "rating": 8.2,
+        "city_id": "AER",
+        "room_id": "h_AER_02_r1",
+        "room_type": "Стандарт",
+        "tariff_id": "t1",
+        "tariff": "Без питания, невозвратный",
+        "meal": "RO",
+        "refundable": false,
+        "nights": 7,
+        "nightly_rub": [
+          2850,
+          2850,
+          2850,
+          3100,
+          3100,
+          2850,
+          2850
+        ],
+        "dist_beach_km": 0.54,
+        "dist_center_km": 0.38,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 2921,
+      "price_unit": "per_room_night",
+      "units": 7,
+      "total_rub": 20447,
+      "included": [
+        "wifi"
+      ],
+      "baggage": null,
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 20447
+      },
+      "times": {
+        "start": "2026-11-10T15:00:00+03:00",
+        "end": "2026-11-17T12:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "hotel:h_AER_02",
+        "osm:node/12749552601",
+        "gen:hotels@seed42"
+      ]
+    },
+    {
+      "offer_id": "off_h_AER_07_r1_t1_20261110_20261117_4be5",
+      "kind": "hotel",
+      "item_id": "h_AER_07",
+      "title": "Lavicon apart Sochi, стандарт, без питания, невозвратный",
+      "variant": {
+        "title": "Lavicon apart Sochi",
+        "hotel_name": "Lavicon apart Sochi",
+        "stars": 4,
+        "rating": 9.0,
+        "city_id": "AER",
+        "room_id": "h_AER_07_r1",
+        "room_type": "Стандарт",
+        "tariff_id": "t1",
+        "tariff": "Без питания, невозвратный",
+        "meal": "RO",
+        "refundable": false,
+        "nights": 7,
+        "nightly_rub": [
+          5640,
+          5640,
+          5640,
+          6140,
+          6140,
+          5640,
+          5640
+        ],
+        "dist_beach_km": 0.53,
+        "dist_center_km": 1.8,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 5783,
+      "price_unit": "per_room_night",
+      "units": 7,
+      "total_rub": 40481,
+      "included": [
+        "wifi"
+      ],
+      "baggage": null,
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 40481
+      },
+      "times": {
+        "start": "2026-11-10T14:00:00+03:00",
+        "end": "2026-11-17T12:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "hotel:h_AER_07",
+        "osm:node/13301736501",
+        "gen:hotels@seed42"
+      ]
+    },
+    {
+      "offer_id": "off_h_AER_04_r1_t1_20261110_20261117_4be5",
+      "kind": "hotel",
+      "item_id": "h_AER_04",
+      "title": "Azimut Парк Отель Виноградная, стандарт, без питания, невозвратный",
+      "variant": {
+        "title": "Azimut Парк Отель Виноградная",
+        "hotel_name": "Azimut Парк Отель Виноградная",
+        "stars": 4,
+        "rating": 8.2,
+        "city_id": "AER",
+        "room_id": "h_AER_04_r1",
+        "room_type": "Стандарт",
+        "tariff_id": "t1",
+        "tariff": "Без питания, невозвратный",
+        "meal": "RO",
+        "refundable": false,
+        "nights": 7,
+        "nightly_rub": [
+          6650,
+          6650,
+          6650,
+          7850,
+          7850,
+          6650,
+          6650
+        ],
+        "dist_beach_km": 1.17,
+        "dist_center_km": 3.08,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 6993,
+      "price_unit": "per_room_night",
+      "units": 7,
+      "total_rub": 48951,
+      "included": [
+        "wifi"
+      ],
+      "baggage": null,
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 48951
+      },
+      "times": {
+        "start": "2026-11-10T14:00:00+03:00",
+        "end": "2026-11-17T12:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "hotel:h_AER_04",
+        "osm:way/51764141",
+        "gen:hotels@seed42"
+      ]
+    },
+    {
+      "offer_id": "off_h_AER_03_r1_t1_20261110_20261117_4be5",
+      "kind": "hotel",
+      "item_id": "h_AER_03",
+      "title": "Mercure Sochi Centre, стандарт, без питания, невозвратный",
+      "variant": {
+        "title": "Mercure Sochi Centre",
+        "hotel_name": "Mercure Sochi Centre",
+        "stars": 4,
+        "rating": 8.2,
+        "city_id": "AER",
+        "room_id": "h_AER_03_r1",
+        "room_type": "Стандарт",
+        "tariff_id": "t1",
+        "tariff": "Без питания, невозвратный",
+        "meal": "RO",
+        "refundable": false,
+        "nights": 7,
+        "nightly_rub": [
+          7240,
+          7240,
+          7240,
+          8040,
+          8040,
+          7240,
+          7240
+        ],
+        "dist_beach_km": 0.3,
+        "dist_center_km": 0.91,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 7469,
+      "price_unit": "per_room_night",
+      "units": 7,
+      "total_rub": 52283,
+      "included": [
+        "wifi"
+      ],
+      "baggage": null,
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 52283
+      },
+      "times": {
+        "start": "2026-11-10T14:00:00+03:00",
+        "end": "2026-11-17T11:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "hotel:h_AER_03",
+        "osm:way/201474331",
+        "gen:hotels@seed42"
+      ]
+    },
+    {
+      "offer_id": "off_h_AER_06_r1_t1_20261110_20261117_4be5",
+      "kind": "hotel",
+      "item_id": "h_AER_06",
+      "title": "Каникулы в Сочи, стандарт, без питания, невозвратный",
+      "variant": {
+        "title": "Каникулы в Сочи",
+        "hotel_name": "Каникулы в Сочи",
+        "stars": 4,
+        "rating": 9.1,
+        "city_id": "AER",
+        "room_id": "h_AER_06_r1",
+        "room_type": "Стандарт",
+        "tariff_id": "t1",
+        "tariff": "Без питания, невозвратный",
+        "meal": "RO",
+        "refundable": false,
+        "nights": 7,
+        "nightly_rub": [
+          7270,
+          7270,
+          7270,
+          8140,
+          8140,
+          7270,
+          7270
+        ],
+        "dist_beach_km": 1.14,
+        "dist_center_km": 2.43,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 7519,
+      "price_unit": "per_room_night",
+      "units": 7,
+      "total_rub": 52633,
+      "included": [
+        "wifi"
+      ],
+      "baggage": null,
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 52633
+      },
+      "times": {
+        "start": "2026-11-10T14:00:00+03:00",
+        "end": "2026-11-17T12:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "hotel:h_AER_06",
+        "osm:way/52587525",
+        "gen:hotels@seed42"
+      ]
+    },
+    {
+      "offer_id": "off_h_AER_05_r1_t1_20261110_20261117_4be5",
+      "kind": "hotel",
+      "item_id": "h_AER_05",
+      "title": "Жемчужина, стандарт, без питания, невозвратный",
+      "variant": {
+        "title": "Жемчужина",
+        "hotel_name": "Жемчужина",
+        "stars": 4,
+        "rating": 8.7,
+        "city_id": "AER",
+        "room_id": "h_AER_05_r1",
+        "room_type": "Стандарт",
+        "tariff_id": "t1",
+        "tariff": "Без питания, невозвратный",
+        "meal": "RO",
+        "refundable": false,
+        "nights": 7,
+        "nightly_rub": [
+          7910,
+          7910,
+          7910,
+          8620,
+          8620,
+          7910,
+          7910
+        ],
+        "dist_beach_km": 0.17,
+        "dist_center_km": 1.84,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 8113,
+      "price_unit": "per_room_night",
+      "units": 7,
+      "total_rub": 56791,
+      "included": [
+        "wifi"
+      ],
+      "baggage": null,
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 56791
+      },
+      "times": {
+        "start": "2026-11-10T14:00:00+03:00",
+        "end": "2026-11-17T12:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "hotel:h_AER_05",
+        "osm:way/51847429",
+        "gen:hotels@seed42"
+      ]
+    },
+    {
+      "offer_id": "off_h_AER_01_r1_t1_20261110_20261117_4be5",
+      "kind": "hotel",
+      "item_id": "h_AER_01",
+      "title": "Hyatt Regency Sochi, стандарт, без питания, невозвратный",
+      "variant": {
+        "title": "Hyatt Regency Sochi",
+        "hotel_name": "Hyatt Regency Sochi",
+        "stars": 5,
+        "rating": 9.6,
+        "city_id": "AER",
+        "room_id": "h_AER_01_r1",
+        "room_type": "Стандарт",
+        "tariff_id": "t1",
+        "tariff": "Без питания, невозвратный",
+        "meal": "RO",
+        "refundable": false,
+        "nights": 7,
+        "nightly_rub": [
+          10820,
+          10820,
+          10820,
+          11900,
+          11900,
+          10820,
+          10820
+        ],
+        "dist_beach_km": 0.36,
+        "dist_center_km": 1.18,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 11129,
+      "price_unit": "per_room_night",
+      "units": 7,
+      "total_rub": 77903,
+      "included": [
+        "wifi"
+      ],
+      "baggage": null,
+      "cancel_policy": {
+        "free_until": null,
+        "penalty_rub": 77903
+      },
+      "times": {
+        "start": "2026-11-10T14:00:00+03:00",
+        "end": "2026-11-17T12:00:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "hotel:h_AER_01",
+        "osm:relation/9273776",
+        "gen:hotels@seed42"
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "offer_id": "off_trf_AER_h_AER_02_public_202611100840_to_hotel_4be5",
+      "kind": "transfer",
+      "item_id": "trf_AER_h_AER_02_public",
+      "title": "Общественный транспорт, 31.4 км, ~130 мин",
+      "variant": {
+        "title": "Общественный транспорт, 31.4 км, ~130 мин",
+        "mode": "public",
+        "provider": "Общественный транспорт",
+        "direction": "to_hotel",
+        "hub_id": "AER",
+        "hotel_id": "h_AER_02",
+        "distance_km": 31.4,
+        "duration_min": 130,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 120,
+      "price_unit": "per_person",
+      "units": 2,
+      "total_rub": 240,
+      "included": [],
+      "baggage": "2 мест багажа",
+      "cancel_policy": {
+        "free_until": "2026-11-10T08:40:00+03:00",
+        "penalty_rub": 240
+      },
+      "times": {
+        "start": "2026-11-10T08:40:00+03:00",
+        "end": "2026-11-10T10:50:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "transfer:trf_AER_h_AER_02_public",
+        "gen:transfers@seed42",
+        "formula:road_km=1.3*great_circle",
+        "osm:node/12749552601",
+        "ourairports:URSS"
+      ]
+    },
+    {
+      "offer_id": "off_trf_AER_h_AER_02_taxi_202611100840_to_hotel_4be5",
+      "kind": "transfer",
+      "item_id": "trf_AER_h_AER_02_taxi",
+      "title": "Такси, 31.4 км, ~60 мин",
+      "variant": {
+        "title": "Такси, 31.4 км, ~60 мин",
+        "mode": "taxi",
+        "provider": "Такси «Комфорт»",
+        "direction": "to_hotel",
+        "hub_id": "AER",
+        "hotel_id": "h_AER_02",
+        "distance_km": 31.4,
+        "duration_min": 60,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 1400,
+      "price_unit": "per_vehicle",
+      "units": 1,
+      "total_rub": 1400,
+      "included": [],
+      "baggage": "2 мест багажа",
+      "cancel_policy": {
+        "free_until": "2026-11-09T08:40:00+03:00",
+        "penalty_rub": 1400
+      },
+      "times": {
+        "start": "2026-11-10T08:40:00+03:00",
+        "end": "2026-11-10T09:40:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "transfer:trf_AER_h_AER_02_taxi",
+        "gen:transfers@seed42",
+        "formula:road_km=1.3*great_circle",
+        "osm:node/12749552601",
+        "ourairports:URSS"
+      ]
+    },
+    {
+      "offer_id": "off_trf_AER_h_AER_02_shuttle_202611100840_to_hotel_4be5",
+      "kind": "transfer",
+      "item_id": "trf_AER_h_AER_02_shuttle",
+      "title": "Шаттл, 31.4 км, ~110 мин",
+      "variant": {
+        "title": "Шаттл, 31.4 км, ~110 мин",
+        "mode": "shuttle",
+        "provider": "Групповой трансфер",
+        "direction": "to_hotel",
+        "hub_id": "AER",
+        "hotel_id": "h_AER_02",
+        "distance_km": 31.4,
+        "duration_min": 110,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 850,
+      "price_unit": "per_person",
+      "units": 2,
+      "total_rub": 1700,
+      "included": [],
+      "baggage": "2 мест багажа",
+      "cancel_policy": {
+        "free_until": "2026-11-08T08:40:00+03:00",
+        "penalty_rub": 1700
+      },
+      "times": {
+        "start": "2026-11-10T08:40:00+03:00",
+        "end": "2026-11-10T10:30:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "transfer:trf_AER_h_AER_02_shuttle",
+        "gen:transfers@seed42",
+        "formula:road_km=1.3*great_circle",
+        "osm:node/12749552601",
+        "ourairports:URSS"
+      ]
+    },
+    {
+      "offer_id": "off_trf_AER_h_AER_02_minivan_202611100840_to_hotel_4be5",
+      "kind": "transfer",
+      "item_id": "trf_AER_h_AER_02_minivan",
+      "title": "Минивэн, 31.4 км, ~65 мин",
+      "variant": {
+        "title": "Минивэн, 31.4 км, ~65 мин",
+        "mode": "minivan",
+        "provider": "Минивэн-трансфер",
+        "direction": "to_hotel",
+        "hub_id": "AER",
+        "hotel_id": "h_AER_02",
+        "distance_km": 31.4,
+        "duration_min": 65,
+        "extras": []
+      },
+      "capacity": {
+        "adults": 2,
+        "children": 0,
+        "pets": false
+      },
+      "quantity": 1,
+      "unit_price_rub": 2250,
+      "price_unit": "per_vehicle",
+      "units": 1,
+      "total_rub": 2250,
+      "included": [],
+      "baggage": "2 мест багажа",
+      "cancel_policy": {
+        "free_until": "2026-11-09T08:40:00+03:00",
+        "penalty_rub": 2250
+      },
+      "times": {
+        "start": "2026-11-10T08:40:00+03:00",
+        "end": "2026-11-10T09:45:00+03:00"
+      },
+      "synthetic": true,
+      "source_refs": [
+        "transfer:trf_AER_h_AER_02_minivan",
+        "gen:transfers@seed42",
+        "formula:road_km=1.3*great_circle",
+        "osm:node/12749552601",
+        "ourairports:URSS"
+      ]
+    }
+  ]
+}

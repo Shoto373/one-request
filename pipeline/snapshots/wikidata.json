@@ -1,0 +1,146 @@
+{
+ "Q649": {
+  "label_ru": "Москва",
+  "label_en": "Moscow",
+  "description_ru": "cтолица и крупнейший город России, город федерального значения РФ",
+  "lat": 55.750556,
+  "lon": 37.6175,
+  "population": 13274285
+ },
+ "Q656": {
+  "label_ru": "Санкт-Петербург",
+  "label_en": "Saint Petersburg",
+  "description_ru": "город федерального значения Российской Федерации",
+  "lat": 59.95,
+  "lon": 30.316667,
+  "population": 5652922
+ },
+ "Q887": {
+  "label_ru": "Екатеринбург",
+  "label_en": "Yekaterinburg",
+  "description_ru": "город в России, административный центр Уральского федерального округа и Свердловской области",
+  "lat": 56.835556,
+  "lon": 60.612778,
+  "population": 1468833
+ },
+ "Q39420": {
+  "label_ru": "Сочи",
+  "label_en": "Sochi",
+  "description_ru": "город в Краснодарском крае России",
+  "lat": 43.585278,
+  "lon": 39.720278,
+  "population": 445149
+ },
+ "Q1829": {
+  "label_ru": "Калининград",
+  "label_en": "Kaliningrad",
+  "description_ru": "город и городской округ в России, административный центр Калининградской области",
+  "lat": 54.716667,
+  "lon": 20.5,
+  "population": 488690
+ },
+ "Q900": {
+  "label_ru": "Казань",
+  "label_en": "Kazan",
+  "description_ru": "город в России, столица Республики Татарстан",
+  "lat": 55.790833,
+  "lon": 49.114444,
+  "population": 1329825
+ },
+ "Q406": {
+  "label_ru": "Стамбул",
+  "label_en": "Istanbul",
+  "description_ru": "город в Турции",
+  "lat": 41.01,
+  "lon": 28.960278,
+  "population": 15655924
+ },
+ "Q6487": {
+  "label_ru": "Анталья",
+  "label_en": "Antalya",
+  "description_ru": "город на юге Турции, административный центр провинции Анталья",
+  "lat": 36.90812,
+  "lon": 30.69556,
+  "population": 2426356
+ },
+ "Q644": {
+  "label_ru": "Шарм-эш-Шейх",
+  "label_en": "Sharm el-Sheikh",
+  "description_ru": "город в Египте",
+  "lat": 27.851944,
+  "lon": 34.305,
+  "population": 73000
+ },
+ "Q612": {
+  "label_ru": "Дубай",
+  "label_en": "Dubai",
+  "description_ru": "крупнейший город в ОАЭ, административный центр эмирата Дубай, важнейший торгово-финансовый центр Ближнего Востока",
+  "lat": 25.269722,
+  "lon": 55.309444,
+  "population": 3944751
+ },
+ "Q1953": {
+  "label_ru": "Ереван",
+  "label_en": "Yerevan",
+  "description_ru": "столица и крупнейший город Армении",
+  "lat": 40.181389,
+  "lon": 44.514444,
+  "population": 1106300
+ },
+ "Q1432585": {
+  "label_ru": "Казанский вокзал",
+  "label_en": "Kazansky railway station",
+  "description_ru": "вокзал станции Москва-Казанская в Москве",
+  "lat": 55.773611,
+  "lon": 37.65567,
+  "population": null
+ },
+ "Q1344454": {
+  "label_ru": "Ленинградский вокзал",
+  "label_en": "Leningradsky railway station",
+  "description_ru": "пассажирский терминал железнодорожной станции Москва-Пассажирская Октябрьской железной дороги в Москве, Россия",
+  "lat": 55.776261,
+  "lon": 37.655328,
+  "population": null
+ },
+ "Q139318": {
+  "label_ru": "Московский вокзал",
+  "label_en": "Moskovsky railway station",
+  "description_ru": "вокзал в Санкт-Петербурге, Россия",
+  "lat": 59.928717,
+  "lon": 30.362433,
+  "population": null
+ },
+ "Q3180012": {
+  "label_ru": "Екатеринбург-Пассажирский",
+  "label_en": "Yekaterinburg Railway station",
+  "description_ru": "станция и пассажирский вокзал в Екатеринбурге, Россия",
+  "lat": 56.858844,
+  "lon": 60.604122,
+  "population": null
+ },
+ "Q34085": {
+  "label_ru": "Казань-Пассажирская",
+  "label_en": "Kazan I",
+  "description_ru": "станция в Казани, Россия",
+  "lat": 55.788229,
+  "lon": 49.100121,
+  "population": null
+ },
+ "Q3180156": {
+  "label_ru": "Сочи",
+  "label_en": "Sochi train station",
+  "description_ru": "железнодорожная станция в Краснодарском крае России",
+  "lat": 43.591389,
+  "lon": 39.728056,
+  "population": null
+ },
+ "Q4057610": {
+  "label_ru": "Адлер",
+  "label_en": "Adler train station",
+  "description_ru": "железнодорожная станция в Краснодарском крае России",
+  "lat": 43.4475,
+  "lon": 39.904722,
+  "population": null
+ }
+}

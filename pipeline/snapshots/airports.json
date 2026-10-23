@@ -1,0 +1,128 @@
+{
+ "AER": {
+  "ourairports_id": "6519",
+  "ident": "URSS",
+  "name": "Sochi International Airport",
+  "lat": 43.449902,
+  "lon": 39.9566,
+  "country": "RU",
+  "municipality": "Sochi"
+ },
+ "AYT": {
+  "ourairports_id": "4515",
+  "ident": "LTAI",
+  "name": "Antalya International Airport",
+  "lat": 36.898701,
+  "lon": 30.800501,
+  "country": "TR",
+  "municipality": "Antalya"
+ },
+ "DME": {
+  "ourairports_id": "26394",
+  "ident": "UUDD",
+  "name": "Domodedovo International Airport",
+  "lat": 55.408798,
+  "lon": 37.9063,
+  "country": "RU",
+  "municipality": "Moscow"
+ },
+ "DXB": {
+  "ourairports_id": "5235",
+  "ident": "OMDB",
+  "name": "Dubai International Airport",
+  "lat": 25.24979,
+  "lon": 55.370992,
+  "country": "AE",
+  "municipality": "Dubai"
+ },
+ "EVN": {
+  "ourairports_id": "6446",
+  "ident": "UDYZ",
+  "name": "Zvartnots International Airport",
+  "lat": 40.148941,
+  "lon": 44.397887,
+  "country": "AM",
+  "municipality": "Yerevan"
+ },
+ "IST": {
+  "ourairports_id": "317457",
+  "ident": "LTFM",
+  "name": "İstanbul Airport",
+  "lat": 41.274874,
+  "lon": 28.732136,
+  "country": "TR",
+  "municipality": "Istanbul"
+ },
+ "KGD": {
+  "ourairports_id": "6498",
+  "ident": "UMKK",
+  "name": "Khrabrovo Airport",
+  "lat": 54.89161,
+  "lon": 20.598559,
+  "country": "RU",
+  "municipality": "Kaliningrad"
+ },
+ "KZN": {
+  "ourairports_id": "26404",
+  "ident": "UWKD",
+  "name": "Kazan International Airport",
+  "lat": 55.606201,
+  "lon": 49.278702,
+  "country": "RU",
+  "municipality": "Kazan"
+ },
+ "LED": {
+  "ourairports_id": "6489",
+  "ident": "ULLI",
+  "name": "Pulkovo Airport",
+  "lat": 59.800301,
+  "lon": 30.262501,
+  "country": "RU",
+  "municipality": "St. Petersburg"
+ },
+ "SAW": {
+  "ourairports_id": "4569",
+  "ident": "LTFJ",
+  "name": "Istanbul Sabiha Gökçen International Airport",
+  "lat": 40.898602,
+  "lon": 29.3092,
+  "country": "TR",
+  "municipality": "Pendik, Istanbul"
+ },
+ "SSH": {
+  "ourairports_id": "3198",
+  "ident": "HESH",
+  "name": "Sharm El Sheikh International Airport",
+  "lat": 27.977272,
+  "lon": 34.394717,
+  "country": "EG",
+  "municipality": "Sharm El Sheikh"
+ },
+ "SVO": {
+  "ourairports_id": "26396",
+  "ident": "UUEE",
+  "name": "Sheremetyevo International Airport",
+  "lat": 55.977486,
+  "lon": 37.386677,
+  "country": "RU",
+  "municipality": "Moscow"
+ },
+ "SVX": {
+  "ourairports_id": "26378",
+  "ident": "USSS",
+  "name": "Koltsovo Airport",
+  "lat": 56.743099,
+  "lon": 60.8027,
+  "country": "RU",
+  "municipality": "Yekaterinburg"
+ },
+ "VKO": {
+  "ourairports_id": "26401",
+  "ident": "UUWW",
+  "name": "Vnukovo International Airport",
+  "lat": 55.591499,
+  "lon": 37.261501,
+  "country": "RU",
+  "municipality": "Moscow"
+ }
+}

@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "random_seed": 42,
+  "window": {
+    "start": "2026-10-26",
+    "end": "2027-01-16",
+    "note": null
+  },
+  "counts": {
+    "cities": 11,
+    "hubs": 21,
+    "climate": 8,
+    "hotels": 56,
+    "flights": 11588,
+    "trains": 1496,
+    "transfers": 283
+  },
+  "edge_cases": [
+    {
+      "id": "ec_ayt_closed_season",
+      "kind": "hotel_closed_season",
+      "refs": [
+        "h_AYT_05",
+        "h_AYT_02"
+      ],
+      "note": "Отели Антальи закрыты с 1 ноября до 15 апреля: поиск на ноябрь их не возвращает."
+    },
+    {
+      "id": "ec_aer_no_night_reception",
+      "kind": "no_24h_reception",
+      "refs": [
+        "h_AER_02"
+      ],
+      "note": "Самый дешёвый отель (Marina Yacht by Stellar) без круглосуточной стойки: ночной прилёт -> block."
+    },
+    {
+      "id": "ec_ayt_no_night_reception",
+      "kind": "no_24h_reception",
+      "refs": [
+        "h_AYT_06"
+      ],
+      "note": "Самый дешёвый отель (Eva Butik Otel) без круглосуточной стойки: ночной прилёт -> block."
+    },
+    {
+      "id": "ec_kgd_keybox",
+      "kind": "no_24h_reception",
+      "refs": [
+        "h_KGD_04"
+      ],
+      "note": "Стойка 09:00–21:00, поздний заезд через ключницу: ночной прилёт -> warn."
+    },
+    {
+      "id": "ec_no_pets_hotels",
+      "kind": "no_pets_hotel",
+      "refs": [
+        "h_AER_01",
+        "h_AER_03",
+        "h_AER_04",
+        "h_AER_05",
+        "h_AER_07",
+        "h_AYT_01",
+        "h_AYT_02",
+        "h_AYT_03",
+        "h_AYT_05",
+        "h_DXB_01",
+        "h_DXB_02",
+        "h_DXB_03",
+        "h_DXB_04",
+        "h_DXB_05",
+        "h_EVN_04",
+        "h_EVN_05",
+        "h_EVN_06",
+        "h_EVN_07",
+        "h_IST_02",
+        "h_IST_03",
+        "h_IST_04",
+        "h_KGD_03",
+        "h_KGD_04",
+        "h_KGD_05",
+        "h_KGD_06",
+        "h_KGD_07",
+        "h_KZN_02",
+        "h_KZN_05",
+        "h_KZN_06",
+        "h_KZN_07",
+        "h_SSH_02",
+        "h_SSH_03",
+        "h_SSH_04",
+        "h_SSH_05",
+        "h_SSH_06",
+        "h_SSH_07"
+      ],
+      "note": "Отели без животных: при собаке они выпадают из поиска."
+    },
+    {
+      "id": "ec_evn_sold_out",
+      "kind": "no_options_dates",
+      "refs": [
+        "city:EVN",
+        "2026-11-20/2026-11-24"
+      ],
+      "note": "В Ереване нет свободных номеров в ночи 20–23 ноября 2026."
+    },
+    {
+      "id": "ec_night_arrival",
+      "kind": "night_arrival_next_day",
+      "refs": [
+        "fl_U64498_20261110",
+        "fl_SU2138_20261110",
+        "fl_S74560_20261110",
+        "tr_104V_20261110"
+      ],
+      "note": "Вылет вечером, прилёт ночью следующего дня по местному времени: заезд сдвигается."
+    },
+    {
+      "id": "ec_svx_ayt_program",
+      "kind": "out_of_schedule",
+      "refs": [
+        "route:SVX-AYT:U6",
+        "2026-11-16"
+      ],
+      "note": "Ежедневная программа Екатеринбург–Анталья до 15.11, дальше только ср и вс."
+    },
+    {
+      "id": "ec_window_end",
+      "kind": "out_of_schedule",
+      "refs": [
+        "window:2026-10-26/2027-01-16"
+      ],
+      "note": "Транспорт есть только в окне каталога; даты вне окна -> нет вариантов."
+    },
+    {
+      "id": "ec_ssh_svx_days",
+      "kind": "no_options_dates",
+      "refs": [
+        "route:SVX-SSH:U6"
+      ],
+      "note": "Из Екатеринбурга в Шарм-эль-Шейх прямые только вт и сб; в другие дни — с пересадкой."
+    },
+    {
+      "id": "ec_dxb_pets",
+      "kind": "no_pets_transport",
+      "refs": [
+        "route:DME-DXB",
+        "route:DXB-DME",
+        "route:DXB-LED",
+        "route:DXB-SVO",
+        "route:DXB-SVX",
+        "route:DXB-VKO",
+        "route:LED-DXB",
+        "route:SVO-DXB",
+        "route:SVX-DXB",
+        "route:VKO-DXB"
+      ],
+      "note": "В ОАЭ животное пассажиром не провезти: Дубай с собакой невыполним."
+    },
+    {
+      "id": "ec_n4_pets",
+      "kind": "no_pets_transport",
+      "refs": [
+        "carrier:N4"
+      ],
+      "note": "Чартер Nordwind не берёт животных."
+    },
+    {
+      "id": "ec_trains",
+      "kind": "train_route",
+      "refs": [
+        "train:001А:st_mow_len-st_led_msk",
+        "train:001Й:st_kzn-st_mow_kaz",
+        "train:002А:st_led_msk-st_mow_len",
+        "train:002Й:st_mow_kaz-st_kzn",
+        "train:027С:st_aer_adler-st_mow_kaz",
+        "train:028С:st_mow_kaz-st_aer_adler",
+        "train:053Г:st_kzn-st_mow_kaz",
+        "train:054Г:st_mow_kaz-st_kzn",
+        "train:091Е:st_kzn-st_svx",
+        "train:092Е:st_svx-st_kzn",
+        "train:101М:st_aer_sochi-st_mow_kaz",
+        "train:102М:st_mow_kaz-st_aer_sochi",
+        "train:103В:st_aer_adler-st_mow_kaz",
+        "train:104В:st_mow_kaz-st_aer_adler",
+        "train:379Е:st_kzn-st_svx",
+        "train:380Е:st_svx-st_kzn",
+        "train:751А:st_mow_len-st_led_msk",
+        "train:751Г:st_kzn-st_mow_kaz",
+        "train:752А:st_led_msk-st_mow_len",
+        "train:752Г:st_mow_kaz-st_kzn",
+        "train:757А:st_mow_len-st_led_msk",
+        "train:758А:st_led_msk-st_mow_len"
+      ],
+      "note": "ЖД: Москва↔Казань, Москва↔Сочи/Адлер, СПб↔Москва, Екатеринбург↔Казань."
+    },
+    {
+      "id": "ec_no_pets_transfer",
+      "kind": "no_pets_transfer",
+      "refs": [
+        "city:DXB",
+        "city:SSH"
+      ],
+      "note": "Ни один трансфер в Шарм-эль-Шейхе и Дубае не берёт животных; в других городах — не каждое такси."
+    },
+    {
+      "id": "ec_night_public",
+      "kind": "no_options_dates",
+      "refs": [
+        "mode:public",
+        "mode:shuttle"
+      ],
+      "note": "Ночью автобус и шаттл не ходят: после 23:00 остаётся только такси/минивэн."
+    },
+    {
+      "id": "ec_budget_dxb",
+      "kind": "budget_infeasible",
+      "refs": [
+        "city:DXB"
+      ],
+      "note": "«Дубай на неделю на троих за 30 000» — невыполним: только перелёт дороже бюджета."
+    }
+  ],
+  "sources": [
+    "Wikidata (CC0): города, координаты, население, описание, вокзалы",
+    "OurAirports (public domain): аэропорты, координаты",
+    "OpenStreetMap (ODbL, © участники OpenStreetMap): названия и координаты отелей, пляжи",
+    "Open-Meteo (CC BY 4.0): архив погоды и температура моря",
+    "Справочник визовых правил для граждан РФ (ручной, см. visa.checked_at)",
+    "Синтетика (seed=42): рейсы, поезда, условия отелей, трансферы"
+  ]
+}
