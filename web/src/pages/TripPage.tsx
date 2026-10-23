@@ -19,10 +19,23 @@ export default function TripPage() {
     if (!s.state || !s.sessionId) return
     setCheckoutBusy(bundleId)
     try {
-      const cart = await api.createCart({ session_id: s.sessionId, version: s.state.version, bundle_id: bundleId })
+      // Persist the user's explicit choice through the agent before asking it
+      // to validate readiness. The cart API still checks this version again.
+      await s.act('select_bundle', { bundle_id: bundleId }, `Выбираю комплект ${bundleId}`)
+      let current = (await api.getSession(s.sessionId)).state
+      if (current.selected_bundle_id !== bundleId || current.stage !== 'assemble') {
+        throw new Error('Не удалось зафиксировать выбранный комплект. Обновите план и повторите действие.')
+      }
+      await s.act('request_checkout', {}, 'Проверь выбранный комплект перед оформлением')
+      current = (await api.getSession(s.sessionId)).state
+      if (current.stage !== 'checkout') {
+        const blockers = current.bundles.find((b) => b.id === bundleId)?.checks.filter((c) => c.status === 'block').map((c) => c.text) ?? []
+        throw new Error(blockers.length ? `Нельзя оформить: ${blockers.join('; ')}` : 'Проверка плана не подтвердила готовность к оформлению.')
+      }
+      const cart = await api.createCart({ session_id: s.sessionId, version: current.version, bundle_id: bundleId })
       navigate(`/checkout/${cart.cart_id}`)
     } catch (e) {
-      s.setError(e instanceof ApiError ? e.message : 'Не удалось оформить')
+      s.setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Не удалось оформить')
     } finally {
       setCheckoutBusy(null)
     }

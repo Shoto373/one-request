@@ -26,13 +26,20 @@ class Explanation(BaseModel):
     claims: list[Claim] = Field(default_factory=list)
 
 
+class BundleExplanation(BaseModel):
+    advantages: list[Claim] = Field(default_factory=list)
+    tradeoffs: list[Claim] = Field(default_factory=list)
+    risks: list[Claim] = Field(default_factory=list)
+
+
 def _numbers(value: Any) -> set[str]:
     if isinstance(value, bool) or value is None:
         return set()
     if isinstance(value, (int, float)):
         value = str(value)
     if isinstance(value, str):
-        return {x.replace(",", ".") for x in re.findall(r"\d+(?:[.,]\d+)?", value)}
+        matches = re.findall(r"\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?", value)
+        return {re.sub(r"[ \u00a0]", "", x).replace(",", ".") for x in matches}
     if isinstance(value, dict):
         out: set[str] = set()
         for nested in value.values():
@@ -110,6 +117,76 @@ def validate_claims(claims: list[Claim], facts: list[EvidenceFact]) -> bool:
         if not _numbers(claim.text).issubset(allowed):
             return False
     return True
+
+
+async def explain_bundle_claims(llm: LLMClient, bundle: Any, requirements: list[Any]) -> tuple[BundleExplanation, dict[str, Any]]:
+    """Let the LLM phrase bundle facts, then independently reject unsupported claims.
+
+    Prices and feasibility are passed through from A's Offers and Checks. The
+    model cannot introduce a number or a source ref that did not come from them.
+    """
+    offer_facts = []
+    offer_refs = []
+    by_ref: dict[str, EvidenceFact] = {}
+    for offer in bundle.items:
+        ref = f"offer:{offer.offer_id}"
+        offer_refs.append(ref)
+        data = offer.model_dump(mode="json")
+        fact = EvidenceFact(
+            ref=ref, value=data, label=offer.title or offer.item_id, kind="offer",
+            source="Track A Offer", source_refs=offer.source_refs or [ref],
+        )
+        by_ref[ref] = fact
+        offer_facts.append(fact.model_dump(mode="json"))
+    check_facts = []
+    for index, check in enumerate(bundle.checks):
+        ref = f"check:{bundle.id}:{index}"
+        fact = EvidenceFact(
+            ref=ref, value={"kind": check.kind, "status": check.status, "text": check.text},
+            label=check.kind, kind="plan_check", source="Track A validate_plan",
+            source_refs=check.refs or sorted(f"offer:{o.offer_id}" for o in bundle.items),
+        )
+        by_ref[ref] = fact
+        check_facts.append(fact.model_dump(mode="json"))
+    bundle_ref = f"bundle:{bundle.id}"
+    by_ref[bundle_ref] = EvidenceFact(
+        ref=bundle_ref, value={"id": bundle.id, "label": bundle.label, "total_rub": bundle.total_rub},
+        label=bundle.label, kind="bundle_result", source="Track A build/replan result",
+        source_refs=sorted(by_ref),
+    )
+    allowed_refs = {fact.ref for fact in by_ref.values()}
+    requirement_facts = [r.model_dump(mode="json") if hasattr(r, "model_dump") else r for r in requirements]
+    system = f"""Write brief, evidence-backed bundle advantages, trade-offs and risks in Russian.
+Use only the supplied Offer, Check and bundle facts. Return JSON with arrays advantages, tradeoffs, risks of {{text,refs}}.
+Each claim needs one or more exact refs from the supplied data. Do not calculate, alter or estimate prices, durations,
+or feasibility. Never present a warning option as a guaranteed service. Do not include unsupported numeric values.
+Offers: {offer_facts}
+Checks: {check_facts}
+Bundle result: {by_ref[bundle_ref].model_dump(mode='json')}
+User requirements: {requirement_facts}
+Available refs: {sorted(allowed_refs)}"""
+    raw = await llm.chat_json(
+        [{"role": "system", "content": system}, {"role": "user", "content": "Explain this selected travel bundle."}],
+        BundleExplanation, fast=True,
+    )
+    candidate = raw if isinstance(raw, BundleExplanation) else BundleExplanation.model_validate(raw)
+    valid: dict[str, list[Claim]] = {}
+    for name in ("advantages", "tradeoffs", "risks"):
+        claims = getattr(candidate, name)
+        accepted = []
+        for claim in claims:
+            if not claim.refs or any(ref not in allowed_refs for ref in claim.refs):
+                continue
+            allowed_numbers: set[str] = set()
+            for ref in claim.refs:
+                allowed_numbers.update(_numbers(by_ref[ref].value))
+            if _numbers(claim.text).issubset(allowed_numbers):
+                accepted.append(claim)
+        valid[name] = accepted
+    return BundleExplanation(**valid), {
+        "step_type": "llm", "name": "explain_bundle", "input": {"bundle_id": bundle.id, "offer_refs": sorted(offer_refs)},
+        "output": {key: [c.model_dump(mode="json") for c in value] for key, value in valid.items()}, "status": "ok",
+    }
 
 
 def deterministic_claims(facts: list[EvidenceFact]) -> list[Claim]:

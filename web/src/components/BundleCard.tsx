@@ -165,6 +165,14 @@ export default function BundleCard({ bundle, selected, onCheckout, checkoutBusy 
 
       <div className="mt-auto space-y-3 border-t border-black/[.05] bg-canvas/50 p-4">
         <Checks checks={general} />
+        {!!bundle.advantages?.length && (
+          <div className="text-[13px]">
+            <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Почему подходит</div>
+            {bundle.advantages.map((claim, i) => (
+              <div key={i} className="text-ink-grey" title={claim.refs.join(', ')}>{claim.text}</div>
+            ))}
+          </div>
+        )}
         {(bundle.tradeoffs.length > 0 || bundle.risks.length > 0) && (
           <div className={`grid gap-3 text-[13px] ${bundle.tradeoffs.length && bundle.risks.length ? 'sm:grid-cols-2' : ''}`}>
             {bundle.tradeoffs.length > 0 && (

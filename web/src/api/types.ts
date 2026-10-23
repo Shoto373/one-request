@@ -66,6 +66,7 @@ export interface Claim {
 export type CheckStatus = 'ok' | 'warn' | 'block'
 
 export interface Check {
+  id?: string
   kind: string
   status: CheckStatus
   text: string
@@ -80,6 +81,7 @@ export interface Bundle {
   items: Offer[]
   total_rub: number
   checks: Check[]
+  advantages?: Claim[]
   tradeoffs: Claim[]
   risks: Claim[]
 }
@@ -138,6 +140,10 @@ export interface HistoryEntry {
   kept: string[]
   replaced: string[]
   price_delta_rub: number | null
+  reasons?: string[]
+  item_reasons?: Record<string, string>
+  previous_bundle?: Bundle | null
+  resulting_bundle_id?: string | null
 }
 
 export interface TripState {
@@ -149,6 +155,7 @@ export interface TripState {
   destinations: DestinationOption[]
   bundles: Bundle[]
   selected_bundle_id: string | null
+  pending_replan?: { status: 'stale_source'; source_bundle: Bundle; previous_requirements: Requirement[]; change: string } | null
   history: HistoryEntry[]
   /** честный ответ на невыполнимый запрос: подтверждённые минимальные изменения */
   proposed_changes?: ProposedChange[]
@@ -220,6 +227,7 @@ export interface CommandIn {
     | 'select_destination' // {destination_id}
     | 'accept_alternative' // {alternative_id}
     | 'select_bundle' // {bundle_id}
+    | 'request_checkout' // {} — validate selected bundle before starting checkout; cart still validates again
   payload: Record<string, unknown>
   expected_version: number
 }

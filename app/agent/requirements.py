@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Iterable
 
 from pydantic import BaseModel, Field
@@ -37,6 +37,7 @@ QUESTION_TEXT = {
     "children_ages": ("Сколько лет каждому ребёнку?", "Возраст влияет на тарифы и вместимость.", []),
     "children_count": ("Сколько детей едет и сколько лет каждому?", "Число и возраст детей нужны для тарифа и размещения.", []),
     "budget_scope": ("Бюджет указан на всю поездку или на одного человека?", "Основание бюджета меняет проверку стоимости.", ["На поездку", "На человека"]),
+    "pet_weight_kg": ("Сколько весит животное?", "Вес влияет на правила перевозчика и вместимость трансфера.", []),
 }
 
 
@@ -65,6 +66,8 @@ def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
                 continue
             quote_l = req.quote.lower()
             if req.key in {"budget_total_rub", "budget_per_person_rub"} and not re.search(r"\d", quote_l):
+                continue
+            if req.key == "pet_weight_kg" and not re.search(r"\d+(?:[.,]\d+)?\s*кг|\d+(?:[.,]\d+)?\s*kg", quote_l):
                 continue
             if req.key in {"budget_total_rub", "budget_per_person_rub"} and re.search(r"строго|не\s+больше|не\s+выше|не\s+дороже|максимум|лимит|\bдо\b", quote_l):
                 req = req.model_copy(update={"kind": "hard"})
@@ -150,6 +153,57 @@ def merge_requirement_changes(
     return list(values.values()), sorted(suppressed)
 
 
+def normalize_contextual_changes(parsed: ParsedRequest, text: str, state: TripState) -> tuple[ParsedRequest, OpenQuestion | None]:
+    """Normalize relative chat edits against the current trip without guessing."""
+    normalized = {r.key: r for r in parsed.requirements}
+    lower = text.lower().replace("ё", "е")
+    if re.search(r"бюджет\w*\s+(?:меньше|ниже|снизить|уменьшить)|(?:меньше|ниже)\s+бюджет", lower) and not re.search(r"\d", text):
+        normalized.pop("budget_total_rub", None)
+        normalized.pop("budget_per_person_rub", None)
+        return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
+            key="budget_total_rub", question="До какой суммы снизить бюджет?",
+            why="Без суммы нельзя проверить, укладывается ли комплект в новый лимит.",
+        )
+
+    shift = re.search(r"на\s+(?P<n>\d+|один|одну|два|две|три|четыре)\s+д(?:ень|ня|ней)\s+(?P<dir>позже|раньше)", lower)
+    if shift:
+        word_nums = {"один": 1, "одну": 1, "два": 2, "две": 2, "три": 3, "четыре": 4}
+        days = int(shift.group("n")) if shift.group("n").isdigit() else word_nums[shift.group("n")]
+        offset = days if shift.group("dir") == "позже" else -days
+        current = next((r for r in state.requirements if r.key == "dates" and r.value is not None), None)
+        if current and isinstance(current.value, dict):
+            try:
+                start = date.fromisoformat(str(current.value["start"])) + timedelta(days=offset)
+                end = date.fromisoformat(str(current.value["end"])) + timedelta(days=offset)
+                normalized["dates"] = Requirement(
+                    key="dates", value={"start": start.isoformat(), "end": end.isoformat()},
+                    kind=current.kind if current.kind in {"hard", "soft"} else "hard",
+                    source="user_text", quote=text[shift.start():shift.end()],
+                )
+            except (KeyError, TypeError, ValueError):
+                return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
+                    key="dates", question="Какие даты поставить?", why="Не удалось однозначно сдвинуть текущий диапазон дат.",
+                )
+        else:
+            return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
+                key="dates", question="От каких дат отсчитать сдвиг?", why="В текущем плане нет точного диапазона дат.",
+            )
+
+    pet_match = re.search(r"с\s+(?:нами\s+)?(?:собак\w*|п[её]с\w*|кош\w*|кот\w*)", lower)
+    existing_pets = next((r for r in state.requirements if r.key == "pets" and r.value not in (None, False, "", [])), None)
+    weight = next((r for r in state.requirements if r.key == "pet_weight_kg" and r.value not in (None, "")), None)
+    if pet_match and existing_pets is None:
+        kind = "cat" if re.search(r"кош|кот", pet_match.group(0)) else "dog"
+        if "pets" not in normalized:
+            normalized["pets"] = Requirement(key="pets", value={"kind": kind}, kind="hard", source="user_text", quote=text[pet_match.start():pet_match.end()])
+        if "pet_weight_kg" not in normalized and not weight:
+            return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
+                key="pet_weight_kg", question="Сколько весит животное?",
+                why="Вес влияет на правила перевозчика и вместимость трансфера.",
+            )
+    return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), None
+
+
 def _present(requirements: Iterable[Requirement], key: str) -> Requirement | None:
     return next((r for r in requirements if r.key == key and r.kind != "unknown" and r.value not in (None, "")), None)
 
@@ -187,6 +241,7 @@ def next_questions(
     children_count_unknown = any(r.key == "children_count" and r.kind == "unknown" for r in reqs)
     child_ages = _present(reqs, "children_ages")
     budget = _present(reqs, "budget_total_rub") or _present(reqs, "budget_per_person_rub")
+    pets = _present(reqs, "pets")
     questions: list[OpenQuestion] = []
 
     def add(key: str) -> None:
@@ -215,6 +270,8 @@ def next_questions(
         scope = str(budget.value).lower()
         if not any(token in scope for token in ("total", "поездк", "человек", "person", "на всех")):
             add("budget_scope")
+    if pets and "pet_weight_kg" not in present:
+        add("pet_weight_kg")
     # Keep stable order and do not emit the same blocker twice.
     unique: dict[str, OpenQuestion] = {}
     for q in questions:

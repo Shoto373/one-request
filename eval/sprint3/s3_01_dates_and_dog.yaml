@@ -1,0 +1,19 @@
+id: s3_01_dates_and_dog
+description: Пересборка выбранного комплекта на два дня позже с собакой и уточнением её веса.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Сочи 10–17 ноября 2026, двое взрослых.
+actions:
+  - {type: command, command: select_destination, payload: {destination_id: AER}}
+  - {type: command, command: select_bundle, payload: {bundle_id: b1}}
+  - {type: message, text: На два дня позже и с собакой}
+  - {type: answer, key: pet_weight_kg, text: 8 кг}
+expected:
+  final_stage: select
+  requirements:
+    - {key: dates, kind: hard, value: {start: '2026-11-12', end: '2026-11-19'}}
+    - {key: pets, kind: hard, value: {kind: dog}}
+    - {key: pet_weight_kg, kind: hard, value: 8}
+  max_questions_per_turn: 2
+  checks: [replan_uses_selected_bundle, all_dates_match_active_offers, pet_check_covers_transport_hotel_transfer, history_matches_tool_result, total_delta_matches_offers]
+fixtures: {replan_result: selected_bundle_dates_shifted_pet_supported}
