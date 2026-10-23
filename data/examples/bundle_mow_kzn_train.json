@@ -25,6 +25,7 @@
           "offer_id": "off_tr_054G_20261113_platzkart_4be5",
           "kind": "train",
           "item_id": "tr_054G_20261113",
+          "title": "Поезд 054Г, плацкарт",
           "variant": {
             "title": "Поезд 054Г",
             "train_no": "054Г",
@@ -50,9 +51,7 @@
           "units": 2,
           "total_rub": 2420,
           "included": [],
-          "baggage": {
-            "hand_kg": 36
-          },
+          "baggage": "ручная кладь до 36 кг",
           "cancel_policy": {
             "free_until": null,
             "penalty_rub": 600
@@ -73,6 +72,7 @@
           "offer_id": "off_trf_st_kzn_h_KZN_04_public_202611141113_to_hotel_4be5",
           "kind": "transfer",
           "item_id": "trf_st_kzn_h_KZN_04_public",
+          "title": "Общественный транспорт, 3.5 км, ~45 мин",
           "variant": {
             "title": "Общественный транспорт, 3.5 км, ~45 мин",
             "mode": "public",
@@ -95,9 +95,7 @@
           "units": 2,
           "total_rub": 220,
           "included": [],
-          "baggage": {
-            "bags": 2
-          },
+          "baggage": "2 мест багажа",
           "cancel_policy": {
             "free_until": "2026-11-14T11:13:00+03:00",
             "penalty_rub": 220
@@ -119,6 +117,7 @@
           "offer_id": "off_h_KZN_04_r1_t1_20261114_20261115_4be5",
           "kind": "hotel",
           "item_id": "h_KZN_04",
+          "title": "Амакс Сафар, стандарт, без питания, невозвратный",
           "variant": {
             "title": "Амакс Сафар",
             "hotel_name": "Амакс Сафар",
@@ -172,6 +171,7 @@
           "offer_id": "off_trf_st_kzn_h_KZN_04_public_202611152005_to_hub_4be5",
           "kind": "transfer",
           "item_id": "trf_st_kzn_h_KZN_04_public",
+          "title": "Общественный транспорт, 3.5 км, ~45 мин",
           "variant": {
             "title": "Общественный транспорт, 3.5 км, ~45 мин",
             "mode": "public",
@@ -194,9 +194,7 @@
           "units": 2,
           "total_rub": 220,
           "included": [],
-          "baggage": {
-            "bags": 2
-          },
+          "baggage": "2 мест багажа",
           "cancel_policy": {
             "free_until": "2026-11-15T20:05:00+03:00",
             "penalty_rub": 220
@@ -218,6 +216,7 @@
           "offer_id": "off_tr_053G_20261115_platzkart_4be5",
           "kind": "train",
           "item_id": "tr_053G_20261115",
+          "title": "Поезд 053Г, плацкарт",
           "variant": {
             "title": "Поезд 053Г",
             "train_no": "053Г",
@@ -243,9 +242,7 @@
           "units": 2,
           "total_rub": 2880,
           "included": [],
-          "baggage": {
-            "hand_kg": 36
-          },
+          "baggage": "ручная кладь до 36 кг",
           "cancel_policy": {
             "free_until": null,
             "penalty_rub": 600
@@ -270,6 +267,9 @@
           "status": "ok",
           "text": "Прибытие в отель 14.11 11:58, заезд 14.11.",
           "options": [],
+          "offer_ids": [
+            "off_h_KZN_04_r1_t1_20261114_20261115_4be5"
+          ],
           "refs": [
             "offer:off_h_KZN_04_r1_t1_20261114_20261115_4be5",
             "hotel:h_KZN_04"
@@ -280,6 +280,9 @@
           "status": "ok",
           "text": "Круглосуточная стойка.",
           "options": [],
+          "offer_ids": [
+            "off_h_KZN_04_r1_t1_20261114_20261115_4be5"
+          ],
           "refs": [
             "offer:off_h_KZN_04_r1_t1_20261114_20261115_4be5",
             "hotel:h_KZN_04"
@@ -290,30 +293,13 @@
           "status": "warn",
           "text": "Прибытие 11:58, заселение с 14:00: ожидание 2 ч 02 мин.",
           "options": [
-            {
-              "code": "wait",
-              "text": "Ждать заселения 2 ч 02 мин",
-              "price_rub": 0,
-              "guaranteed": null
-            },
-            {
-              "code": "luggage_storage",
-              "text": "Оставить багаж на стойке",
-              "price_rub": 0,
-              "guaranteed": null
-            },
-            {
-              "code": "early_checkin",
-              "text": "Ранний заезд с 11:58 (по наличию, не гарантирован)",
-              "price_rub": 0,
-              "guaranteed": false
-            },
-            {
-              "code": "prev_night",
-              "text": "Забронировать ночь накануне — номер готов сразу",
-              "price_rub": 4380,
-              "guaranteed": true
-            }
+            "Ждать заселения 2 ч 02 мин",
+            "Оставить багаж на стойке",
+            "Ранний заезд с 11:58 (по наличию, не гарантирован)",
+            "Забронировать ночь накануне — номер готов сразу — 4 380 ₽"
+          ],
+          "offer_ids": [
+            "off_h_KZN_04_r1_t1_20261114_20261115_4be5"
           ],
           "refs": [
             "offer:off_h_KZN_04_r1_t1_20261114_20261115_4be5",
@@ -325,18 +311,11 @@
           "status": "warn",
           "text": "Выезд из номера в 12:00, из отеля — в 20:05: 8 ч 05 мин без номера.",
           "options": [
-            {
-              "code": "luggage_storage",
-              "text": "Оставить багаж в отеле",
-              "price_rub": 0,
-              "guaranteed": null
-            },
-            {
-              "code": "wait",
-              "text": "Погулять до выезда",
-              "price_rub": 0,
-              "guaranteed": null
-            }
+            "Оставить багаж в отеле",
+            "Погулять до выезда"
+          ],
+          "offer_ids": [
+            "off_h_KZN_04_r1_t1_20261114_20261115_4be5"
           ],
           "refs": [
             "offer:off_h_KZN_04_r1_t1_20261114_20261115_4be5",
@@ -348,6 +327,7 @@
           "status": "ok",
           "text": "Трансферы стыкуются с транспортом.",
           "options": [],
+          "offer_ids": [],
           "refs": []
         },
         {
@@ -355,6 +335,7 @@
           "status": "ok",
           "text": "Все позиции на 2 взр.",
           "options": [],
+          "offer_ids": [],
           "refs": []
         },
         {
@@ -362,6 +343,7 @@
           "status": "ok",
           "text": "Поездка по России, виза не нужна.",
           "options": [],
+          "offer_ids": [],
           "refs": [
             "city:KZN:visa"
           ]

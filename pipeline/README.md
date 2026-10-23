@@ -13,7 +13,7 @@
 | `app/planning/models.py` | `Bundle`, `Check`, `CheckOption`, `Claim` (п.6) — TripState импортирует их отсюда |
 | `app/planning/validate.py` | `validate_plan` v0 (п.7) |
 | `app/planning/build.py` | `build_bundles` v0: один комплект — самый дешёвый выполнимый |
-| `data/seed/*.json` | каталог (JSON-массив, один объект на строку) + `meta.json` |
+| `data/seed/catalog/*.json` | каталог (JSON-массив, один объект на строку) + `meta.json`; в подпапке, чтобы `app.db.load_seed` (трек B) его не трогал |
 | `data/examples/*.json` | реальные ответы инструментов для UI и моков (в БД не сидятся) |
 | `pipeline/` | офлайн-сбор (`fetch`) и генерация (`build`, `examples`) |
 | `pipeline/snapshots/` | компактные выгрузки реальных данных; генерация читает только их |
@@ -23,7 +23,7 @@
 
 ```bash
 pip install -r pipeline/requirements.txt
-python -m pipeline.build        # snapshots -> data/seed (офлайн, детерминированно, ~2 с)
+python -m pipeline.build        # snapshots -> data/seed/catalog (офлайн, детерминированно, ~2 с)
 python -m pipeline.examples     # data/examples
 python -m pytest tests
 python -m pipeline.fetch        # только если нужно обновить реальные данные (сеть)
@@ -35,7 +35,7 @@ python -m pipeline.fetch        # только если нужно обнови�
 Overpass по HTTPS из некоторых сетей сбрасывается: `pipeline/sources.py` ходит на него по HTTP
 и с ретраями (сервер часто перегружен, сбор OSM занимает 10–20 минут).
 
-## Каталог (`data/seed`)
+## Каталог (`data/seed/catalog`)
 
 | Файл | Объект | Кол-во | Источник |
 |---|---|---|---|
@@ -76,35 +76,61 @@ Overpass по HTTPS из некоторых сетей сбрасывается:
   Для тарифов с возвратом (рейс «Гибкий», поезд) `penalty_rub` = сбор за возврат.
 - `times` — ISO-время с часовым поясом. Дата заезда отеля — локальная дата города.
 - `capacity` — на какой состав рассчитано предложение; вместимость номеров/машин проверена при поиске.
-- `variant` — описательные поля по виду (`title`, `hotel_name`, `room_type`, `tariff`, `fare`, `car_class`,
-  `mode`, `from_hub`/`to_hub`, `direction`, `extras` …). Всегда есть `title` для карточки.
+- `title` — подпись карточки, `baggage` — строка («10 кг ручной клади + 1×23 кг»).
+- `variant` — описательные поля по виду (`hotel_name`, `room_type`, `tariff`, `fare`, `car_class`, `mode`,
+  `from_hub`/`to_hub`, `direction`, `baggage`, `extras` …).
 
-## API для трека B
+## Интеграция с треками B и C
+
+Точки входа, которые уже вызывает код из `main`:
+
+| Кто вызывает | Функция | Что возвращает |
+|---|---|---|
+| оркестратор B (`app/agent/orchestrator.py`) | `app.planning.build.build_bundles(requirements: dict, state)` | `list[dict]` — комплекты в формате TripState (`[]`, если нечего предложить) |
+| корзина C (`app/cart/service.py`) | `app.planning.validate.validate_bundle(bundle: dict, state: dict)` | `list[dict]` — проверки; любой `block` = платить нельзя |
+
+- `requirements` — то, что достал LLM: `origin`/`destination` текстом («Москва», «из Казани», «SVO»),
+  `dates` как `{"start","end"}` или ISO-строки, `adults`, `children`/`children_ages` (возраст неизвестен → 7 лет),
+  `pets`, `budget_total_rub`, `transport` («поездом» → только поезда). Жёсткость бюджета берётся из `kind` требования в `state`.
+- Город не из каталога или нераспознанные даты → `[]`. Причины для честного ответа:
+  `app.planning.build.explain_no_bundles(requirements, state) -> list[str]`
+  (в т.ч. «Самый дешёвый вариант — N ₽, это на M ₽ больше бюджета»).
+- `validate_bundle` повторяет `validate_plan` и заново оценивает каждое предложение по каталогу:
+  пропало или изменилась цена → `availability: block`.
+- На проводе `Check.options` — строки (как в `app/state/models.py` и `web/src/api/types.ts`);
+  внутри трека A это `CheckOption` с ценой и гарантией. Дополнительно в проверке есть `offer_ids` и `refs`.
+- У `Offer` есть готовые к показу `title` и `baggage` (строка), структурный багаж — в `variant.baggage`.
+
+Каталог лежит в `data/seed/catalog/`, а не в `data/seed/`: `app.db.load_seed` (трек B) читает только
+верхний уровень `data/seed/*.json` в таблицу `catalog_entries` и требует у каждой записи `id` и `kind`.
+Поиск работает по каталогу в памяти, БД ему не нужна.
+
+## API трека A
 
 ```python
 from datetime import date
 from app.catalog.models import Party, Pet
 from app.catalog.store import get_catalog
-from app.planning.build import TripQuery, build_bundles
+from app.planning.build import build_trip_bundles
+from app.planning.query import TripQuery
 from app.tools.search import search_hotels, search_transfers, search_transport
 
-cat = get_catalog()                       # SEED_DIR или <repo>/data/seed
+cat = get_catalog()                       # CATALOG_DIR или <repo>/data/seed/catalog
 party = Party(adults=2, children_ages=[5], pets=[Pet(kind="dog", weight_kg=7)])
 search_transport(cat, "MOW", "AYT", date(2026, 11, 12), party)            # рейсы + поезда, дешевле первыми
 search_hotels(cat, "AYT", date(2026, 11, 12), date(2026, 11, 19), party, cheapest_per_hotel=True)
 search_transfers(cat, "AYT", "h_AYT_06", party, at=arrival_dt, direction="to_hotel")
-res = build_bundles(cat, TripQuery("MOW", "AER", date(2026, 11, 10), date(2026, 11, 17), Party(adults=2)))
+res = build_trip_bundles(cat, TripQuery("MOW", "AER", date(2026, 11, 10), date(2026, 11, 17), Party(adults=2)))
 res.bundles      # [Bundle] — 0 или 1 комплект в v0
 res.notes        # почему вариантов нет (для честного ответа)
 res.cheapest_total_rub  # минимум без учёта бюджета («+N ₽ к бюджету»)
 ```
 
 `TripQuery.kinds=("train",)` — только поезда («поездом в Казань»).
-Нужные зависимости в образе `app`: `pydantic>=2.11`, `tzdata`.
 
 ## Крайние случаи (A3)
 
-Полный реестр с id объектов — `data/seed/meta.json` → `edge_cases`.
+Полный реестр с id объектов — `data/seed/catalog/meta.json` → `edge_cases`.
 
 | id | Что | Где |
 |---|---|---|
@@ -124,4 +150,5 @@ res.cheapest_total_rub  # минимум без учёта бюджета («+N 
 
 - `Check` дополнен необязательным `refs: list[str]` — ссылки на данные, как у `Claim`.
 - В `early_checkin` поле цены называется `price_rub` (единый суффикс `_rub`), ключ `from` сохранён.
-- `Bundle` / `Check` / `Claim` определены в `app/planning/models.py`; TripState (трек B) импортирует их.
+- У B свои `Bundle` / `Check` / `Claim` в `app/state/models.py`; трек A отдаёт им совместимые dict (`bundle_to_wire`).
+- `Offer.title` (строка для карточки) добавлен по `web/src/api/types.ts`; `Offer.baggage` — строка.

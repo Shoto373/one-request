@@ -1,7 +1,8 @@
-"""In-memory catalog loaded from ``data/seed`` with lookup indexes.
+"""In-memory catalog loaded from ``data/seed/catalog`` with lookup indexes.
 
 Search tools are deterministic functions over this object. The seed directory is
-``$SEED_DIR`` or ``<repo>/data/seed``.
+``$CATALOG_DIR`` or ``<repo>/data/seed/catalog``. It lives in a subfolder on purpose:
+``app.db.load_seed`` reads only top-level ``data/seed/*.json`` rows into ``catalog_entries``.
 """
 
 from __future__ import annotations
@@ -25,11 +26,11 @@ from app.catalog.models import (
     TransferRoute,
 )
 
-DEFAULT_SEED_DIR = Path(__file__).resolve().parents[2] / "data" / "seed"
+DEFAULT_SEED_DIR = Path(__file__).resolve().parents[2] / "data" / "seed" / "catalog"
 
 
 def seed_dir() -> Path:
-    return Path(os.environ.get("SEED_DIR") or DEFAULT_SEED_DIR)
+    return Path(os.environ.get("CATALOG_DIR") or DEFAULT_SEED_DIR)
 
 
 @dataclass

@@ -33,8 +33,14 @@
           "offer_id": "off_fl_DP3736_20261112_standard_dd27",
           "kind": "flight",
           "item_id": "fl_DP3736_20261112",
+          "title": "Победа DP 3736",
           "variant": {
             "title": "Победа DP 3736",
+            "baggage": {
+              "cabin_kg": 10,
+              "checked_pieces": 1,
+              "checked_kg": 23
+            },
             "carrier": "DP",
             "carrier_name": "Победа",
             "flight_no": "DP 3736",
@@ -71,11 +77,7 @@
             "cabin_bag_10kg",
             "checked_bag_1x23kg"
           ],
-          "baggage": {
-            "cabin_kg": 10,
-            "checked_pieces": 1,
-            "checked_kg": 23
-          },
+          "baggage": "10 кг ручной клади + 1×23 кг",
           "cancel_policy": {
             "free_until": null,
             "penalty_rub": 36269
@@ -95,6 +97,7 @@
           "offer_id": "off_trf_AYT_h_AYT_06_public_202611121140_to_hotel_dd27",
           "kind": "transfer",
           "item_id": "trf_AYT_h_AYT_06_public",
+          "title": "Общественный транспорт, 19.8 км, ~75 мин",
           "variant": {
             "title": "Общественный транспорт, 19.8 км, ~75 мин",
             "mode": "public",
@@ -117,9 +120,7 @@
           "units": 2,
           "total_rub": 320,
           "included": [],
-          "baggage": {
-            "bags": 3
-          },
+          "baggage": "3 мест багажа",
           "cancel_policy": {
             "free_until": "2026-11-12T11:40:00+03:00",
             "penalty_rub": 320
@@ -141,6 +142,7 @@
           "offer_id": "off_h_AYT_06_r1_t3_20261112_20261119_dd27",
           "kind": "hotel",
           "item_id": "h_AYT_06",
+          "title": "Eva Butik Otel, стандарт, завтрак, бесплатная отмена",
           "variant": {
             "title": "Eva Butik Otel",
             "hotel_name": "Eva Butik Otel",
@@ -201,6 +203,7 @@
           "offer_id": "off_trf_AYT_h_AYT_06_public_202611190900_to_hub_dd27",
           "kind": "transfer",
           "item_id": "trf_AYT_h_AYT_06_public",
+          "title": "Общественный транспорт, 19.8 км, ~75 мин",
           "variant": {
             "title": "Общественный транспорт, 19.8 км, ~75 мин",
             "mode": "public",
@@ -223,9 +226,7 @@
           "units": 2,
           "total_rub": 320,
           "included": [],
-          "baggage": {
-            "bags": 3
-          },
+          "baggage": "3 мест багажа",
           "cancel_policy": {
             "free_until": "2026-11-19T09:00:00+03:00",
             "penalty_rub": 320
@@ -247,8 +248,14 @@
           "offer_id": "off_fl_DP3737_20261119_standard_dd27",
           "kind": "flight",
           "item_id": "fl_DP3737_20261119",
+          "title": "Победа DP 3737",
           "variant": {
             "title": "Победа DP 3737",
+            "baggage": {
+              "cabin_kg": 10,
+              "checked_pieces": 1,
+              "checked_kg": 23
+            },
             "carrier": "DP",
             "carrier_name": "Победа",
             "flight_no": "DP 3737",
@@ -285,11 +292,7 @@
             "cabin_bag_10kg",
             "checked_bag_1x23kg"
           ],
-          "baggage": {
-            "cabin_kg": 10,
-            "checked_pieces": 1,
-            "checked_kg": 23
-          },
+          "baggage": "10 кг ручной клади + 1×23 кг",
           "cancel_policy": {
             "free_until": null,
             "penalty_rub": 47459
@@ -313,6 +316,9 @@
           "status": "ok",
           "text": "Прибытие в отель 12.11 12:55, заезд 12.11.",
           "options": [],
+          "offer_ids": [
+            "off_h_AYT_06_r1_t3_20261112_20261119_dd27"
+          ],
           "refs": [
             "offer:off_h_AYT_06_r1_t3_20261112_20261119_dd27",
             "hotel:h_AYT_06"
@@ -323,6 +329,9 @@
           "status": "ok",
           "text": "Стойка открыта в момент прибытия.",
           "options": [],
+          "offer_ids": [
+            "off_h_AYT_06_r1_t3_20261112_20261119_dd27"
+          ],
           "refs": [
             "offer:off_h_AYT_06_r1_t3_20261112_20261119_dd27",
             "hotel:h_AYT_06"
@@ -333,30 +342,13 @@
           "status": "warn",
           "text": "Прибытие 12:55, заселение с 14:00: ожидание 1 ч 05 мин.",
           "options": [
-            {
-              "code": "wait",
-              "text": "Ждать заселения 1 ч 05 мин",
-              "price_rub": 0,
-              "guaranteed": null
-            },
-            {
-              "code": "luggage_storage",
-              "text": "Оставить багаж на стойке",
-              "price_rub": 0,
-              "guaranteed": null
-            },
-            {
-              "code": "early_checkin",
-              "text": "Ранний заезд с 12:55 (по наличию, не гарантирован)",
-              "price_rub": 0,
-              "guaranteed": false
-            },
-            {
-              "code": "prev_night",
-              "text": "Забронировать ночь накануне — номер готов сразу",
-              "price_rub": 4690,
-              "guaranteed": true
-            }
+            "Ждать заселения 1 ч 05 мин",
+            "Оставить багаж на стойке",
+            "Ранний заезд с 12:55 (по наличию, не гарантирован)",
+            "Забронировать ночь накануне — номер готов сразу — 4 690 ₽"
+          ],
+          "offer_ids": [
+            "off_h_AYT_06_r1_t3_20261112_20261119_dd27"
           ],
           "refs": [
             "offer:off_h_AYT_06_r1_t3_20261112_20261119_dd27",
@@ -368,6 +360,9 @@
           "status": "ok",
           "text": "Выезд из отеля 19.11 09:00 — успеваете на обратную дорогу.",
           "options": [],
+          "offer_ids": [
+            "off_h_AYT_06_r1_t3_20261112_20261119_dd27"
+          ],
           "refs": [
             "offer:off_h_AYT_06_r1_t3_20261112_20261119_dd27",
             "hotel:h_AYT_06"
@@ -378,6 +373,7 @@
           "status": "ok",
           "text": "Трансферы стыкуются с транспортом.",
           "options": [],
+          "offer_ids": [],
           "refs": []
         },
         {
@@ -385,6 +381,7 @@
           "status": "ok",
           "text": "Все позиции на 2 взр. и 1 дет.",
           "options": [],
+          "offer_ids": [],
           "refs": []
         },
         {
@@ -392,6 +389,7 @@
           "status": "ok",
           "text": "Животное принимают перевозчик, отель и трансферы.",
           "options": [],
+          "offer_ids": [],
           "refs": []
         },
         {
@@ -399,6 +397,7 @@
           "status": "warn",
           "text": "Турция: Безвиз до 60 дней в течение 180 дней. Срок действия паспорта уточняйте перед поездкой. Документы: загранпаспорт.",
           "options": [],
+          "offer_ids": [],
           "refs": [
             "city:AYT:visa"
           ]

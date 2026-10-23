@@ -1,4 +1,4 @@
-"""Generate ``data/seed/*.json`` from snapshots (offline, deterministic).
+"""Generate ``data/seed/catalog/*.json`` from snapshots (offline, deterministic).
 
     python -m pipeline.build
 
@@ -20,7 +20,7 @@ from pipeline.places import build_climate, build_cities, build_hubs
 from pipeline.trains import build_trains
 from pipeline.transfers import build_transfers
 
-SEED_DIR = Path(__file__).resolve().parent.parent / "data" / "seed"
+SEED_DIR = Path(__file__).resolve().parent.parent / "data" / "seed" / "catalog"
 
 SOURCES = [
     "Wikidata (CC0): города, координаты, население, описание, вокзалы",

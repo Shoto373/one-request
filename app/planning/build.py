@@ -3,35 +3,33 @@
 Trip = outbound transport -> transfer -> hotel -> transfer -> return transport.
 The hotel stay starts on the local arrival date (a night flight shifts check-in)
 and ends on the local date of the return departure.
+
+Two entry points:
+- ``build_trip_bundles(cat, TripQuery) -> BuildResult`` — typed core with ``notes``;
+- ``build_bundles(requirements, state) -> list[dict]`` — the orchestrator contract
+  (track B, README «Integration»): TripState requirements in, wire bundles out.
 """
 
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
-from app.catalog.models import Offer, Party
-from app.catalog.store import Catalog
-from app.planning.models import Bundle, Check, Claim
+from app.catalog.models import Offer
+from app.catalog.store import Catalog, get_catalog
+from app.planning.models import Bundle, Check, Claim, bundle_to_wire
+from app.planning.query import TripQuery, query_from_requirements
 from app.planning.validate import DEPART_BUFFER_MIN, EXIT_MIN, hub_class, validate_plan
-from app.tools.search import TransportKind, search_hotels, search_transfers, search_transport
+from app.tools.search import search_hotels, search_transfers, search_transport
+
+log = logging.getLogger(__name__)
 
 TOP_TRANSPORT = 12
 TOP_HOTELS = 15
-
-
-@dataclass
-class TripQuery:
-    origin_city: str
-    dest_city: str
-    depart_date: date
-    return_date: date
-    party: Party
-    budget_rub: int | None = None
-    budget_hard: bool = False
-    kinds: tuple[TransportKind, ...] = ("flight", "train")
 
 
 @dataclass
@@ -68,8 +66,9 @@ def _tradeoffs(items: list[Offer]) -> list[Claim]:
         if o.kind == "hotel" and not o.variant.get("refundable"):
             out.append(Claim(text=f"Невозвратный тариф отеля: при отмене теряется {o.cancel_policy.penalty_rub:,} ₽."
                              .replace(",", " "), refs=ref))
-        if o.kind == "flight" and o.baggage and not o.baggage.get("checked_pieces"):
-            out.append(Claim(text=f"{o.variant['title']}: тариф без багажа, только ручная кладь {o.baggage['cabin_kg']} кг.",
+        bag = o.variant.get("baggage") or {}
+        if o.kind == "flight" and bag and not bag.get("checked_pieces"):
+            out.append(Claim(text=f"{o.variant['title']}: тариф без багажа, только ручная кладь {bag['cabin_kg']} кг.",
                              refs=ref))
         if o.kind == "flight" and o.variant.get("stops"):
             out.append(Claim(text=f"{o.variant['title']}: пересадка, в пути {o.variant['duration_min'] // 60} ч.",
@@ -77,7 +76,7 @@ def _tradeoffs(items: list[Offer]) -> list[Claim]:
     return out
 
 
-def build_bundles(cat: Catalog, q: TripQuery) -> BuildResult:
+def build_trip_bundles(cat: Catalog, q: TripQuery) -> BuildResult:
     notes: list[str] = []
     if q.return_date <= q.depart_date:
         return BuildResult([], ["Дата обратной дороги должна быть позже даты отправления."])
@@ -139,3 +138,35 @@ def build_bundles(cat: Catalog, q: TripQuery) -> BuildResult:
         risks=[Claim(text=c.text, refs=c.refs) for c in checks if c.status == "warn" and c.kind != "visa"],
     )
     return BuildResult([bundle], notes, cheapest_total_rub=total)
+
+
+def build_bundles(requirements: dict[str, Any], state: Any = None) -> list[dict[str, Any]]:
+    """Orchestrator contract: ``{key: value}`` requirements (+ TripState for kinds) -> wire bundles.
+
+    Returns ``[]`` when the request cannot be resolved or nothing is feasible; the reasons
+    are logged (and available from ``build_trip_bundles`` / ``explain_no_bundles``).
+    """
+    cat = get_catalog()
+    query, problems = query_from_requirements(cat, requirements, state)
+    if query is None:
+        log.info("build_bundles: request not resolved: %s", problems)
+        return []
+    result = build_trip_bundles(cat, query)
+    if not result.bundles:
+        log.info("build_bundles: no feasible bundle: %s", result.notes)
+    return [bundle_to_wire(b) for b in result.bundles]
+
+
+def explain_no_bundles(requirements: dict[str, Any], state: Any = None) -> list[str]:
+    """Human-readable reasons why ``build_bundles`` returned nothing (for an honest reply)."""
+    cat = get_catalog()
+    query, problems = query_from_requirements(cat, requirements, state)
+    if query is None:
+        return problems
+    result = build_trip_bundles(cat, query)
+    notes = list(result.notes)
+    if query.budget_rub is not None and result.cheapest_total_rub and result.cheapest_total_rub > query.budget_rub:
+        diff = result.cheapest_total_rub - query.budget_rub
+        notes.append(f"Самый дешёвый вариант — {result.cheapest_total_rub:,} ₽, это на {diff:,} ₽ больше бюджета."
+                     .replace(",", " "))
+    return notes

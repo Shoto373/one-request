@@ -7,11 +7,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
-from app.catalog.models import Hotel, Offer, Party
-from app.catalog.store import Catalog
-from app.planning.models import Check, CheckOption
+from app.catalog.models import Capacity, Hotel, Offer, Party
+from app.catalog.store import Catalog, get_catalog
+from app.planning.models import Check, CheckOption, check_to_wire
+from app.planning.query import merged_requirements, party_and_budget
+from app.tools.search import flight_offers, hotel_offers, train_offers, transfer_offer
 
 # Minutes from arrival to pickup (baggage, passport control).
 EXIT_MIN = {"airport_intl": 45, "airport_dom": 30, "station": 15}
@@ -194,8 +197,12 @@ def validate_plan(
     budget_rub: int | None = None,
     budget_hard: bool = False,
 ) -> list[Check]:
-    legs = split_legs(items)
+    untimed = [o for o in items if o.times is None]
+    legs = split_legs([o for o in items if o.times is not None])
     checks: list[Check] = []
+    if untimed:
+        checks.append(Check(kind="availability", status="block", refs=[f"offer:{o.offer_id}" for o in untimed],
+                            text="У части позиций нет времени — состыковки не проверить."))
     h = cat.hotels.get(legs.hotel.item_id) if legs.hotel else None
     if h is not None:
         tz = ZoneInfo(cat.cities[h.city_id].timezone)
@@ -203,13 +210,14 @@ def validate_plan(
         checks += _return_checks(legs, h, tz)
     checks += _transfer_checks(legs)
 
-    bad = [o for o in items if o.capacity.adults != party.adults or o.capacity.children != party.children]
+    bad = [o for o in items
+           if o.capacity is None or o.capacity.adults != party.adults or o.capacity.children != party.children]
     checks.append(Check(kind="capacity", status="block" if bad else "ok", refs=[f"offer:{o.offer_id}" for o in bad],
                         text="Не все позиции рассчитаны на этот состав." if bad else
                         f"Все позиции на {party.adults} взр." + (f" и {party.children} дет." if party.children else "")))
 
     if party.pets:
-        no = [o for o in items if not o.capacity.pets]
+        no = [o for o in items if o.capacity is None or not o.capacity.pets]
         checks.append(Check(kind="pets", status="block" if no else "ok", refs=[f"offer:{o.offer_id}" for o in no],
                             text="Не все позиции принимают животное." if no else
                             "Животное принимают перевозчик, отель и трансферы."))
@@ -237,3 +245,92 @@ def validate_plan(
             checks.append(Check(kind="visa", status="warn", refs=[f"city:{city.id}:visa"],
                                 text=f"{city.country}: {visa.note} Документы: {', '.join(visa.documents)}."))
     return checks
+
+
+# --------------------------------------------------------------------------- checkout re-validation
+
+_VARIANT_KEYS = {"flight": ("fare",), "train": ("car_class",), "hotel": ("room_id", "tariff_id"), "transfer": ("direction",)}
+
+
+def _same_offer(a: Offer, b: Offer) -> bool:
+    return (
+        a.kind == b.kind
+        and a.item_id == b.item_id
+        and a.times.start == b.times.start
+        and all(a.variant.get(k) == b.variant.get(k) for k in _VARIANT_KEYS[a.kind])
+    )
+
+
+def current_offer(cat: Catalog, o: Offer, party: Party) -> Offer | None:
+    """The same offer priced again from the catalog now (None if it no longer exists)."""
+    if o.kind == "flight":
+        f = cat.flights.get(o.item_id)
+        cands = flight_offers(f, party) if f else []
+    elif o.kind == "train":
+        t = cat.trains.get(o.item_id)
+        cands = train_offers(t, party) if t else []
+    elif o.kind == "hotel":
+        h = cat.hotels.get(o.item_id)
+        if h is None:
+            return None
+        tz = cat.cities[h.city_id].timezone
+        zone = ZoneInfo(tz)
+        cands = hotel_offers(h, o.times.start.astimezone(zone).date(), o.times.end.astimezone(zone).date(), party, tz)
+    else:
+        r = cat.transfers.get(o.item_id)
+        if r is None:
+            return None
+        found = transfer_offer(r, party, o.times.start, o.variant.get("direction", "to_hotel"), cat.hubs[r.hub_id].timezone)
+        cands = [found] if found else []
+    return next((c for c in cands if _same_offer(c, o)), None)
+
+
+def availability_checks(cat: Catalog, items: list[Offer], party: Party) -> list[Check]:
+    checks = []
+    for o in items:
+        now = current_offer(cat, o, party) if o.times is not None else None
+        name = o.title or o.variant.get("title") or o.item_id
+        if now is None:
+            checks.append(Check(kind="availability", status="block", refs=[f"offer:{o.offer_id}"],
+                                text=f"{name}: предложение больше недоступно.",
+                                options=[CheckOption(code="rebuild", text="Пересобрать комплект")]))
+        elif now.total_rub != o.total_rub:
+            checks.append(Check(kind="availability", status="block", refs=[f"offer:{o.offer_id}"],
+                                text=f"{name}: цена изменилась — было {o.total_rub:,} ₽, стало {now.total_rub:,} ₽."
+                                .replace(",", " "),
+                                options=[CheckOption(code="rebuild", text="Пересобрать комплект")]))
+    if not checks:
+        checks.append(Check(kind="availability", status="ok", text="Все предложения актуальны, цены не изменились."))
+    return checks
+
+
+def _party_from_capacity(items: list[Offer]) -> Party:
+    cap = next((o.capacity for o in items if o.capacity), None) or Capacity(adults=1, children=0, pets=False)
+    return Party(adults=max(1, cap.adults), children_ages=[7] * cap.children)
+
+
+def _in_catalog(cat: Catalog, o: Offer) -> bool:
+    index = {"flight": cat.flights, "train": cat.trains, "hotel": cat.hotels, "transfer": cat.transfers}[o.kind]
+    return o.item_id in index
+
+
+def validate_bundle(bundle: dict[str, Any], state: Any = None) -> list[dict[str, Any]]:
+    """Checkout re-validation (track C cart): plan checks + offers still exist at the same price.
+
+    ``bundle`` and ``state`` are JSON dicts as stored in TripState; returns wire checks
+    (``options`` as strings). Any ``block`` means the bundle must not be paid.
+    A bundle with no item from the track A catalog (test fixtures, hand-made bundles)
+    has nothing to re-check here: its stored checks are returned unchanged.
+    """
+    cat = get_catalog()
+    items = [Offer.model_validate(i) for i in bundle.get("items") or []]
+    if not any(_in_catalog(cat, o) for o in items):
+        return list(bundle.get("checks") or [])
+    req, kinds_by_key = merged_requirements({}, state)
+    budget, hard = None, False
+    if req:
+        party, budget, hard = party_and_budget(req, kinds_by_key)
+    else:
+        party = _party_from_capacity(items)
+    checks = validate_plan(cat, items, party, budget, hard) + availability_checks(cat, items, party)
+    return [check_to_wire(c) for c in checks]

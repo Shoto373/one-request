@@ -4,8 +4,14 @@
       "offer_id": "off_fl_DP2512_20261110_light_4be5",
       "kind": "flight",
       "item_id": "fl_DP2512_20261110",
+      "title": "Победа DP 2512",
       "variant": {
         "title": "Победа DP 2512",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 0,
+          "checked_kg": null
+        },
         "carrier": "DP",
         "carrier_name": "Победа",
         "flight_no": "DP 2512",
@@ -35,11 +41,7 @@
       "included": [
         "cabin_bag_10kg"
       ],
-      "baggage": {
-        "cabin_kg": 10,
-        "checked_pieces": 0,
-        "checked_kg": null
-      },
+      "baggage": "10 кг ручной клади, без багажа",
       "cancel_policy": {
         "free_until": null,
         "penalty_rub": 11140
@@ -59,8 +61,14 @@
       "offer_id": "off_fl_DP4334_20261110_light_4be5",
       "kind": "flight",
       "item_id": "fl_DP4334_20261110",
+      "title": "Победа DP 4334",
       "variant": {
         "title": "Победа DP 4334",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 0,
+          "checked_kg": null
+        },
         "carrier": "DP",
         "carrier_name": "Победа",
         "flight_no": "DP 4334",
@@ -90,11 +98,7 @@
       "included": [
         "cabin_bag_10kg"
       ],
-      "baggage": {
-        "cabin_kg": 10,
-        "checked_pieces": 0,
-        "checked_kg": null
-      },
+      "baggage": "10 кг ручной клади, без багажа",
       "cancel_policy": {
         "free_until": null,
         "penalty_rub": 12220
@@ -114,8 +118,14 @@
       "offer_id": "off_fl_DP2450_20261110_standard_4be5",
       "kind": "flight",
       "item_id": "fl_DP2450_20261110",
+      "title": "Победа DP 2450",
       "variant": {
         "title": "Победа DP 2450",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 1,
+          "checked_kg": 23
+        },
         "carrier": "DP",
         "carrier_name": "Победа",
         "flight_no": "DP 2450",
@@ -146,11 +156,7 @@
         "cabin_bag_10kg",
         "checked_bag_1x23kg"
       ],
-      "baggage": {
-        "cabin_kg": 10,
-        "checked_pieces": 1,
-        "checked_kg": 23
-      },
+      "baggage": "10 кг ручной клади + 1×23 кг",
       "cancel_policy": {
         "free_until": null,
         "penalty_rub": 13060
@@ -170,8 +176,14 @@
       "offer_id": "off_fl_S72410_20261110_light_4be5",
       "kind": "flight",
       "item_id": "fl_S72410_20261110",
+      "title": "S7 Airlines S7 2410",
       "variant": {
         "title": "S7 Airlines S7 2410",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 0,
+          "checked_kg": null
+        },
         "carrier": "S7",
         "carrier_name": "S7 Airlines",
         "flight_no": "S7 2410",
@@ -201,11 +213,7 @@
       "included": [
         "cabin_bag_10kg"
       ],
-      "baggage": {
-        "cabin_kg": 10,
-        "checked_pieces": 0,
-        "checked_kg": null
-      },
+      "baggage": "10 кг ручной клади, без багажа",
       "cancel_policy": {
         "free_until": null,
         "penalty_rub": 13220
@@ -225,8 +233,14 @@
       "offer_id": "off_fl_DP2512_20261110_standard_4be5",
       "kind": "flight",
       "item_id": "fl_DP2512_20261110",
+      "title": "Победа DP 2512",
       "variant": {
         "title": "Победа DP 2512",
+        "baggage": {
+          "cabin_kg": 10,
+          "checked_pieces": 1,
+          "checked_kg": 23
+        },
         "carrier": "DP",
         "carrier_name": "Победа",
         "flight_no": "DP 2512",
@@ -257,11 +271,7 @@
         "cabin_bag_10kg",
         "checked_bag_1x23kg"
       ],
-      "baggage": {
-        "cabin_kg": 10,
-        "checked_pieces": 1,
-        "checked_kg": 23
-      },
+      "baggage": "10 кг ручной клади + 1×23 кг",
       "cancel_policy": {
         "free_until": null,
         "penalty_rub": 14960
@@ -283,6 +293,7 @@
       "offer_id": "off_h_AER_02_r1_t1_20261110_20261117_4be5",
       "kind": "hotel",
       "item_id": "h_AER_02",
+      "title": "Marina Yacht by Stellar, стандарт, без питания, невозвратный",
       "variant": {
         "title": "Marina Yacht by Stellar",
         "hotel_name": "Marina Yacht by Stellar",
@@ -342,6 +353,7 @@
       "offer_id": "off_h_AER_07_r1_t1_20261110_20261117_4be5",
       "kind": "hotel",
       "item_id": "h_AER_07",
+      "title": "Lavicon apart Sochi, стандарт, без питания, невозвратный",
       "variant": {
         "title": "Lavicon apart Sochi",
         "hotel_name": "Lavicon apart Sochi",
@@ -401,6 +413,7 @@
       "offer_id": "off_h_AER_04_r1_t1_20261110_20261117_4be5",
       "kind": "hotel",
       "item_id": "h_AER_04",
+      "title": "Azimut Парк Отель Виноградная, стандарт, без питания, невозвратный",
       "variant": {
         "title": "Azimut Парк Отель Виноградная",
         "hotel_name": "Azimut Парк Отель Виноградная",
@@ -460,6 +473,7 @@
       "offer_id": "off_h_AER_03_r1_t1_20261110_20261117_4be5",
       "kind": "hotel",
       "item_id": "h_AER_03",
+      "title": "Mercure Sochi Centre, стандарт, без питания, невозвратный",
       "variant": {
         "title": "Mercure Sochi Centre",
         "hotel_name": "Mercure Sochi Centre",
@@ -519,6 +533,7 @@
       "offer_id": "off_h_AER_06_r1_t1_20261110_20261117_4be5",
       "kind": "hotel",
       "item_id": "h_AER_06",
+      "title": "Каникулы в Сочи, стандарт, без питания, невозвратный",
       "variant": {
         "title": "Каникулы в Сочи",
         "hotel_name": "Каникулы в Сочи",
@@ -578,6 +593,7 @@
       "offer_id": "off_h_AER_05_r1_t1_20261110_20261117_4be5",
       "kind": "hotel",
       "item_id": "h_AER_05",
+      "title": "Жемчужина, стандарт, без питания, невозвратный",
       "variant": {
         "title": "Жемчужина",
         "hotel_name": "Жемчужина",
@@ -637,6 +653,7 @@
       "offer_id": "off_h_AER_01_r1_t1_20261110_20261117_4be5",
       "kind": "hotel",
       "item_id": "h_AER_01",
+      "title": "Hyatt Regency Sochi, стандарт, без питания, невозвратный",
       "variant": {
         "title": "Hyatt Regency Sochi",
         "hotel_name": "Hyatt Regency Sochi",
@@ -698,6 +715,7 @@
       "offer_id": "off_trf_AER_h_AER_02_public_202611100840_to_hotel_4be5",
       "kind": "transfer",
       "item_id": "trf_AER_h_AER_02_public",
+      "title": "Общественный транспорт, 31.4 км, ~130 мин",
       "variant": {
         "title": "Общественный транспорт, 31.4 км, ~130 мин",
         "mode": "public",
@@ -720,9 +738,7 @@
       "units": 2,
       "total_rub": 240,
       "included": [],
-      "baggage": {
-        "bags": 2
-      },
+      "baggage": "2 мест багажа",
       "cancel_policy": {
         "free_until": "2026-11-10T08:40:00+03:00",
         "penalty_rub": 240
@@ -744,6 +760,7 @@
       "offer_id": "off_trf_AER_h_AER_02_taxi_202611100840_to_hotel_4be5",
       "kind": "transfer",
       "item_id": "trf_AER_h_AER_02_taxi",
+      "title": "Такси, 31.4 км, ~60 мин",
       "variant": {
         "title": "Такси, 31.4 км, ~60 мин",
         "mode": "taxi",
@@ -766,9 +783,7 @@
       "units": 1,
       "total_rub": 1400,
       "included": [],
-      "baggage": {
-        "bags": 2
-      },
+      "baggage": "2 мест багажа",
       "cancel_policy": {
         "free_until": "2026-11-09T08:40:00+03:00",
         "penalty_rub": 1400
@@ -790,6 +805,7 @@
       "offer_id": "off_trf_AER_h_AER_02_shuttle_202611100840_to_hotel_4be5",
       "kind": "transfer",
       "item_id": "trf_AER_h_AER_02_shuttle",
+      "title": "Шаттл, 31.4 км, ~110 мин",
       "variant": {
         "title": "Шаттл, 31.4 км, ~110 мин",
         "mode": "shuttle",
@@ -812,9 +828,7 @@
       "units": 2,
       "total_rub": 1700,
       "included": [],
-      "baggage": {
-        "bags": 2
-      },
+      "baggage": "2 мест багажа",
       "cancel_policy": {
         "free_until": "2026-11-08T08:40:00+03:00",
         "penalty_rub": 1700
@@ -836,6 +850,7 @@
       "offer_id": "off_trf_AER_h_AER_02_minivan_202611100840_to_hotel_4be5",
       "kind": "transfer",
       "item_id": "trf_AER_h_AER_02_minivan",
+      "title": "Минивэн, 31.4 км, ~65 мин",
       "variant": {
         "title": "Минивэн, 31.4 км, ~65 мин",
         "mode": "minivan",
@@ -858,9 +873,7 @@
       "units": 1,
       "total_rub": 2250,
       "included": [],
-      "baggage": {
-        "bags": 2
-      },
+      "baggage": "2 мест багажа",
       "cancel_policy": {
         "free_until": "2026-11-09T08:40:00+03:00",
         "penalty_rub": 2250

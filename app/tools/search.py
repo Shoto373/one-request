@@ -75,13 +75,18 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
         if fare.baggage.checked_pieces:
             included.append(f"checked_bag_{fare.baggage.checked_pieces}x{fare.baggage.checked_kg}kg")
         penalty = (fare.refund_fee_rub or 0) * seats if fare.refundable else total
+        title = f"{f.carrier_name} {f.flight_no}"
+        bag = f"{fare.baggage.cabin_kg} кг ручной клади"
+        bag += f" + {fare.baggage.checked_pieces}×{fare.baggage.checked_kg} кг" if fare.baggage.checked_pieces else ", без багажа"
         out.append(
             Offer(
                 offer_id=f"off_{f.id}_{fare.code}_{party_key(party)}",
                 kind="flight",
                 item_id=f.id,
+                title=title,
                 variant={
-                    "title": f"{f.carrier_name} {f.flight_no}",
+                    "title": title,
+                    "baggage": fare.baggage.model_dump(mode="json"),
                     "carrier": f.carrier,
                     "carrier_name": f.carrier_name,
                     "flight_no": f.flight_no,
@@ -105,7 +110,7 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
                 units=seats,
                 total_rub=total,
                 included=included,
-                baggage=fare.baggage.model_dump(mode="json"),
+                baggage=bag,
                 cancel_policy=CancelPolicy(free_until=None, penalty_rub=penalty),
                 times=OfferTimes(start=f.depart, end=f.arrive),
                 synthetic=f.synthetic,
@@ -129,6 +134,7 @@ def train_offers(t: Train, party: Party) -> list[Offer]:
                 offer_id=f"off_{t.id}_{car.car_class}_{party_key(party)}",
                 kind="train",
                 item_id=t.id,
+                title=f"{title}, {car.name.lower()}",
                 variant={
                     "title": title,
                     "train_no": t.train_no,
@@ -150,7 +156,7 @@ def train_offers(t: Train, party: Party) -> list[Offer]:
                 units=seats,
                 total_rub=total,
                 included=["bedding"] if car.bedding_included else [],
-                baggage={"hand_kg": t.hand_luggage_kg},
+                baggage=f"ручная кладь до {t.hand_luggage_kg} кг",
                 cancel_policy=CancelPolicy(free_until=None, penalty_rub=car.refund_fee_rub * seats),
                 times=OfferTimes(start=t.depart, end=t.arrive),
                 synthetic=t.synthetic,
@@ -262,6 +268,7 @@ def hotel_offers(h: Hotel, checkin: date, checkout: date, party: Party, tz: str)
                     offer_id=f"off_{room.id}_{tariff.id}_{checkin:%Y%m%d}_{checkout:%Y%m%d}_{party_key(party)}",
                     kind="hotel",
                     item_id=h.id,
+                    title=f"{h.name}, {room.name.lower()}, {tariff.name.lower()}",
                     variant={
                         "title": h.name,
                         "hotel_name": h.name,
@@ -337,12 +344,14 @@ def transfer_offer(
     total = r.price_rub * units * quantity + sum(e["price_rub"] for e in extras)
     end = local + timedelta(minutes=r.duration_min)
     mode_name = {"taxi": "Такси", "minivan": "Минивэн", "shuttle": "Шаттл", "public": "Общественный транспорт"}[r.mode]
+    title = f"{mode_name}, {r.distance_km:g} км, ~{r.duration_min} мин"
     return Offer(
         offer_id=f"off_{r.id}_{local:%Y%m%d%H%M}_{direction}_{party_key(party)}",
         kind="transfer",
         item_id=r.id,
+        title=title,
         variant={
-            "title": f"{mode_name}, {r.distance_km:g} км, ~{r.duration_min} мин",
+            "title": title,
             "mode": r.mode,
             "provider": r.provider,
             "direction": direction,
@@ -359,7 +368,7 @@ def transfer_offer(
         units=units,
         total_rub=total,
         included=["child_seat"] if r.child_seat and party.children else [],
-        baggage={"bags": bags},
+        baggage=f"{bags} мест багажа" if bags else None,
         cancel_policy=CancelPolicy(free_until=local - timedelta(hours=r.free_cancel_hours), penalty_rub=total),
         times=OfferTimes(start=local, end=end),
         synthetic=r.synthetic,

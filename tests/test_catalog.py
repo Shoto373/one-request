@@ -8,7 +8,8 @@ import pytest
 
 from app.catalog.models import Party, Pet
 from app.catalog.store import Catalog, seed_dir
-from app.planning.build import TripQuery, build_bundles
+from app.planning.build import build_trip_bundles
+from app.planning.query import TripQuery
 from app.planning.validate import validate_plan
 from app.tools.search import search_hotels, search_transfers, search_transport
 
@@ -72,7 +73,7 @@ def test_capacity_needs_second_room(cat: Catalog) -> None:
 def test_sprint1_scenario_moscow_sochi(cat: Catalog) -> None:
     """«Из Москвы в Сочи 10–17 ноября, двое взрослых» -> one feasible bundle."""
     q = TripQuery("MOW", "AER", D(2026, 11, 10), D(2026, 11, 17), Party(adults=2))
-    res = build_bundles(cat, q)
+    res = build_trip_bundles(cat, q)
     assert len(res.bundles) == 1, res.notes
     b = res.bundles[0]
     assert [o.kind for o in b.items][1:4] == ["transfer", "hotel", "transfer"]
@@ -106,14 +107,14 @@ def test_night_arrival_without_reception_is_blocked(cat: Catalog) -> None:
 
 def test_bundle_skips_blocked_hotel_for_night_arrival(cat: Catalog) -> None:
     q = TripQuery("SVX", "AYT", D(2026, 11, 10), D(2026, 11, 17), Party(adults=2), kinds=("flight",))
-    res = build_bundles(cat, q)
+    res = build_trip_bundles(cat, q)
     assert res.bundles, res.notes
     assert res.bundles[0].feasible
 
 
 def test_dubai_with_dog_is_infeasible(cat: Catalog) -> None:
     q = TripQuery("MOW", "DXB", D(2026, 11, 10), D(2026, 11, 17), Party(adults=2, pets=[Pet(weight_kg=7)]))
-    res = build_bundles(cat, q)
+    res = build_trip_bundles(cat, q)
     assert not res.bundles and res.notes
 
 
@@ -138,14 +139,14 @@ def test_antalya_closed_hotels_disappear_in_november(cat: Catalog) -> None:
 
 def test_train_only_weekend_to_kazan(cat: Catalog) -> None:
     q = TripQuery("MOW", "KZN", D(2026, 11, 13), D(2026, 11, 15), Party(adults=2), kinds=("train",))
-    res = build_bundles(cat, q)
+    res = build_trip_bundles(cat, q)
     assert res.bundles, res.notes
     assert {o.kind for o in res.bundles[0].items} == {"train", "transfer", "hotel"}
 
 
 def test_budget_hard_reports_cheapest(cat: Catalog) -> None:
     q = TripQuery("MOW", "DXB", D(2026, 11, 10), D(2026, 11, 17), Party(adults=3), budget_rub=30_000, budget_hard=True)
-    res = build_bundles(cat, q)
+    res = build_trip_bundles(cat, q)
     assert not res.bundles
     assert res.cheapest_total_rub and res.cheapest_total_rub > 30_000
 

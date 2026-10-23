@@ -1,12 +1,13 @@
 """Bundle, Check and Claim (architecture v2, section 6).
 
-Defined here because ``build_bundles`` and ``validate_plan`` (track A) produce them;
-TripState (track B) should import them from this module instead of redefining.
+Track A works with structured checks (``CheckOption`` with price and guarantee).
+TripState (track B) and the UI (track C) store ``Check.options`` as strings, so
+everything leaving track A goes through ``check_to_wire`` / ``bundle_to_wire``.
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
@@ -22,6 +23,7 @@ CheckKind = Literal[
     "pets",
     "budget",
     "visa",
+    "availability",
 ]
 
 
@@ -66,3 +68,27 @@ class Bundle(Model):
     @property
     def feasible(self) -> bool:
         return all(c.status != "block" for c in self.checks)
+
+
+def option_text(o: CheckOption) -> str:
+    if o.price_rub:
+        return f"{o.text} — {o.price_rub:,} ₽".replace(",", " ")
+    return o.text
+
+
+def check_to_wire(c: Check) -> dict[str, Any]:
+    """Check as TripState/UI store it: options are strings, offer refs also as ``offer_ids``."""
+    return {
+        "kind": c.kind,
+        "status": c.status,
+        "text": c.text,
+        "options": [option_text(o) for o in c.options],
+        "offer_ids": [r.removeprefix("offer:") for r in c.refs if r.startswith("offer:")],
+        "refs": c.refs,
+    }
+
+
+def bundle_to_wire(b: Bundle) -> dict[str, Any]:
+    data = b.model_dump(mode="json")
+    data["checks"] = [check_to_wire(c) for c in b.checks]
+    return data

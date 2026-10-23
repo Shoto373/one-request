@@ -6,7 +6,7 @@ final price. Search turns an object into an *Offer*: a price for concrete dates
 and a concrete party, where ``total_rub`` always covers the whole party and the
 whole period.
 
-Seed files in ``data/seed`` are plain JSON arrays of these models
+Catalog files in ``data/seed/catalog`` are plain JSON arrays of these models
 (see ``SEED_FILES``); ``meta.json`` is a single ``SeedMeta`` object.
 """
 
@@ -429,25 +429,29 @@ class Offer(Model):
 
     Invariant: ``total_rub == unit_price_rub * units * quantity + sum(e["price_rub"] for e in variant["extras"])``.
     ``variant`` is descriptive and kind-specific (hotel_name, room_type, tariff, fare, car_class,
-    mode, from/to hubs, nightly_rub, extras...). Missing ``extras`` means no extras.
+    mode, from/to hubs, nightly_rub, extras, structured baggage...). Missing ``extras`` means no extras.
+    ``title`` and ``baggage`` are ready-to-show strings for the UI (web/src/api/types.ts).
+    Search always fills every field; defaults only keep minimal hand-written offers
+    (track B fixtures of the former shim) valid.
     """
 
     offer_id: str
     kind: Literal["hotel", "flight", "train", "transfer"]
     item_id: str
-    variant: dict[str, Any]
-    capacity: Capacity
-    quantity: int = Field(ge=1)
+    title: str | None = None
+    variant: dict[str, Any] = Field(default_factory=dict)
+    capacity: Capacity | None = None
+    quantity: int = Field(default=1, ge=1)
     unit_price_rub: int = Field(ge=0)
     price_unit: Literal["per_room_night", "per_person", "per_vehicle", "per_trip"]
     units: int = Field(ge=1)
     total_rub: int = Field(ge=0)
     included: list[str] = Field(default_factory=list)
-    baggage: dict[str, Any] | None = None
+    baggage: str | None = None
     cancel_policy: CancelPolicy | None = None
-    times: OfferTimes
-    synthetic: bool
-    source_refs: list[str]
+    times: OfferTimes | None = None
+    synthetic: bool = True
+    source_refs: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _total_matches(self) -> Offer:

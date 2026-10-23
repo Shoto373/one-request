@@ -14,7 +14,9 @@ from pathlib import Path
 
 from app.catalog.models import Party, Pet
 from app.catalog.store import Catalog
-from app.planning.build import TripQuery, build_bundles
+from app.planning.build import build_trip_bundles
+from app.planning.models import bundle_to_wire
+from app.planning.query import TripQuery
 from app.tools.search import search_hotels, search_transfers, search_transport
 
 OUT = Path(__file__).resolve().parent.parent / "data" / "examples"
@@ -41,12 +43,12 @@ def main() -> None:
     cat = Catalog.load()
     OUT.mkdir(parents=True, exist_ok=True)
     for name, q in SCENARIOS.items():
-        res = build_bundles(cat, q)
+        res = build_trip_bundles(cat, q)
         query = asdict(q)
         query["party"] = q.party.model_dump(mode="json")
         dump(name, {
             "query": json.loads(json.dumps(query, default=str)),
-            "bundles": [b.model_dump(mode="json") for b in res.bundles],
+            "bundles": [bundle_to_wire(b) for b in res.bundles],  # as stored in TripState
             "notes": res.notes,
             "cheapest_total_rub": res.cheapest_total_rub,
         })

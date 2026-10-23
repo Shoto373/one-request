@@ -25,8 +25,14 @@
           "offer_id": "off_fl_DP2512_20261110_light_4be5",
           "kind": "flight",
           "item_id": "fl_DP2512_20261110",
+          "title": "Победа DP 2512",
           "variant": {
             "title": "Победа DP 2512",
+            "baggage": {
+              "cabin_kg": 10,
+              "checked_pieces": 0,
+              "checked_kg": null
+            },
             "carrier": "DP",
             "carrier_name": "Победа",
             "flight_no": "DP 2512",
@@ -56,11 +62,7 @@
           "included": [
             "cabin_bag_10kg"
           ],
-          "baggage": {
-            "cabin_kg": 10,
-            "checked_pieces": 0,
-            "checked_kg": null
-          },
+          "baggage": "10 кг ручной клади, без багажа",
           "cancel_policy": {
             "free_until": null,
             "penalty_rub": 11140
@@ -80,6 +82,7 @@
           "offer_id": "off_trf_AER_h_AER_02_public_202611100910_to_hotel_4be5",
           "kind": "transfer",
           "item_id": "trf_AER_h_AER_02_public",
+          "title": "Общественный транспорт, 31.4 км, ~130 мин",
           "variant": {
             "title": "Общественный транспорт, 31.4 км, ~130 мин",
             "mode": "public",
@@ -102,9 +105,7 @@
           "units": 2,
           "total_rub": 240,
           "included": [],
-          "baggage": {
-            "bags": 2
-          },
+          "baggage": "2 мест багажа",
           "cancel_policy": {
             "free_until": "2026-11-10T09:10:00+03:00",
             "penalty_rub": 240
@@ -126,6 +127,7 @@
           "offer_id": "off_h_AER_02_r1_t1_20261110_20261117_4be5",
           "kind": "hotel",
           "item_id": "h_AER_02",
+          "title": "Marina Yacht by Stellar, стандарт, без питания, невозвратный",
           "variant": {
             "title": "Marina Yacht by Stellar",
             "hotel_name": "Marina Yacht by Stellar",
@@ -185,6 +187,7 @@
           "offer_id": "off_trf_AER_h_AER_02_public_202611170650_to_hub_4be5",
           "kind": "transfer",
           "item_id": "trf_AER_h_AER_02_public",
+          "title": "Общественный транспорт, 31.4 км, ~130 мин",
           "variant": {
             "title": "Общественный транспорт, 31.4 км, ~130 мин",
             "mode": "public",
@@ -207,9 +210,7 @@
           "units": 2,
           "total_rub": 240,
           "included": [],
-          "baggage": {
-            "bags": 2
-          },
+          "baggage": "2 мест багажа",
           "cancel_policy": {
             "free_until": "2026-11-17T06:50:00+03:00",
             "penalty_rub": 240
@@ -231,8 +232,14 @@
           "offer_id": "off_fl_DP2513_20261117_light_4be5",
           "kind": "flight",
           "item_id": "fl_DP2513_20261117",
+          "title": "Победа DP 2513",
           "variant": {
             "title": "Победа DP 2513",
+            "baggage": {
+              "cabin_kg": 10,
+              "checked_pieces": 0,
+              "checked_kg": null
+            },
             "carrier": "DP",
             "carrier_name": "Победа",
             "flight_no": "DP 2513",
@@ -262,11 +269,7 @@
           "included": [
             "cabin_bag_10kg"
           ],
-          "baggage": {
-            "cabin_kg": 10,
-            "checked_pieces": 0,
-            "checked_kg": null
-          },
+          "baggage": "10 кг ручной клади, без багажа",
           "cancel_policy": {
             "free_until": null,
             "penalty_rub": 9480
@@ -290,6 +293,9 @@
           "status": "ok",
           "text": "Прибытие в отель 10.11 11:20, заезд 10.11.",
           "options": [],
+          "offer_ids": [
+            "off_h_AER_02_r1_t1_20261110_20261117_4be5"
+          ],
           "refs": [
             "offer:off_h_AER_02_r1_t1_20261110_20261117_4be5",
             "hotel:h_AER_02"
@@ -300,6 +306,9 @@
           "status": "ok",
           "text": "Стойка открыта в момент прибытия.",
           "options": [],
+          "offer_ids": [
+            "off_h_AER_02_r1_t1_20261110_20261117_4be5"
+          ],
           "refs": [
             "offer:off_h_AER_02_r1_t1_20261110_20261117_4be5",
             "hotel:h_AER_02"
@@ -310,24 +319,12 @@
           "status": "warn",
           "text": "Прибытие 11:20, заселение с 15:00: ожидание 3 ч 40 мин.",
           "options": [
-            {
-              "code": "wait",
-              "text": "Ждать заселения 3 ч 40 мин",
-              "price_rub": 0,
-              "guaranteed": null
-            },
-            {
-              "code": "luggage_storage",
-              "text": "Оставить багаж на стойке",
-              "price_rub": 0,
-              "guaranteed": null
-            },
-            {
-              "code": "prev_night",
-              "text": "Забронировать ночь накануне — номер готов сразу",
-              "price_rub": 2921,
-              "guaranteed": true
-            }
+            "Ждать заселения 3 ч 40 мин",
+            "Оставить багаж на стойке",
+            "Забронировать ночь накануне — номер готов сразу — 2 921 ₽"
+          ],
+          "offer_ids": [
+            "off_h_AER_02_r1_t1_20261110_20261117_4be5"
           ],
           "refs": [
             "offer:off_h_AER_02_r1_t1_20261110_20261117_4be5",
@@ -339,6 +336,9 @@
           "status": "ok",
           "text": "Выезд из отеля 17.11 06:50 — успеваете на обратную дорогу.",
           "options": [],
+          "offer_ids": [
+            "off_h_AER_02_r1_t1_20261110_20261117_4be5"
+          ],
           "refs": [
             "offer:off_h_AER_02_r1_t1_20261110_20261117_4be5",
             "hotel:h_AER_02"
@@ -349,6 +349,7 @@
           "status": "ok",
           "text": "Трансферы стыкуются с транспортом.",
           "options": [],
+          "offer_ids": [],
           "refs": []
         },
         {
@@ -356,6 +357,7 @@
           "status": "ok",
           "text": "Все позиции на 2 взр.",
           "options": [],
+          "offer_ids": [],
           "refs": []
         },
         {
@@ -363,6 +365,7 @@
           "status": "ok",
           "text": "Поездка по России, виза не нужна.",
           "options": [],
+          "offer_ids": [],
           "refs": [
             "city:AER:visa"
           ]
