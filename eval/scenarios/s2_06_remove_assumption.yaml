@@ -1,0 +1,15 @@
+id: s2_06_remove_assumption
+description: Удалённое предположение не возвращается при следующем ходе.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Сочи в ноябре, двое взрослых и ребёнок 5 лет.
+actions:
+  - {type: command, command: remove_assumption, payload: {key: assumption_child_flight_time}}
+  - {type: message, text: Продолжай подбор.}
+expected:
+  final_stage: select
+  requirements:
+    - {key: assumption_child_flight_time, kind: assumption, value: absent}
+  max_questions_per_turn: 2
+  checks: [assumption_removed_by_agent_command, key_persistently_suppressed, other_requirements_preserved]
+fixtures: {suggestion_result: one_family_option}

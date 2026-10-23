@@ -71,6 +71,7 @@ make web-mock  # фронт на моках, бэкенд не нужен
 - `POST /api/sessions` → `{"session_id":"<uuid>","version":0}`
 - `GET /api/sessions/{id}` → `{"state": TripState, "messages": [...]}`
 - `POST /api/sessions/{id}/messages` JSON: `{"text":"Из Москвы в Сочи 10–17 ноября, двое взрослых","expected_version":0}`. Response content type is `text/event-stream`.
+- `POST /api/sessions/{id}/commands` JSON: `{"type":"accept_alternative","payload":{"alternative_id":"<confirmed-id>"},"expected_version":1}`. Supported types: `edit_requirement` (`key,value,kind?`), `remove_requirement` / `remove_assumption` (`key`), `select_destination` (`destination_id`), `accept_alternative` (`alternative_id`), `select_bundle` (`bundle_id`). IDs must exist in the current state.
 - `GET /api/sessions/{id}/trace` → `{"session_id":"...","steps":[...]}`
 
 SSE payloads are JSON, UTF-8, separated by a blank line:
@@ -116,7 +117,9 @@ curl -N -X POST "$BASE_URL/api/sessions/$SESSION_ID/messages" \
 curl -fsS "$BASE_URL/api/sessions/$SESSION_ID"
 ```
 
-The last call returns the persisted state and messages. Until track A provides `app.planning.build.build_bundles`, the POST returns a structured `catalog_integration_missing` SSE error after parsing, and the state remains unchanged; after A is integrated the same example proceeds to save the resulting bundle and version 1.
+The last call returns the persisted state and messages. Track A's real `build_bundles` is integrated. Its `suggest_destinations` and calculated/confirmed minimal changes are still pending; until then vague requests return structured `a_tool_unavailable` and no destination is fabricated. Climate refs such as `climate:AYT:11.sea_temp` resolve to `{value,label,unit,kind,source,source_refs}` in the destination `sources` map for UI tooltips. Monthly climate values are statistics, not forecasts.
+
+SSE `step` payloads use `{step_type,name,input,output,status}`, `state` uses `{state: TripState}`, `message` uses `{role,text}`, and `done` uses `{ok,version?}`. Commands use the same SSE event schema. `TripState.open_questions` items have `{key,question,why,options}`; removed assumptions appear in `suppressed_assumptions` so the UI can remove them without the next turn restoring them. The eight YAML scenarios are checked with `python -m eval.schema`; there is no full eval runner yet.
 
 ## LLM
 
@@ -128,9 +131,9 @@ Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and opti
 pytest -q
 ```
 
-Unit tests use mocked LLM responses and in-memory test stores. PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` points to a dedicated test database. Never point it at the shared/development database. The real `build_bundles` test is skipped until track A's module exists. Checkout tests (`tests/test_cart.py`) also need `TEST_DATABASE_URL`; `make test` creates `trip_test` in the compose db and runs everything.
+Unit tests use mocked LLM responses and in-memory test stores. PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` points to a dedicated test database. Never point it at the shared/development database. The real `build_bundles` regression uses the integrated track A module. Checkout tests (`tests/test_cart.py`) also need `TEST_DATABASE_URL`; `make test` creates `trip_test` in the compose db and runs everything.
 
 ## Integration handoff
 
-- **A:** supply `app/catalog/models.py` Offer or map its existing Offer to this serialized v2 contract; provide `app.planning.build.build_bundles(requirements: dict, state: TripState) -> list[Bundle]`. Ensure prices/IDs/items come only from catalog tools. Replace `catalog_entries` with the owned catalog migrations and seed format.
-- **C (done in sprint 1):** Docker Compose, one app worker, React UI on the SSE schemas above, cart and mock checkout against `{session_id, version, bundle_id}` (`app/cart`, `002_cart_checkout.sql`). Checkout re-validates through `app.planning.validate.validate_bundle(bundle, state)` when track A provides it.
+- **A:** implement `app.planning.suggest.suggest_destinations(requirements: dict, state: TripState) -> {destinations, alternatives, notes, required_inputs}`. A candidate has `feasible: true` only after A verifies it. Each alternative needs a stable `id`, `label`, `confirmed: true`, exact `changes`, refs and resolvable `evidence` (`ref,value,label,kind,source,source_refs`); B does not calculate alternatives. Assumptions are excluded from filter inputs; A may read them from state for ranking only.
+- **C:** consume `open_questions` and destinations with evidence-backed `why`, `risks`, `sources`; send command payloads above via POST and parse SSE from `fetch`. Keep one app worker because per-session serialization locks are process-local. Checkout remains C-owned and uses `{session_id, version, bundle_id}`.

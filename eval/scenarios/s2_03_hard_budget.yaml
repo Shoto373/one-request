@@ -1,0 +1,14 @@
+id: s2_03_hard_budget
+description: Строгий бюджет остаётся hard; поездка проходит лимит либо получает честный отказ.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Сочи 10–17 ноября 2026, двое взрослых, строго до 100 000 рублей на всю поездку.
+actions: []
+expected:
+  final_stage: select
+  requirements:
+    - {key: budget_total_rub, kind: hard, value: 100000}
+    - {key: budget_scope, kind: hard, value: trip}
+  max_questions_per_turn: 2
+  checks: [hard_budget_not_softened, bundle_within_total_or_honest_no_bundle, no_fabricated_alternative]
+fixtures: {catalog: sochi_budget_100k}
