@@ -350,21 +350,15 @@
       }
     },
     {
-      "kind": "nights",
-      "text": "На 1 день короче: 10.11–16.11 — 312 980 ₽ (+282 980 ₽ к бюджету)",
-      "total_rub": 312980,
-      "over_budget_rub": 282980,
+      "kind": "budget",
+      "text": "Увеличить бюджет на 319 500 ₽ — до 349 500 ₽",
+      "total_rub": 349500,
+      "over_budget_rub": 319500,
       "needs_consent": false,
       "change": {
-        "key": "dates",
-        "from": {
-          "start": "2026-11-10",
-          "end": "2026-11-17"
-        },
-        "to": {
-          "start": "2026-11-10",
-          "end": "2026-11-16"
-        }
+        "key": "budget_total_rub",
+        "from": 30000,
+        "to": 349500
       },
       "bundle": {
         "id": "b1",
@@ -473,7 +467,7 @@
             ]
           },
           {
-            "offer_id": "off_h_DXB_06_r1_t1_20261111_20261116_6fdf",
+            "offer_id": "off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
             "kind": "hotel",
             "item_id": "h_DXB_06",
             "title": "La Quinta by Wyndham Bur Dubai, стандарт, без питания, невозвратный",
@@ -489,12 +483,13 @@
               "tariff": "Без питания, невозвратный",
               "meal": "RO",
               "refundable": false,
-              "nights": 5,
+              "nights": 6,
               "nightly_rub": [
                 17600,
                 17600,
                 20420,
                 20420,
+                17600,
                 17600
               ],
               "dist_beach_km": 1.8,
@@ -507,21 +502,21 @@
               "pets": false
             },
             "quantity": 2,
-            "unit_price_rub": 18728,
+            "unit_price_rub": 18540,
             "price_unit": "per_room_night",
-            "units": 5,
-            "total_rub": 187280,
+            "units": 6,
+            "total_rub": 222480,
             "included": [
               "wifi"
             ],
             "baggage": null,
             "cancel_policy": {
               "free_until": null,
-              "penalty_rub": 187280
+              "penalty_rub": 222480
             },
             "times": {
               "start": "2026-11-11T15:00:00+04:00",
-              "end": "2026-11-16T12:00:00+04:00"
+              "end": "2026-11-17T12:00:00+04:00"
             },
             "synthetic": true,
             "source_refs": [
@@ -531,7 +526,7 @@
             ]
           },
           {
-            "offer_id": "off_trf_DXB_h_DXB_06_public_202611152235_to_hub_6fdf",
+            "offer_id": "off_trf_DXB_h_DXB_06_public_202611162235_to_hub_6fdf",
             "kind": "transfer",
             "item_id": "trf_DXB_h_DXB_06_public",
             "title": "Общественный транспорт, 11.5 км, ~55 мин",
@@ -559,12 +554,12 @@
             "included": [],
             "baggage": "3 мест багажа",
             "cancel_policy": {
-              "free_until": "2026-11-15T22:35:00+04:00",
+              "free_until": "2026-11-16T22:35:00+04:00",
               "penalty_rub": 570
             },
             "times": {
-              "start": "2026-11-15T22:35:00+04:00",
-              "end": "2026-11-15T23:30:00+04:00"
+              "start": "2026-11-16T22:35:00+04:00",
+              "end": "2026-11-16T23:30:00+04:00"
             },
             "synthetic": true,
             "source_refs": [
@@ -576,9 +571,9 @@
             ]
           },
           {
-            "offer_id": "off_fl_FZ1759_20261116_light_6fdf",
+            "offer_id": "off_fl_FZ1759_20261117_light_6fdf",
             "kind": "flight",
-            "item_id": "fl_FZ1759_20261116",
+            "item_id": "fl_FZ1759_20261117",
             "title": "flydubai FZ 1759",
             "variant": {
               "title": "flydubai FZ 1759",
@@ -609,31 +604,31 @@
               "pets": false
             },
             "quantity": 1,
-            "unit_price_rub": 17900,
+            "unit_price_rub": 18340,
             "price_unit": "per_person",
             "units": 3,
-            "total_rub": 53700,
+            "total_rub": 55020,
             "included": [
               "cabin_bag_10kg"
             ],
             "baggage": "10 кг ручной клади, без багажа",
             "cancel_policy": {
               "free_until": null,
-              "penalty_rub": 53700
+              "penalty_rub": 55020
             },
             "times": {
-              "start": "2026-11-16T01:30:00+04:00",
-              "end": "2026-11-16T06:15:00+03:00"
+              "start": "2026-11-17T01:30:00+04:00",
+              "end": "2026-11-17T06:15:00+03:00"
             },
             "synthetic": true,
             "source_refs": [
-              "flight:fl_FZ1759_20261116",
+              "flight:fl_FZ1759_20261117",
               "gen:flights@seed42",
               "formula:block_time=distance/750kmh+40min"
             ]
           }
         ],
-        "total_rub": 312980,
+        "total_rub": 349500,
         "checks": [
           {
             "kind": "checkin_date",
@@ -641,10 +636,10 @@
             "text": "Прибытие в отель 11.11 05:10, заезд 11.11.",
             "options": [],
             "offer_ids": [
-              "off_h_DXB_06_r1_t1_20261111_20261116_6fdf"
+              "off_h_DXB_06_r1_t1_20261111_20261117_6fdf"
             ],
             "refs": [
-              "offer:off_h_DXB_06_r1_t1_20261111_20261116_6fdf",
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
               "hotel:h_DXB_06"
             ]
           },
@@ -654,10 +649,10 @@
             "text": "Круглосуточная стойка.",
             "options": [],
             "offer_ids": [
-              "off_h_DXB_06_r1_t1_20261111_20261116_6fdf"
+              "off_h_DXB_06_r1_t1_20261111_20261117_6fdf"
             ],
             "refs": [
-              "offer:off_h_DXB_06_r1_t1_20261111_20261116_6fdf",
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
               "hotel:h_DXB_06"
             ]
           },
@@ -668,26 +663,26 @@
             "options": [
               "Ждать заселения 9 ч 50 мин",
               "Оставить багаж на стойке",
-              "Забронировать ночь накануне — номер готов сразу — 37 456 ₽"
+              "Забронировать ночь накануне — номер готов сразу — 37 080 ₽"
             ],
             "offer_ids": [
-              "off_h_DXB_06_r1_t1_20261111_20261116_6fdf"
+              "off_h_DXB_06_r1_t1_20261111_20261117_6fdf"
             ],
             "refs": [
-              "offer:off_h_DXB_06_r1_t1_20261111_20261116_6fdf",
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
               "hotel:h_DXB_06"
             ]
           },
           {
             "kind": "return_trip",
             "status": "warn",
-            "text": "Выезд 15.11 22:35 раньше даты выезда 16.11: последняя ночь не используется.",
+            "text": "Выезд 16.11 22:35 раньше даты выезда 17.11: последняя ночь не используется.",
             "options": [],
             "offer_ids": [
-              "off_h_DXB_06_r1_t1_20261111_20261116_6fdf"
+              "off_h_DXB_06_r1_t1_20261111_20261117_6fdf"
             ],
             "refs": [
-              "offer:off_h_DXB_06_r1_t1_20261111_20261116_6fdf",
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
               "hotel:h_DXB_06"
             ]
           },
@@ -726,15 +721,15 @@
             ]
           },
           {
-            "text": "Невозвратный тариф отеля: при отмене теряется 187 280 ₽.",
+            "text": "Невозвратный тариф отеля: при отмене теряется 222 480 ₽.",
             "refs": [
-              "offer:off_h_DXB_06_r1_t1_20261111_20261116_6fdf"
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf"
             ]
           },
           {
             "text": "flydubai FZ 1759: тариф без багажа, только ручная кладь 10 кг.",
             "refs": [
-              "offer:off_fl_FZ1759_20261116_light_6fdf"
+              "offer:off_fl_FZ1759_20261117_light_6fdf"
             ]
           }
         ],
@@ -742,14 +737,14 @@
           {
             "text": "Прибытие 05:10, заселение с 15:00: ожидание 9 ч 50 мин.",
             "refs": [
-              "offer:off_h_DXB_06_r1_t1_20261111_20261116_6fdf",
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
               "hotel:h_DXB_06"
             ]
           },
           {
-            "text": "Выезд 15.11 22:35 раньше даты выезда 16.11: последняя ночь не используется.",
+            "text": "Выезд 16.11 22:35 раньше даты выезда 17.11: последняя ночь не используется.",
             "refs": [
-              "offer:off_h_DXB_06_r1_t1_20261111_20261116_6fdf",
+              "offer:off_h_DXB_06_r1_t1_20261111_20261117_6fdf",
               "hotel:h_DXB_06"
             ]
           }

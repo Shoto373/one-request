@@ -33,6 +33,7 @@ class TripQuery:
     max_travel_min: int | None = None  # "без долгих перелётов" -> one-way limit
     limits_hard: bool = False  # soft limits fall back to any transport (with a note)
     dates_hard: bool = False  # alternatives never move hard dates without consent
+    date_flex_days: int = 0  # user-stated flexibility: shifts within it need no consent
     dest_hard: bool = False
 
 
@@ -212,11 +213,16 @@ LONG_TRAVEL_DEFAULT_MIN = 300  # "без долгих перелётов" withou
 def parse_travel_limits(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple[int | None, int | None, bool]:
     """(max_stops, max_travel_min, hard) from explicit numbers or phrases."""
     text = requirement_text(req)
-    key, value = _pick(req, "max_flight_hours", "max_travel_hours", "flight_hours", "max_flight_duration",
-                       "travel_time", "flight_duration")
-    hours = parse_int(value) if value is not None else None
-    max_min = hours * 60 if hours else None
+    key, value = _pick(req, "max_duration_min")
+    max_min = parse_int(value) if value is not None else None
+    if max_min is None:
+        key, value = _pick(req, "max_flight_hours", "max_travel_hours", "flight_hours", "max_flight_duration",
+                           "travel_time", "flight_duration")
+        hours = parse_int(value) if value is not None else None
+        max_min = hours * 60 if hours else None
     hard = bool(key and kinds_by_key.get(key) == "hard")
+    if max_min is None and str(req.get("travel_time_preference", "")).lower() in ("short", "короткий", "короткие"):
+        max_min = LONG_TRAVEL_DEFAULT_MIN
     if max_min is None and re.search(r"без долг\w* (перел|дорог|поезд)|короткий перел|недолг\w* перел|short flight", text):
         max_min = LONG_TRAVEL_DEFAULT_MIN
     stops_key, stops_value = _pick(req, "max_stops", "stops", "direct", "direct_flight", "no_transfers")
@@ -262,6 +268,9 @@ def party_and_budget(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple
     adults = parse_int(_pick(req, "adults", "adults_count", "travelers", "people")[1]) or 1
     children = parse_children(_pick(req, "children_ages", "children", "kids", "child_age", "children_count")[1])
     pets = parse_pets(_pick(req, "pets", "pet", "animals", "with_pet", "dog")[1])
+    weight = parse_int(req.get("pet_weight_kg"))
+    if pets and weight:
+        pets = [p.model_copy(update={"weight_kg": float(weight)}) for p in pets]
     party = Party(adults=max(1, min(adults, 9)), children_ages=children, pets=pets)
     budget_key, budget_value = _pick(req, "budget_total_rub", "budget_per_person_rub", "budget_rub", "budget", "max_budget", "budget_total")
     budget = parse_budget(budget_value)
@@ -318,4 +327,5 @@ def query_from_requirements(
         budget_rub=budget, budget_hard=hard, kinds=kinds,
         max_stops=max_stops, max_travel_min=max_travel_min, limits_hard=limits_hard,
         dates_hard=kinds_by_key.get(dates_key) == "hard", dest_hard=kinds_by_key.get(dest_key) == "hard",
+        date_flex_days=parse_int(req.get("date_flex_days")) or 0,
     ), []

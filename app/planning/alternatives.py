@@ -94,7 +94,7 @@ def candidate_changes(cat: Catalog, q: TripQuery) -> list[Change]:
                 q, "dates", f"Даты на {plural_days(shift)} {where}: {q2.depart_date:%d.%m}–{q2.return_date:%d.%m}", b,
                 {"key": "dates", "from": {"start": str(q.depart_date), "end": str(q.return_date)},
                  "to": {"start": str(q2.depart_date), "end": str(q2.return_date)}},
-                magnitude=abs(shift), relaxes=q.dates_hard))
+                magnitude=abs(shift), relaxes=q.dates_hard and abs(shift) > q.date_flex_days))
             break
 
     for fewer in range(1, min(MAX_SHORTER_NIGHTS, nights - 1) + 1):
@@ -150,8 +150,13 @@ def minimal_changes(cat: Catalog, q: TripQuery, limit: int = 2) -> list[Change]:
     """Up to ``limit`` cheapest one-step changes of different kinds; [] if the trip already fits."""
     if is_satisfied(cat, q):
         return []
-    ranked = sorted(candidate_changes(cat, q),
-                    key=lambda c: (c.relaxes_hard, c.over_budget_rub, c.magnitude, c.total_rub))
+    candidates = candidate_changes(cat, q)
+    budget_only = next((c for c in candidates if c.kind == "budget"), None)
+    if budget_only is not None:
+        # A date/length change that still needs most of the extra money is just a worse "raise the budget".
+        candidates = [c for c in candidates if not (c.kind in ("dates", "nights") and c.over_budget_rub
+                                                    and c.over_budget_rub > 0.7 * budget_only.over_budget_rub)]
+    ranked = sorted(candidates, key=lambda c: (c.relaxes_hard, c.over_budget_rub, c.magnitude, c.total_rub))
     out, kinds = [], set()
     for c in ranked:
         if c.kind in kinds:

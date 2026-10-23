@@ -26,7 +26,7 @@ from app.planning.query import (
     merged_requirements,
     parse_dates,
     parse_int,
-    parse_kinds,
+    parse_transport,
     parse_travel_limits,
     party_and_budget,
     requirement_text,
@@ -179,7 +179,7 @@ def parse_preferences(req: dict[str, Any], kinds_by_key: dict[str, str], party: 
     sea_keys = [k for k, v in req.items() if re.search(r"мор|пляж|sea|beach", f"{k} {v}".lower())]
     prefs.sea_hard = any(kinds_by_key.get(k) == "hard" for k in sea_keys)
     prefs.warm = bool(re.search(r"тепл|жар|солн|warm|sun", text)) or prefs.sea
-    prefs.cheap = bool(re.search(r"недорог|дешев|бюджетн|эконом|cheap", text))
+    prefs.cheap = bool(re.search(r"недорог|дешев|бюджетн|эконом|cheap|low_cost", text))
     for rx, tags in PREF_TAGS.items():
         if re.search(rx, text):
             prefs.tags |= tags
@@ -200,16 +200,19 @@ def destination_query_from_requirements(
         problems.append("origin: нужен город отправления (Москва, Санкт-Петербург или Екатеринбург).")
 
     exact = parse_dates(_pick(req, "dates", "date_range", "trip_dates")[1])
-    month = exact[0].month if exact else parse_month(_pick(req, "month", "travel_month", "when", "period", "dates")[1])
+    month = exact[0].month if exact else parse_month(_pick(req, "travel_month", "month", "when", "period", "dates")[1])
     if month is None:
         month = parse_month(text)
     year = exact[0].year if exact else (_year_in_window(cat, month) if month else None)
+    stated_year = parse_int(req.get("travel_year"))
+    if not exact and month and stated_year and _year_in_window(cat, month) == stated_year:
+        year = stated_year
     if month is None:
         problems.append("dates: нужен месяц или даты поездки.")
     elif year is None:
         problems.append("dates: этот месяц вне окна каталога (конец октября 2026 – середина января 2027).")
 
-    nights = (exact[1] - exact[0]).days if exact else parse_nights(_pick(req, "nights", "duration", "duration_nights",
+    nights = (exact[1] - exact[0]).days if exact else parse_nights(_pick(req, "duration_nights", "nights", "duration",
                                                                         "length", "trip_length")[1], text)
     if nights is None:
         nights = DEFAULT_NIGHTS
@@ -226,13 +229,13 @@ def destination_query_from_requirements(
     max_stops, max_travel_min, limits_hard = parse_travel_limits(req, kinds_by_key)
     prefs = parse_preferences(req, kinds_by_key, party)
     prefs.short_travel = max_travel_min is not None
-    if max_travel_min is not None and not _pick(req, "max_flight_hours", "max_travel_hours", "flight_hours")[0]:
+    if max_travel_min is not None and not _pick(req, "max_duration_min", "max_flight_hours", "max_travel_hours")[0]:
         assumptions.append(f"«без долгих перелётов» = до {max_travel_min // 60} ч в одну сторону")
     explicit = resolve_city(cat, _pick(req, "destination", "dest", "destination_city", "to")[1])
     return DestinationQuery(
         origin_city=origin, month=month, year=year, nights=nights, party=party, exact_dates=exact,
         budget_rub=budget, budget_hard=budget_hard,
-        kinds=parse_kinds(_pick(req, "transport", "transport_mode", "transport_type", "by")[1]) or ("flight", "train"),
+        kinds=parse_transport(req, kinds_by_key),
         max_stops=max_stops, max_travel_min=max_travel_min, limits_hard=limits_hard, prefs=prefs,
         candidates=[explicit] if explicit else None, assumptions=assumptions,
     ), []
@@ -427,20 +430,24 @@ def suggest_destinations_for(cat: Catalog, dq: DestinationQuery, limit: int = TO
     return result
 
 
-def _changes_when_empty(cat: Catalog, dq: DestinationQuery, candidates: list[str]) -> list[dict[str, Any]]:
-    """Minimal changes for the destination closest to working (cheapest when the budget is ignored)."""
+def closest_trip_query(cat: Catalog, dq: DestinationQuery, candidates: list[str] | None = None) -> TripQuery | None:
+    """Trip of the candidate that is cheapest when the budget is ignored: the base for minimal changes."""
+    candidates = candidates or dq.candidates or sorted(c.id for c in cat.cities.values() if "destination" in c.roles)
     best: tuple[int, TripQuery] | None = None
     for dest in candidates:
         for q in _trip_queries(cat, dq, dest):
             res = build_trip_bundles(cat, replace(q, budget_rub=None, budget_hard=False))
             if res.bundles and (best is None or res.bundles[0].total_rub < best[0]):
                 best = (res.bundles[0].total_rub, q)
-    if best is None:
-        q = _trip_queries(cat, dq, candidates[0])
-        if not q:
-            return []
-        best = (0, q[0])
-    return [c.to_wire() for c in minimal_changes(cat, best[1])]
+    if best is not None:
+        return best[1]
+    queries = _trip_queries(cat, dq, candidates[0]) if candidates else []
+    return queries[0] if queries else None
+
+
+def _changes_when_empty(cat: Catalog, dq: DestinationQuery, candidates: list[str]) -> list[dict[str, Any]]:
+    q = closest_trip_query(cat, dq, candidates)
+    return [c.to_wire() for c in minimal_changes(cat, q)] if q else []
 
 
 # --------------------------------------------------------------------------- orchestrator contract

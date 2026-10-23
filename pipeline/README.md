@@ -15,6 +15,7 @@
 | `app/planning/build.py` | `build_bundles` v0: один комплект — самый дешёвый выполнимый |
 | `app/planning/destinations.py` | `suggest_destinations`: только выполнимые направления, скоринг с разложением |
 | `app/planning/alternatives.py` | минимальные изменения для невыполнимого запроса |
+| `app/planning/suggest.py` | `suggest_destinations(requirements, state)` — контракт с оркестратором B |
 | `data/seed/catalog/*.json` | каталог (JSON-массив, один объект на строку) + `meta.json`; в подпапке, чтобы `app.db.load_seed` (трек B) его не трогал |
 | `data/examples/*.json` | реальные ответы инструментов для UI и моков (в БД не сидятся) |
 | `pipeline/` | офлайн-сбор (`fetch`) и генерация (`build`, `examples`) |
@@ -167,7 +168,32 @@ res.cheapest_total_rub  # минимум без учёта бюджета («+N 
 `needs_consent` (затрагивает hard), `change` (`key`, `from`, `to` — под команду правки требования), `bundle`.
 Сами изменения не применяются: их предлагают пользователю.
 
-Примеры: `data/examples/destinations_vague_sea.json`, `data/examples/changes_dxb_30000.json`.
+### Контракт с оркестратором B
+
+B вызывает `app.planning.suggest.suggest_destinations(requirements, state)` (см. `app/agent/destination_search.py`) и получает:
+
+```json
+{"destinations": [...], "alternatives": [...], "notes": ["..."], "required_inputs": ["origin", "travel_window"]}
+```
+
+- `destinations` — опции направления (поля выше) с `feasible: true` и `evidence`. Климатические факты передаются как
+  `{ref: "climate:AYT:11.sea_temp", value, role}`, B перечитывает их из каталога сам. Остальные факты несут происхождение:
+  `trip:<город>:total_rub` (итог комплекта), `trip:<город>:travel_min` (дорога), `city:<город>:visa` —
+  с `label`, `unit`, `kind`, `source`, `source_refs`, `synthetic`, `role` (`fit` / `risk`).
+- `alternatives` — минимальные изменения, когда ничего не подходит: `id`, `label`, `confirmed: true`,
+  `changes` в ключах B (`budget_total_rub`, `dates`, `destination`, `transport`, `max_stops`), `refs` и `evidence`
+  с итогом пересобранного комплекта. Если изменение всё ещё дороже бюджета, в `changes` добавляется новый
+  `budget_total_rub`: без него комплект после принятия не соберётся. Дополнительно: `kind`, `total_rub`,
+  `over_budget_rub`, `needs_consent`, `bundle`.
+- Указанное, но отсутствующее в каталоге направление → `notes` со списком доступных, без альтернатив.
+- Направление указано и даты известны → только `alternatives` для этой поездки (B зовёт это после пустого `build_bundles`).
+
+Ключи требований B, которые понимает трек A: `travel_month`, `travel_year` (предположение B о годе),
+`duration_nights`, `children_count`, `children_ages`, `pet_weight_kg`, `budget_per_person_rub`,
+`budget_preference: low_cost`, `travel_time_preference: short`, `max_duration_min`, `max_stops`, `trip_style`,
+`date_flex_days` (сдвиг дат в пределах гибкости не требует согласия). Транспорт фильтрует только `kind: hard`.
+
+Примеры: `data/examples/destinations_vague_sea.json`, `data/examples/changes_dxb_30000.json`, `data/examples/suggest_contract_vague.json`.
 
 ## Крайние случаи (A3)
 
