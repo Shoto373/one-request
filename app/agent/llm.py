@@ -1,0 +1,129 @@
+"""Small async client for OpenAI-compatible chat completions APIs."""
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import os
+import re
+import time
+from typing import Any, TypeVar
+
+import httpx
+from pydantic import BaseModel, ValidationError
+
+log = logging.getLogger(__name__)
+T = TypeVar("T", bound=BaseModel)
+
+
+class LLMConfigurationError(RuntimeError):
+    pass
+
+
+class LLMRequestError(RuntimeError):
+    pass
+
+
+class InvalidLLMJSONError(ValueError):
+    pass
+
+
+class LLMClient:
+    def __init__(
+        self, *, base_url: str | None = None, api_key: str | None = None,
+        model: str | None = None, model_fast: str | None = None,
+        timeout_seconds: float | None = None, http_client: httpx.AsyncClient | None = None,
+        retries: int = 2,
+    ):
+        self.base_url = (base_url or os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
+        self.api_key = api_key if api_key is not None else os.getenv("LLM_API_KEY", "")
+        self.model = model or os.getenv("LLM_MODEL", "")
+        self.model_fast = model_fast or os.getenv("LLM_MODEL_FAST", self.model)
+        self.timeout_seconds = timeout_seconds or float(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
+        self.client = http_client
+        self.retries = max(0, min(retries, 3))
+
+    def _require_config(self, model: str) -> None:
+        if not self.api_key:
+            raise LLMConfigurationError("LLM_API_KEY is not configured; set it or enable explicit DEMO_MODE")
+        if not model:
+            raise LLMConfigurationError("LLM_MODEL is not configured")
+
+    async def _request(self, body: dict[str, Any], model: str) -> dict[str, Any]:
+        self._require_config(model)
+        own_client = self.client is None
+        client = self.client or httpx.AsyncClient(timeout=self.timeout_seconds)
+        started = time.monotonic()
+        try:
+            for attempt in range(self.retries + 1):
+                try:
+                    response = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+                        json={"model": model, **body}, timeout=self.timeout_seconds,
+                    )
+                    if response.status_code in (408, 429) or response.status_code >= 500:
+                        if attempt < self.retries:
+                            await asyncio.sleep(min(0.25 * (2**attempt), 1.0))
+                            continue
+                    response.raise_for_status()
+                    data = response.json()
+                    usage = data.get("usage")
+                    log.info("llm request model=%s duration_ms=%d usage=%s", model, int((time.monotonic()-started)*1000), usage if usage is not None else "unreported")
+                    return data
+                except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                    if attempt < self.retries:
+                        await asyncio.sleep(min(0.25 * (2**attempt), 1.0))
+                        continue
+                    raise LLMRequestError(f"LLM request failed after {attempt + 1} attempt(s): {type(exc).__name__}") from exc
+                except httpx.HTTPStatusError as exc:
+                    raise LLMRequestError(f"LLM provider returned HTTP {exc.response.status_code}") from exc
+                except (ValueError, KeyError) as exc:
+                    raise LLMRequestError("LLM provider returned malformed response") from exc
+        finally:
+            if own_client:
+                await client.aclose()
+        raise LLMRequestError("LLM request failed")
+
+    @staticmethod
+    def _content(data: dict[str, Any]) -> str:
+        try:
+            content = data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise LLMRequestError("LLM response has no assistant content") from exc
+        if not isinstance(content, str):
+            raise LLMRequestError("LLM returned non-text assistant content")
+        return content
+
+    async def chat(self, messages: list[dict[str, Any]], *, fast: bool = False, temperature: float = 0.2) -> str:
+        model = self.model_fast if fast else self.model
+        result = await self._request({"messages": messages, "temperature": temperature}, model)
+        return self._content(result)
+
+    async def chat_json(
+        self, messages: list[dict[str, Any]], schema: type[T], *, fast: bool = False,
+    ) -> T:
+        model = self.model_fast if fast else self.model
+        result = await self._request(
+            {"messages": messages, "temperature": 0, "response_format": {"type": "json_object"}}, model,
+        )
+        content = self._content(result).strip()
+        content = re.sub(r"\A```(?:json)?\s*|\s*```\Z", "", content, flags=re.I)
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise InvalidLLMJSONError(f"LLM returned invalid JSON at character {exc.pos}") from exc
+        try:
+            return schema.model_validate(parsed)
+        except ValidationError as exc:
+            raise InvalidLLMJSONError(f"LLM JSON does not match {schema.__name__}: {exc.errors()[0]['msg']}") from exc
+
+    async def chat_tools(
+        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]], *, fast: bool = False,
+    ) -> dict[str, Any]:
+        model = self.model_fast if fast else self.model
+        result = await self._request({"messages": messages, "tools": tools, "tool_choice": "auto"}, model)
+        try:
+            return result["choices"][0]["message"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise LLMRequestError("LLM response has no tool-capable assistant message") from exc

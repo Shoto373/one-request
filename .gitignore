@@ -1,4 +1,42 @@
+# --- AI / личные рабочие файлы ---
 CLAUDE.md
+.claude/
+AGENTS.md
+.cursor/
+.cursorrules
+.aider*
+.windsurf/
+plan/
+Контекст/
+*.docx
+
+# --- секреты ---
+.env
+.env.*
+!.env.example
+!web/.env.mock
+
+# --- Node / фронт ---
+node_modules/
+web/dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- pipeline ---
+pipeline/.cache/
+
+# --- IDE / ОС ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
