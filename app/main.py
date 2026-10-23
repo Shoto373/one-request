@@ -5,16 +5,19 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Awaitable, Callable
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.agent.llm import InvalidLLMJSONError, LLMClient, LLMConfigurationError, LLMRequestError
-from app.agent.orchestrator import CatalogIntegrationUnavailable, Orchestrator
+from app.agent.orchestrator import (
+    CatalogIntegrationUnavailable, InvalidAgentCommand, OrchestrationLimitError, Orchestrator,
+)
 from app.db import apply_migrations, load_seed
+from app.state.models import TripState
 from app.state.store import SessionNotFound, StateStore, VersionConflict
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
@@ -50,6 +53,31 @@ class CreateSessionResponse(BaseModel):
 class MessageRequest(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
     expected_version: int = Field(ge=0)
+
+
+class CommandRequest(BaseModel):
+    type: str
+    payload: dict[str, Any]
+    expected_version: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def validate_command(self):
+        required = {
+            "edit_requirement": {"key", "value"},
+            "remove_requirement": {"key"},
+            "remove_assumption": {"key"},
+            "select_destination": {"destination_id"},
+            "accept_alternative": {"alternative_id"},
+            "select_bundle": {"bundle_id"},
+        }
+        if self.type not in required:
+            raise ValueError(f"unsupported command type: {self.type}")
+        absent = required[self.type] - self.payload.keys()
+        if absent:
+            raise ValueError(f"missing payload keys: {', '.join(sorted(absent))}")
+        if self.type == "edit_requirement" and self.payload.get("kind", "hard") not in {"hard", "soft"}:
+            raise ValueError("edited requirement kind must be hard or soft")
+        return self
 
 
 def get_store(request: Request) -> StateStore:
@@ -94,8 +122,12 @@ async def read_trace(session_id: UUID, request: Request):
     return {"session_id": str(session_id), "steps": store.get_trace(session_id)}
 
 
-@app.post("/api/sessions/{session_id}/messages")
-async def send_message(session_id: UUID, body: MessageRequest, request: Request):
+async def _session_event_stream(
+    session_id: UUID,
+    expected_version: int,
+    request: Request,
+    operation: Callable[[TripState], Awaitable[tuple[TripState, str, list[dict[str, Any]]]]],
+):
     store = get_store(request)
     locks: dict[UUID, asyncio.Lock] = request.app.state.session_locks
     lock = locks.setdefault(session_id, asyncio.Lock())
@@ -107,10 +139,10 @@ async def send_message(session_id: UUID, body: MessageRequest, request: Request)
             current = store.get_state(session_id)
         except SessionNotFound:
             raise HTTPException(404, detail={"code": "session_not_found", "message": "Session does not exist"})
-        if current.version != body.expected_version:
+        if current.version != expected_version:
             raise HTTPException(409, detail={
                 "code": "version_conflict", "message": "Session changed; reload its state",
-                "expected_version": body.expected_version, "current_version": current.version,
+                "expected_version": expected_version, "current_version": current.version,
             })
     except Exception:
         lock.release()
@@ -118,9 +150,9 @@ async def send_message(session_id: UUID, body: MessageRequest, request: Request)
 
     async def event_stream():
         try:
-            candidate, reply, trace = await request.app.state.orchestrator.prepare_turn(current, body.text)
+            candidate, reply, trace = await operation(current)
             saved = store.save_turn(
-                candidate, expected_version=body.expected_version, user_text=body.text,
+                candidate, expected_version=expected_version, user_text=getattr(request.state, "user_text", ""),
                 assistant_text=reply, trace_steps=trace,
             )
             for item in trace:
@@ -140,7 +172,11 @@ async def send_message(session_id: UUID, body: MessageRequest, request: Request)
             elif isinstance(exc, LLMRequestError):
                 code, message = "llm_request_failed", str(exc)
             elif isinstance(exc, CatalogIntegrationUnavailable):
-                code, message = "catalog_integration_missing", str(exc)
+                code, message = "a_tool_unavailable", str(exc)
+            elif isinstance(exc, OrchestrationLimitError):
+                code, message = "agent_step_limit", str(exc)
+            elif isinstance(exc, InvalidAgentCommand):
+                code, message = "invalid_command", str(exc)
             else:
                 log.exception("message orchestration failed")
                 code, message = "agent_error", "The agent could not complete this request"
@@ -152,6 +188,24 @@ async def send_message(session_id: UUID, body: MessageRequest, request: Request)
     return StreamingResponse(
         event_stream(), media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/sessions/{session_id}/messages")
+async def send_message(session_id: UUID, body: MessageRequest, request: Request):
+    request.state.user_text = body.text
+    return await _session_event_stream(
+        session_id, body.expected_version, request,
+        lambda state: request.app.state.orchestrator.prepare_turn(state, body.text),
+    )
+
+
+@app.post("/api/sessions/{session_id}/commands")
+async def send_command(session_id: UUID, body: CommandRequest, request: Request):
+    request.state.user_text = f"[command:{body.type}]"
+    return await _session_event_stream(
+        session_id, body.expected_version, request,
+        lambda state: request.app.state.orchestrator.prepare_command(state, body.type, body.payload),
     )
 
 

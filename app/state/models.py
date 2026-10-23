@@ -15,6 +15,7 @@ class Requirement(BaseModel):
     kind: RequirementKind
     source: str
     quote: str | None = None
+    label: str | None = None
 
 
 class Claim(BaseModel):
@@ -43,6 +44,7 @@ class OpenQuestion(BaseModel):
     key: str
     question: str
     why: str
+    options: list[str] = Field(default_factory=list)
 
 
 class HistoryEntry(BaseModel):
@@ -62,6 +64,9 @@ class TripState(BaseModel):
     requirements: list[Requirement] = Field(default_factory=list)
     open_questions: list[OpenQuestion] = Field(default_factory=list)
     destinations: list[dict[str, Any]] = Field(default_factory=list)
+    proposed_changes: list[dict[str, Any]] = Field(default_factory=list)
+    suppressed_assumptions: list[str] = Field(default_factory=list)
+    selected_destination_id: str | None = None
     bundles: list[Bundle] = Field(default_factory=list)
     selected_bundle_id: str | None = None
     history: list[HistoryEntry] = Field(default_factory=list)

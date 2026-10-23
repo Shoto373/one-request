@@ -1,0 +1,15 @@
+id: s2_07_train_kazan
+description: Поездной запрос сохраняет транспортное требование и использует поездные Offer из A.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Казань поездом 13–15 ноября 2026, двое взрослых.
+actions: []
+expected:
+  final_stage: select
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: destination, kind: hard, value: Казань}
+    - {key: transport, kind: hard, value: train}
+  max_questions_per_turn: 2
+  checks: [bundle_transport_kind_train, offer_ids_from_catalog, no_flight_substitution]
+fixtures: {catalog: moscow_kazan_train_2026_11}

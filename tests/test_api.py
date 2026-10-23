@@ -71,6 +71,13 @@ class FakeOrchestrator:
             raise self.error
         return state, "ok", [{"step_type": "llm", "name": "parse_request", "input": {}, "output": {}, "status": "ok"}]
 
+    async def prepare_command(self, state, command_type, payload):
+        if self.error:
+            raise self.error
+        changed = state.model_copy(deep=True)
+        changed.requirements.append(Requirement(key=payload["key"], value=payload["value"], kind="hard", source="user_edit"))
+        return changed, "command applied", [{"step_type": "state", "name": "edit_requirement", "input": payload, "output": {}, "status": "ok"}]
+
 
 @pytest_asyncio.fixture
 async def api_client(monkeypatch):
@@ -114,6 +121,20 @@ async def test_session_read_stale_conflict_and_sse(api_client):
     assert saved["state"]["version"] == 1 and len(saved["messages"]) == 2
     assert (await client.get(f"/api/sessions/{session_id}/trace")).json()["steps"]
     assert (await client.get(f"/api/sessions/{uuid4()}")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_command_endpoint_emits_saved_state_and_rejects_stale_version(api_client):
+    client = api_client
+    session_id = (await client.post("/api/sessions")).json()["session_id"]
+    url = f"/api/sessions/{session_id}/commands"
+    stale = await client.post(url, json={"type": "edit_requirement", "payload": {"key": "origin", "value": "Москва"}, "expected_version": 4})
+    assert stale.status_code == 409
+    response = await client.post(url, json={"type": "edit_requirement", "payload": {"key": "origin", "value": "Москва"}, "expected_version": 0})
+    assert response.status_code == 200 and "event: state" in response.text and '"version":1' in response.text
+    persisted = (await client.get(f"/api/sessions/{session_id}")).json()["state"]
+    assert persisted["version"] == 1
+    assert next(r for r in persisted["requirements"] if r["key"] == "origin")["value"] == "Москва"
 
 
 @pytest.mark.asyncio
@@ -171,6 +192,17 @@ async def test_llm_failure_sse_does_not_change_state(api_client):
     assert "event: error" in response.text and 'event: done\ndata: {"ok":false}' in response.text
     assert store.get_state(session_id).version == 0
     assert store.messages[UUID(session_id)] == []
+
+
+@pytest.mark.asyncio
+async def test_timeout_sse_does_not_change_state(api_client):
+    from app.agent.llm import LLMRequestError
+    client, store = api_client, app.state.store
+    app.state.orchestrator = FakeOrchestrator(error=LLMRequestError("timed out"))
+    session_id = (await client.post("/api/sessions")).json()["session_id"]
+    response = await client.post(f"/api/sessions/{session_id}/messages", json={"text": "x", "expected_version": 0})
+    assert '"code":"llm_request_failed"' in response.text and '"ok":false' in response.text
+    assert store.get_state(session_id).version == 0 and store.messages[UUID(session_id)] == []
 
 
 @pytest.mark.asyncio

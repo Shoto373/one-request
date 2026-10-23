@@ -53,7 +53,7 @@ async def test_full_request_calls_builder_and_saves_explicit_year_assumption():
     assert next(r for r in state.requirements if r.key == "travel_year").kind == "assumption"
     assert next(r for r in state.requirements if r.key == "dates").value == {"start": "2026-11-10", "end": "2026-11-17"}
     assert "1 комплект" in reply
-    assert [x["name"] for x in trace] == ["parse_request", "build_bundles"]
+    assert [x["name"] for x in trace] == ["parse_request", "build_bundles", "build_bundles_result", "state_diff"]
 
 
 @pytest.mark.asyncio
@@ -71,12 +71,12 @@ async def test_insufficient_request_asks_at_most_two_and_does_not_search():
     assert len(state.open_questions) == 2
     assert not called
     assert "Откуда" in reply
-    assert len(trace) == 1
+    assert [step["name"] for step in trace] == ["parse_request", "state_diff"]
 
 
 @pytest.mark.asyncio
 async def test_empty_catalog_result_is_honest():
-    orchestrator = Orchestrator(FakeLLM(full_request()), bundle_builder=lambda *_: [])
+    orchestrator = Orchestrator(FakeLLM(full_request()), bundle_builder=lambda *_: [], no_bundle_explainer=lambda *_: [])
     state, reply, _ = await orchestrator.prepare_turn(
         TripState(session_id=uuid4()), "Из Москвы в Сочи 10–17 ноября, двое взрослых",
     )

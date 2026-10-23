@@ -1,0 +1,21 @@
+id: s2_05_short_answers
+description: Короткие ответы применяются к открытому вопросу, а уже известные требования сохраняются.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Хочу в Сочи с ребёнком.
+actions:
+  - {type: answer, key: origin, text: Москва}
+  - {type: answer, key: dates, text: с 10 по 17 ноября}
+  - {type: answer, key: adults, text: двое}
+  - {type: answer, key: children_ages, text: 5 лет}
+expected:
+  final_stage: select
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: destination, kind: hard, value: Сочи}
+    - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-17'}}
+    - {key: adults, kind: hard, value: 2}
+    - {key: children_ages, kind: hard, value: [5]}
+  max_questions_per_turn: 2
+  checks: [short_answers_follow_open_question_keys, known_requirements_preserved, no_question_repeated_after_answer]
+fixtures: {suggestion_result: one_sochi_option}

@@ -222,8 +222,11 @@ def party_and_budget(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple
     children = parse_children(_pick(req, "children_ages", "children", "kids", "child_age", "children_count")[1])
     pets = parse_pets(_pick(req, "pets", "pet", "animals", "with_pet", "dog")[1])
     party = Party(adults=max(1, min(adults, 9)), children_ages=children, pets=pets)
-    budget_key, budget_value = _pick(req, "budget_total_rub", "budget_rub", "budget", "max_budget", "budget_total")
+    budget_key, budget_value = _pick(req, "budget_total_rub", "budget_per_person_rub", "budget_rub", "budget", "max_budget", "budget_total")
     budget = parse_budget(budget_value)
+    if budget is not None and budget_key == "budget_per_person_rub":
+        # The user-facing scope is per traveller; A converts it to a total trip ceiling.
+        budget *= party.people
     return party, budget, budget is not None and kinds_by_key.get(budget_key) == "hard"
 
 
@@ -258,7 +261,13 @@ def query_from_requirements(
     elif dates[1] <= dates[0]:
         problems.append("Дата обратной дороги раньше даты отправления.")
 
-    kinds = parse_kinds(_pick(req, "transport", "transport_mode", "transport_type", "by")[1]) or ("flight", "train")
+    transport_key, transport_value = _pick(req, "transport", "transport_mode", "transport_type", "by")
+    # Soft/assumed transport preferences rank results; only an explicitly hard
+    # transport requirement filters the search space.
+    if transport_key and kinds_by_key.get(transport_key) == "hard":
+        kinds = parse_kinds(transport_value) or ("flight", "train")
+    else:
+        kinds = ("flight", "train")
 
     if problems:
         return None, problems

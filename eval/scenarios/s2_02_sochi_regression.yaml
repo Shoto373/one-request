@@ -1,0 +1,16 @@
+id: s2_02_sochi_regression
+description: Контрольный запрос sprint 1 продолжает сборку через настоящий build_bundles.
+now: '2026-10-23T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Сочи 10–17 ноября 2026, двое взрослых.
+actions: []
+expected:
+  final_stage: select
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: destination, kind: hard, value: Сочи}
+    - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-17'}}
+    - {key: adults, kind: hard, value: 2}
+  max_questions_per_turn: 2
+  checks: [real_build_bundles_called, bundle_has_tool_offers, state_saved_with_new_version]
+fixtures: {catalog: sprint1_sochi_2026_11}
