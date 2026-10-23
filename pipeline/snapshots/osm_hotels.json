@@ -1,0 +1,3218 @@
+{
+ "AER": [
+  {
+   "osm": "node/10759606594",
+   "name": "RP Ranovsky Park",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.574161,
+   "lon": 39.739397,
+   "notable": 2
+  },
+  {
+   "osm": "node/10759606596",
+   "name": "RP Manhattan",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.586905,
+   "lon": 39.72458,
+   "notable": 2
+  },
+  {
+   "osm": "node/10967527654",
+   "name": "Антика",
+   "name_en": null,
+   "stars": "3",
+   "address": "Виноградная улица 134/1",
+   "lat": 43.615167,
+   "lon": 39.7196,
+   "notable": 2
+  },
+  {
+   "osm": "node/11016638373",
+   "name": "Grand Gallery",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.585287,
+   "lon": 39.721273,
+   "notable": 2
+  },
+  {
+   "osm": "node/11016638375",
+   "name": "Veryhotel",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.583837,
+   "lon": 39.726321,
+   "notable": 2
+  },
+  {
+   "osm": "node/11067209459",
+   "name": "Rp",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.600608,
+   "lon": 39.718226,
+   "notable": 2
+  },
+  {
+   "osm": "node/11138786328",
+   "name": "RP Manhattan",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.586595,
+   "lon": 39.724508,
+   "notable": 2
+  },
+  {
+   "osm": "node/11304222978",
+   "name": "Grand Way",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.582007,
+   "lon": 39.727212,
+   "notable": 2
+  },
+  {
+   "osm": "node/11304222979",
+   "name": "Grand Way",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.576478,
+   "lon": 39.73153,
+   "notable": 2
+  },
+  {
+   "osm": "node/11304222981",
+   "name": "Grand Way",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.565455,
+   "lon": 39.747827,
+   "notable": 2
+  },
+  {
+   "osm": "node/11304222984",
+   "name": "Grand Way",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.594985,
+   "lon": 39.72674,
+   "notable": 2
+  },
+  {
+   "osm": "node/11304222985",
+   "name": "Grand Way",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.609339,
+   "lon": 39.711993,
+   "notable": 2
+  },
+  {
+   "osm": "node/11304222987",
+   "name": "Grand Way",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.570135,
+   "lon": 39.73897,
+   "notable": 2
+  },
+  {
+   "osm": "node/11843553789",
+   "name": "Millennials",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.608383,
+   "lon": 39.714101,
+   "notable": 2
+  },
+  {
+   "osm": "node/11843553790",
+   "name": "Виноградный",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.610717,
+   "lon": 39.717883,
+   "notable": 2
+  },
+  {
+   "osm": "node/11843553791",
+   "name": "Лиссабон",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.565781,
+   "lon": 39.762681,
+   "notable": 2
+  },
+  {
+   "osm": "node/11843553792",
+   "name": "Парк Горького",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.595847,
+   "lon": 39.729357,
+   "notable": 2
+  },
+  {
+   "osm": "node/11843553793",
+   "name": "Пушкин",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.605499,
+   "lon": 39.715726,
+   "notable": 2
+  },
+  {
+   "osm": "node/11958163786",
+   "name": "Альпийская",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.590027,
+   "lon": 39.73852,
+   "notable": 2
+  },
+  {
+   "osm": "node/12032893438",
+   "name": "Portofino",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.576073,
+   "lon": 39.723607,
+   "notable": 2
+  },
+  {
+   "osm": "node/12043534507",
+   "name": "Белладжио",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.621412,
+   "lon": 39.71915,
+   "notable": 2
+  },
+  {
+   "osm": "node/12183637632",
+   "name": "Atmosfera hotel&SPA",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.613739,
+   "lon": 39.719857,
+   "notable": 2
+  },
+  {
+   "osm": "node/12749552601",
+   "name": "Marina Yacht by Stellar",
+   "name_en": "Marina Yacht by Stellar",
+   "stars": null,
+   "address": "Несебрская улица 6",
+   "lat": 43.581959,
+   "lon": 39.719145,
+   "notable": 4
+  },
+  {
+   "osm": "node/13301736501",
+   "name": "Lavicon apart Sochi",
+   "name_en": null,
+   "stars": null,
+   "address": "Учительская улица 3",
+   "lat": 43.572952,
+   "lon": 39.734828,
+   "notable": 3
+  },
+  {
+   "osm": "node/4986725623",
+   "name": "Апартаменты в Маяке",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 43.576032,
+   "lon": 39.724265,
+   "notable": 3
+  },
+  {
+   "osm": "node/8872412718",
+   "name": "СПА-отель \"Грейс Горизонт\"",
+   "name_en": "SPA-hotel \"Grace Gorizont\"",
+   "stars": null,
+   "address": null,
+   "lat": 43.576442,
+   "lon": 39.723641,
+   "notable": 3
+  },
+  {
+   "osm": "node/9908709817",
+   "name": "Отель Сочи Галерея Парк",
+   "name_en": "Hotel Sochi Gallery Park",
+   "stars": null,
+   "address": null,
+   "lat": 43.587683,
+   "lon": 39.724293,
+   "notable": 3
+  },
+  {
+   "osm": "relation/1871308",
+   "name": "Бочаров Ручей",
+   "name_en": "Bocharov Ruchey",
+   "stars": "5",
+   "address": null,
+   "lat": 43.617343,
+   "lon": 39.704884,
+   "notable": 3
+  },
+  {
+   "osm": "relation/1949407",
+   "name": "Luciano отель и СПА 5*",
+   "name_en": null,
+   "stars": "4",
+   "address": "Курортный проспект 86",
+   "lat": 43.566517,
+   "lon": 39.749071,
+   "notable": 3
+  },
+  {
+   "osm": "relation/9273776",
+   "name": "Hyatt Regency Sochi",
+   "name_en": null,
+   "stars": "5",
+   "address": "улица Орджоникидзе 17",
+   "lat": 43.575855,
+   "lon": 39.726919,
+   "notable": 7
+  },
+  {
+   "osm": "way/190714781",
+   "name": "Cosmos",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Горького 56 с1",
+   "lat": 43.590669,
+   "lon": 39.727408,
+   "notable": 3
+  },
+  {
+   "osm": "way/201474331",
+   "name": "Mercure Sochi Centre",
+   "name_en": null,
+   "stars": "4",
+   "address": "улица Орджоникидзе 11А к1",
+   "lat": 43.577657,
+   "lon": 39.724374,
+   "notable": 4
+  },
+  {
+   "osm": "way/51277929",
+   "name": "Звёздный",
+   "name_en": "Zvezdny Hotel",
+   "stars": "4",
+   "address": "улица Гагарина 2",
+   "lat": 43.595411,
+   "lon": 39.721489,
+   "notable": 3
+  },
+  {
+   "osm": "way/51570675",
+   "name": "Санаторий \"Черноморье\"",
+   "name_en": "Black Sea Sanatorium",
+   "stars": "4",
+   "address": null,
+   "lat": 43.573501,
+   "lon": 39.729674,
+   "notable": 3
+  },
+  {
+   "osm": "way/51764141",
+   "name": "Azimut Парк Отель Виноградная",
+   "name_en": null,
+   "stars": null,
+   "address": "Виноградная улица 101/1",
+   "lat": 43.612914,
+   "lon": 39.717996,
+   "notable": 4
+  },
+  {
+   "osm": "way/51847429",
+   "name": "Жемчужина",
+   "name_en": "Zhemchuzhina",
+   "stars": "4",
+   "address": "Черноморская улица 3",
+   "lat": 43.570782,
+   "lon": 39.731347,
+   "notable": 4
+  },
+  {
+   "osm": "way/52501847",
+   "name": "Чеботарев",
+   "name_en": null,
+   "stars": null,
+   "address": "Виноградная улица 12/1",
+   "lat": 43.598716,
+   "lon": 39.716625,
+   "notable": 3
+  },
+  {
+   "osm": "way/52526314",
+   "name": "Радуга-Престиж",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Пирогова 2/3",
+   "lat": 43.606923,
+   "lon": 39.717689,
+   "notable": 3
+  },
+  {
+   "osm": "way/52587525",
+   "name": "Каникулы в Сочи",
+   "name_en": "Raduga Sanatorium",
+   "stars": "4",
+   "address": null,
+   "lat": 43.607145,
+   "lon": 39.719506,
+   "notable": 4
+  },
+  {
+   "osm": "way/99991540",
+   "name": "Звёздный",
+   "name_en": "Zvezdny Hotel",
+   "stars": "4",
+   "address": "улица Гагарина 5А",
+   "lat": 43.595236,
+   "lon": 39.720182,
+   "notable": 3
+  }
+ ],
+ "KGD": [
+  {
+   "osm": "node/1124599321",
+   "name": "Прусссия",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 54.680158,
+   "lon": 20.482993,
+   "notable": 0
+  },
+  {
+   "osm": "node/1193845841",
+   "name": "Гостиница",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 54.734913,
+   "lon": 20.474252,
+   "notable": 1
+  },
+  {
+   "osm": "node/12269370944",
+   "name": "Royal Lake",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 54.730595,
+   "lon": 20.527086,
+   "notable": 2
+  },
+  {
+   "osm": "node/13570586046",
+   "name": "У медового моста",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 54.705159,
+   "lon": 20.514454,
+   "notable": 0
+  },
+  {
+   "osm": "node/13888074772",
+   "name": "Lastadie",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 54.708731,
+   "lon": 20.506251,
+   "notable": 0
+  },
+  {
+   "osm": "node/1419122616",
+   "name": "Турист",
+   "name_en": "Tourist",
+   "stars": null,
+   "address": null,
+   "lat": 54.731745,
+   "lon": 20.530883,
+   "notable": 1
+  },
+  {
+   "osm": "node/1732701858",
+   "name": "Рэдиссон Калининград",
+   "name_en": "Radisson Blu Hotel, Kaliningrad",
+   "stars": null,
+   "address": null,
+   "lat": 54.719896,
+   "lon": 20.504815,
+   "notable": 5
+  },
+  {
+   "osm": "node/3158291833",
+   "name": "Золотая бухта",
+   "name_en": null,
+   "stars": "3",
+   "address": "улица Богдана Хмельницкого 53",
+   "lat": 54.697237,
+   "lon": 20.508467,
+   "notable": 5
+  },
+  {
+   "osm": "node/4321402736",
+   "name": "Votre Maison",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Демьяна Бедного 2Б",
+   "lat": 54.743055,
+   "lon": 20.513621,
+   "notable": 2
+  },
+  {
+   "osm": "node/4757747819",
+   "name": "Орион",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Подполковника Иванникова 8",
+   "lat": 54.717939,
+   "lon": 20.506736,
+   "notable": 2
+  },
+  {
+   "osm": "node/6618571485",
+   "name": "Отель RiverSide",
+   "name_en": "RiverSide hotel",
+   "stars": null,
+   "address": null,
+   "lat": 54.705929,
+   "lon": 20.543136,
+   "notable": 3
+  },
+  {
+   "osm": "node/6655202851",
+   "name": "Дона",
+   "name_en": null,
+   "stars": "3",
+   "address": null,
+   "lat": 54.719558,
+   "lon": 20.524225,
+   "notable": 5
+  },
+  {
+   "osm": "node/6725686329",
+   "name": "Mercure",
+   "name_en": null,
+   "stars": null,
+   "address": "Озёрный проезд 2",
+   "lat": 54.721578,
+   "lon": 20.516609,
+   "notable": 2
+  },
+  {
+   "osm": "node/7772161885",
+   "name": "Шерлок",
+   "name_en": "Sherlock",
+   "stars": null,
+   "address": null,
+   "lat": 54.724506,
+   "lon": 20.508068,
+   "notable": 2
+  },
+  {
+   "osm": "node/8738029619",
+   "name": "Коперник",
+   "name_en": "Kopernik",
+   "stars": null,
+   "address": null,
+   "lat": 54.710576,
+   "lon": 20.505822,
+   "notable": 1
+  },
+  {
+   "osm": "node/9222061806",
+   "name": "Москва",
+   "name_en": null,
+   "stars": null,
+   "address": "проспект Мира 19/21",
+   "lat": 54.719731,
+   "lon": 20.487257,
+   "notable": 3
+  },
+  {
+   "osm": "relation/17365648",
+   "name": "Holiday Inn",
+   "name_en": "Holiday Inn",
+   "stars": null,
+   "address": null,
+   "lat": 54.708189,
+   "lon": 20.505887,
+   "notable": 2
+  },
+  {
+   "osm": "relation/6454969",
+   "name": "Ибис",
+   "name_en": null,
+   "stars": null,
+   "address": "Московский проспект 52",
+   "lat": 54.709012,
+   "lon": 20.506758,
+   "notable": 3
+  },
+  {
+   "osm": "relation/6517941",
+   "name": "Шкиперская",
+   "name_en": null,
+   "stars": null,
+   "address": "Октябрьская улица 4А",
+   "lat": 54.704705,
+   "lon": 20.515044,
+   "notable": 1
+  },
+  {
+   "osm": "relation/6747679",
+   "name": "гостиница \"Дейма\"",
+   "name_en": null,
+   "stars": "2",
+   "address": null,
+   "lat": 54.676157,
+   "lon": 20.494843,
+   "notable": 1
+  },
+  {
+   "osm": "way/102948201",
+   "name": "Блюз",
+   "name_en": null,
+   "stars": "3",
+   "address": "Бородинская улица 10",
+   "lat": 54.716245,
+   "lon": 20.47074,
+   "notable": 2
+  },
+  {
+   "osm": "way/103124164",
+   "name": "Вилла Татьяна",
+   "name_en": null,
+   "stars": null,
+   "address": "Линейная улица 11А",
+   "lat": 54.726242,
+   "lon": 20.523841,
+   "notable": 1
+  },
+  {
+   "osm": "way/134194859",
+   "name": "Чайка",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Пугачёва 13",
+   "lat": 54.723212,
+   "lon": 20.472546,
+   "notable": 1
+  },
+  {
+   "osm": "way/135507749",
+   "name": "Фридрисхофф",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Чкалова 31А",
+   "lat": 54.726559,
+   "lon": 20.459204,
+   "notable": 1
+  },
+  {
+   "osm": "way/140385124",
+   "name": "Hotel Marton Palace",
+   "name_en": null,
+   "stars": null,
+   "address": "Большевистский переулок 3",
+   "lat": 54.69678,
+   "lon": 20.505026,
+   "notable": 1
+  },
+  {
+   "osm": "way/157224012",
+   "name": "Чайковский",
+   "name_en": null,
+   "stars": "4",
+   "address": "улица Чайковского 43",
+   "lat": 54.725912,
+   "lon": 20.483053,
+   "notable": 2
+  },
+  {
+   "osm": "way/162622681",
+   "name": "Crystal House",
+   "name_en": null,
+   "stars": "5",
+   "address": "улица Сергеева 4",
+   "lat": 54.715016,
+   "lon": 20.515801,
+   "notable": 2
+  },
+  {
+   "osm": "way/185426192",
+   "name": "Берлин",
+   "name_en": null,
+   "stars": null,
+   "address": "Киевская улица 17Б",
+   "lat": 54.689499,
+   "lon": 20.49773,
+   "notable": 1
+  },
+  {
+   "osm": "way/323421375",
+   "name": "Гостиница при РАНХиГС",
+   "name_en": null,
+   "stars": null,
+   "address": "Артиллерийская улица",
+   "lat": 54.73273,
+   "lon": 20.554144,
+   "notable": 1
+  },
+  {
+   "osm": "way/435401094",
+   "name": "Ибис",
+   "name_en": "Ibis",
+   "stars": null,
+   "address": "Московский проспект 52",
+   "lat": 54.709012,
+   "lon": 20.506758,
+   "notable": 3
+  },
+  {
+   "osm": "way/48817194",
+   "name": "Калининград",
+   "name_en": "Kaliningrad",
+   "stars": "3",
+   "address": "Ленинский проспект 81",
+   "lat": 54.712198,
+   "lon": 20.509501,
+   "notable": 6
+  },
+  {
+   "osm": "way/539520028",
+   "name": "Золотая ночь",
+   "name_en": null,
+   "stars": null,
+   "address": "Ялтинская улица 61А",
+   "lat": 54.706031,
+   "lon": 20.549994,
+   "notable": 1
+  },
+  {
+   "osm": "way/558380773",
+   "name": "Кайзерхоф",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 54.70331,
+   "lon": 20.515591,
+   "notable": 2
+  },
+  {
+   "osm": "way/59285814",
+   "name": "Гостиница Кёниг-Авто",
+   "name_en": null,
+   "stars": null,
+   "address": "Московский проспект 184",
+   "lat": 54.708996,
+   "lon": 20.550781,
+   "notable": 1
+  },
+  {
+   "osm": "way/90640688",
+   "name": "Обертайх LUX",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Гоголя 17",
+   "lat": 54.732048,
+   "lon": 20.52269,
+   "notable": 1
+  },
+  {
+   "osm": "way/90643558",
+   "name": "Hotel Tatyana Turgeneva",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Тургенева 12",
+   "lat": 54.733445,
+   "lon": 20.517369,
+   "notable": 2
+  },
+  {
+   "osm": "way/90647864",
+   "name": "Параисо",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Тургенева 32А",
+   "lat": 54.736464,
+   "lon": 20.522178,
+   "notable": 1
+  },
+  {
+   "osm": "way/90653838",
+   "name": "Патриот",
+   "name_en": null,
+   "stars": "2",
+   "address": "Озёрная улица 25А",
+   "lat": 54.739307,
+   "lon": 20.508706,
+   "notable": 2
+  },
+  {
+   "osm": "way/90809365",
+   "name": "Вилла Гламур",
+   "name_en": null,
+   "stars": null,
+   "address": "Верхнеозёрная улица 26",
+   "lat": 54.732474,
+   "lon": 20.526798,
+   "notable": 3
+  },
+  {
+   "osm": "way/96332281",
+   "name": "Маяк",
+   "name_en": null,
+   "stars": null,
+   "address": "Солдатская улица 2",
+   "lat": 54.738126,
+   "lon": 20.480907,
+   "notable": 3
+  }
+ ],
+ "KZN": [
+  {
+   "osm": "node/11028440488",
+   "name": "Максим Горький",
+   "name_en": null,
+   "stars": "3",
+   "address": null,
+   "lat": 55.794088,
+   "lon": 49.127332,
+   "notable": 4
+  },
+  {
+   "osm": "node/11033844392",
+   "name": "Фешин",
+   "name_en": null,
+   "stars": "3",
+   "address": null,
+   "lat": 55.793177,
+   "lon": 49.114757,
+   "notable": 4
+  },
+  {
+   "osm": "node/11063998680",
+   "name": "Neo Kazan palace by Tasigo",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 55.783409,
+   "lon": 49.138866,
+   "notable": 3
+  },
+  {
+   "osm": "node/11368130754",
+   "name": "Yamle",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 55.785313,
+   "lon": 49.116379,
+   "notable": 3
+  },
+  {
+   "osm": "node/13691127733",
+   "name": "ТатарИнн",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 55.781286,
+   "lon": 49.116802,
+   "notable": 3
+  },
+  {
+   "osm": "node/13993358201",
+   "name": "Иннджой",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Баумана 15",
+   "lat": 55.791699,
+   "lon": 49.113181,
+   "notable": 3
+  },
+  {
+   "osm": "node/1974744920",
+   "name": "Регина",
+   "name_en": "Regina",
+   "stars": "3",
+   "address": null,
+   "lat": 55.785564,
+   "lon": 49.125776,
+   "notable": 6
+  },
+  {
+   "osm": "node/2016092412",
+   "name": "Bilyar Palace",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 55.784083,
+   "lon": 49.124886,
+   "notable": 4
+  },
+  {
+   "osm": "node/2061048752",
+   "name": "Корона",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 55.787143,
+   "lon": 49.13932,
+   "notable": 4
+  },
+  {
+   "osm": "node/2389221106",
+   "name": "Джузеппе",
+   "name_en": "Giuseppe",
+   "stars": "4",
+   "address": null,
+   "lat": 55.794276,
+   "lon": 49.1147,
+   "notable": 6
+  },
+  {
+   "osm": "node/2492065421",
+   "name": "Кристалл",
+   "name_en": "Crystal",
+   "stars": "3",
+   "address": null,
+   "lat": 55.789803,
+   "lon": 49.101454,
+   "notable": 5
+  },
+  {
+   "osm": "node/2494989722",
+   "name": "Особняк на Театральной",
+   "name_en": null,
+   "stars": null,
+   "address": "Театральная улица 3",
+   "lat": 55.795521,
+   "lon": 49.123606,
+   "notable": 3
+  },
+  {
+   "osm": "node/2548738835",
+   "name": "Relita-Kazan",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 55.819065,
+   "lon": 49.091466,
+   "notable": 4
+  },
+  {
+   "osm": "node/4026238730",
+   "name": "DoubleTree",
+   "name_en": null,
+   "stars": "4",
+   "address": "улица Чернышевского 21",
+   "lat": 55.791823,
+   "lon": 49.109652,
+   "notable": 7
+  },
+  {
+   "osm": "node/4268008045",
+   "name": "Ногай",
+   "name_en": null,
+   "stars": "4",
+   "address": "Профсоюзная улица 16Б",
+   "lat": 55.791555,
+   "lon": 49.11501,
+   "notable": 5
+  },
+  {
+   "osm": "node/5607635968",
+   "name": "Ханума",
+   "name_en": "Khanuma",
+   "stars": null,
+   "address": "улица Баумана 68",
+   "lat": 55.789037,
+   "lon": 49.116923,
+   "notable": 3
+  },
+  {
+   "osm": "node/6354006705",
+   "name": "Ямской посад",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 55.788227,
+   "lon": 49.10726,
+   "notable": 3
+  },
+  {
+   "osm": "node/6421749085",
+   "name": "Азалия на Московской",
+   "name_en": "Azalya",
+   "stars": null,
+   "address": null,
+   "lat": 55.793029,
+   "lon": 49.10402,
+   "notable": 4
+  },
+  {
+   "osm": "node/702352431",
+   "name": "Hotel Art",
+   "name_en": null,
+   "stars": "4",
+   "address": null,
+   "lat": 55.787585,
+   "lon": 49.117914,
+   "notable": 4
+  },
+  {
+   "osm": "node/702352432",
+   "name": "Шаляпин Палас Отель",
+   "name_en": "Shalyapin Palace Hotel",
+   "stars": "4",
+   "address": "Университетская улица 7",
+   "lat": 55.787819,
+   "lon": 49.119586,
+   "notable": 7
+  },
+  {
+   "osm": "node/702352433",
+   "name": "Мираж",
+   "name_en": "Mirage",
+   "stars": null,
+   "address": null,
+   "lat": 55.79376,
+   "lon": 49.103142,
+   "notable": 4
+  },
+  {
+   "osm": "node/702352946",
+   "name": "Корстон",
+   "name_en": "Korston",
+   "stars": "5",
+   "address": null,
+   "lat": 55.793839,
+   "lon": 49.149547,
+   "notable": 5
+  },
+  {
+   "osm": "node/7832351395",
+   "name": "Kaganat",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 55.789255,
+   "lon": 49.117354,
+   "notable": 3
+  },
+  {
+   "osm": "node/7875144951",
+   "name": "Островский",
+   "name_en": "Ostrovsky",
+   "stars": "3",
+   "address": null,
+   "lat": 55.790563,
+   "lon": 49.113402,
+   "notable": 5
+  },
+  {
+   "osm": "node/8342005126",
+   "name": "Казантель",
+   "name_en": null,
+   "stars": "2",
+   "address": "Московская улица 26Б",
+   "lat": 55.78966,
+   "lon": 49.106713,
+   "notable": 3
+  },
+  {
+   "osm": "node/8752547391",
+   "name": "Карат",
+   "name_en": null,
+   "stars": "3",
+   "address": null,
+   "lat": 55.773516,
+   "lon": 49.117955,
+   "notable": 3
+  },
+  {
+   "osm": "node/9160548360",
+   "name": "Sweet Йорт",
+   "name_en": null,
+   "stars": "3",
+   "address": null,
+   "lat": 55.775853,
+   "lon": 49.117169,
+   "notable": 4
+  },
+  {
+   "osm": "node/9506376287",
+   "name": "Пражский клуб",
+   "name_en": null,
+   "stars": "2",
+   "address": "проспект Ибрагимова 89А",
+   "lat": 55.81977,
+   "lon": 49.097848,
+   "notable": 4
+  },
+  {
+   "osm": "node/9568171890",
+   "name": "Берисон",
+   "name_en": null,
+   "stars": null,
+   "address": "улица Маяковского 13/34",
+   "lat": 55.788281,
+   "lon": 49.134222,
+   "notable": 4
+  },
+  {
+   "osm": "way/105336402",
+   "name": "Хаял",
+   "name_en": "Hayal",
+   "stars": "4",
+   "address": "Университетская улица 16",
+   "lat": 55.789401,
+   "lon": 49.123072,
+   "notable": 4
+  },
+  {
+   "osm": "way/143056765",
+   "name": "Azimut отель Бауман Казань",
+   "name_en": "Azimut Hotel Bauman Kazan",
+   "stars": "3",
+   "address": "Право-Булачная улица 43/1",
+   "lat": 55.78825,
+   "lon": 49.113962,
+   "notable": 4
+  },
+  {
+   "osm": "way/154197885",
+   "name": "Courtyard by Marriott Kazan Kremlin",
+   "name_en": null,
+   "stars": "4",
+   "address": "улица Карла Маркса 6",
+   "lat": 55.797271,
+   "lon": 49.11107,
+   "notable": 8
+  },
+  {
+   "osm": "way/206345742",
+   "name": "Venera",
+   "name_en": null,
+   "stars": "4",
+   "address": "Московская улица 35",
+   "lat": 55.788942,
+   "lon": 49.108377,
+   "notable": 5
+  },
+  {
+   "osm": "way/225812758",
+   "name": "Рамада Казань Сити Центр",
+   "name_en": null,
+   "stars": "4",
+   "address": "улица Чернышевского 39",
+   "lat": 55.788809,
+   "lon": 49.104757,
+   "notable": 5
+  },
+  {
+   "osm": "way/81708079",
+   "name": "Амакс Сафар",
+   "name_en": "Amaks Safar",
+   "stars": "3",
+   "address": "улица Односторонка Гривки 1",
+   "lat": 55.812465,
+   "lon": 49.094458,
+   "notable": 7
+  },
+  {
+   "osm": "way/91641094",
+   "name": "Плаза",
+   "name_en": "Plaza",
+   "stars": null,
+   "address": "Право-Булачная улица 19",
+   "lat": 55.792688,
+   "lon": 49.107819,
+   "notable": 5
+  },
+  {
+   "osm": "way/94874741",
+   "name": "Cosmos",
+   "name_en": null,
+   "stars": "4",
+   "address": "улица Лесгафта 7",
+   "lat": 55.787187,
+   "lon": 49.142546,
+   "notable": 6
+  },
+  {
+   "osm": "way/95049093",
+   "name": "Булгар",
+   "name_en": "Bulgar",
+   "stars": "3",
+   "address": null,
+   "lat": 55.789144,
+   "lon": 49.153106,
+   "notable": 5
+  },
+  {
+   "osm": "way/95631916",
+   "name": "Сулейман палас",
+   "name_en": "Suleiman Palace Hotel",
+   "stars": "4",
+   "address": "Петербургская улица 55",
+   "lat": 55.781371,
+   "lon": 49.134175,
+   "notable": 5
+  },
+  {
+   "osm": "way/97554004",
+   "name": "Татарстан",
+   "name_en": "Tatarstan",
+   "stars": "3",
+   "address": "улица Пушкина 4",
+   "lat": 55.786427,
+   "lon": 49.122412,
+   "notable": 5
+  }
+ ],
+ "IST": [
+  {
+   "osm": "node/10082183195",
+   "name": "Diamond City Hotels Yenikapı",
+   "name_en": null,
+   "stars": "5",
+   "address": "Küçük Langa Caddesi 27",
+   "lat": 41.006957,
+   "lon": 28.952023,
+   "notable": 4
+  },
+  {
+   "osm": "node/10155275984",
+   "name": "The Ritz-Carlton",
+   "name_en": null,
+   "stars": null,
+   "address": "Asker Ocağı Caddesi 6",
+   "lat": 41.040288,
+   "lon": 28.992178,
+   "notable": 4
+  },
+  {
+   "osm": "node/10178552790",
+   "name": "Imagine Istanbul - Sultanahmet",
+   "name_en": null,
+   "stars": null,
+   "address": "Pertevpaşa Sokağı 57",
+   "lat": 41.005434,
+   "lon": 28.9697,
+   "notable": 5
+  },
+  {
+   "osm": "node/11816727569",
+   "name": "Hampton by Hilton Istanbul Sirkeci",
+   "name_en": null,
+   "stars": "4",
+   "address": "Hoca Kasım Köprüsü Sokağı 5",
+   "lat": 41.01358,
+   "lon": 28.973775,
+   "notable": 8
+  },
+  {
+   "osm": "node/12209532701",
+   "name": "Marlon Hotel",
+   "name_en": null,
+   "stars": "5",
+   "address": "Zambak Sokağı 23",
+   "lat": 41.036791,
+   "lon": 28.982782,
+   "notable": 6
+  },
+  {
+   "osm": "node/12787318496",
+   "name": "Koçak Pansiyon",
+   "name_en": "Koçak Pension",
+   "stars": "3",
+   "address": "Yenikapı Kumsalı Sokağı 10",
+   "lat": 41.003386,
+   "lon": 28.952938,
+   "notable": 5
+  },
+  {
+   "osm": "node/14065082623",
+   "name": "Hampton by Hilton İstanbul Old City",
+   "name_en": null,
+   "stars": null,
+   "address": "Sorguçcu Sokağı 1",
+   "lat": 41.009239,
+   "lon": 28.949426,
+   "notable": 5
+  },
+  {
+   "osm": "node/1885894932",
+   "name": "Zeynep Sultan Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Zeynepsultan Camii Sokağı 25",
+   "lat": 41.010065,
+   "lon": 28.978069,
+   "notable": 5
+  },
+  {
+   "osm": "node/277139847",
+   "name": "Холидей инн в старом городе",
+   "name_en": "Holiday inn old city",
+   "stars": null,
+   "address": "Gencturk Cad. Sirvanizade Sok., No 5. Vezneciler Fatih Istanbul, 34134, Turkey 5",
+   "lat": 41.01205,
+   "lon": 28.954979,
+   "notable": 5
+  },
+  {
+   "osm": "node/3153813247",
+   "name": "Pera Rose Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Meşrutiyet Caddesi 87",
+   "lat": 41.030275,
+   "lon": 28.973467,
+   "notable": 5
+  },
+  {
+   "osm": "node/3844335665",
+   "name": "DoubleTree by Hilton Istanbul - Piyalepasa",
+   "name_en": null,
+   "stars": "5",
+   "address": "Piyalepaşa Bulvarı 5",
+   "lat": 41.03962,
+   "lon": 28.966339,
+   "notable": 6
+  },
+  {
+   "osm": "node/4291021796",
+   "name": "Radisson President Beyazit Istanbul",
+   "name_en": null,
+   "stars": null,
+   "address": "Tiyatro Caddesi 25",
+   "lat": 41.007602,
+   "lon": 28.96555,
+   "notable": 5
+  },
+  {
+   "osm": "node/4419028247",
+   "name": "occidental pees hotel Istanbul",
+   "name_en": null,
+   "stars": "4",
+   "address": "Meşrutiyet Caddesi 34",
+   "lat": 41.033725,
+   "lon": 28.975818,
+   "notable": 5
+  },
+  {
+   "osm": "node/4686516718",
+   "name": "The Elysium Istanbul MGallery by Sofitel",
+   "name_en": null,
+   "stars": "5",
+   "address": "Yedi Kuyular Caddesi",
+   "lat": 41.041941,
+   "lon": 28.984201,
+   "notable": 5
+  },
+  {
+   "osm": "node/5081265955",
+   "name": "Grand Vatan Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Adnan Menderes Vatan Bulvarı 5",
+   "lat": 41.011288,
+   "lon": 28.947608,
+   "notable": 5
+  },
+  {
+   "osm": "node/5108843061",
+   "name": "Sura Design Hotel and Suites",
+   "name_en": null,
+   "stars": "5",
+   "address": "Ticarethane Sokak 13",
+   "lat": 41.008612,
+   "lon": 28.975919,
+   "notable": 6
+  },
+  {
+   "osm": "node/5108843075",
+   "name": "Sura Hagia Sophia Hotel and Spa",
+   "name_en": null,
+   "stars": "5",
+   "address": "Ticarethane Sokak 10",
+   "lat": 41.00872,
+   "lon": 28.976178,
+   "notable": 5
+  },
+  {
+   "osm": "node/5113623097",
+   "name": "Four Seasons Hotel",
+   "name_en": null,
+   "stars": "5",
+   "address": "Kutlugün Sokak",
+   "lat": 41.006562,
+   "lon": 28.980241,
+   "notable": 5
+  },
+  {
+   "osm": "node/6185559951",
+   "name": "Palazzo Donizetti Istanbul, Tapestry Collection by Hilton",
+   "name_en": null,
+   "stars": null,
+   "address": "Meşrutiyet Caddesi 85",
+   "lat": 41.030528,
+   "lon": 28.973568,
+   "notable": 5
+  },
+  {
+   "osm": "node/6185582261",
+   "name": "Rixos Pera Istanbul",
+   "name_en": null,
+   "stars": null,
+   "address": "Meşrutiyet Caddesi 44",
+   "lat": 41.033352,
+   "lon": 28.975111,
+   "notable": 5
+  },
+  {
+   "osm": "node/6823338285",
+   "name": "My Home Sultanahmet Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Piyer Loti Caddesi 35",
+   "lat": 41.006472,
+   "lon": 28.970181,
+   "notable": 5
+  },
+  {
+   "osm": "node/7196887786",
+   "name": "Ламп Отел",
+   "name_en": null,
+   "stars": null,
+   "address": "Akbıyık Caddesi 66",
+   "lat": 41.004523,
+   "lon": 28.979057,
+   "notable": 5
+  },
+  {
+   "osm": "node/9283646105",
+   "name": "Orientbank Hotel Istanbul",
+   "name_en": null,
+   "stars": null,
+   "address": "Fındıkçı Remzi Sokağı 7",
+   "lat": 41.015179,
+   "lon": 28.972389,
+   "notable": 5
+  },
+  {
+   "osm": "node/9560644978",
+   "name": "Şirin Han Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Rahvancı Sokağı 10/1",
+   "lat": 41.015517,
+   "lon": 28.972266,
+   "notable": 5
+  },
+  {
+   "osm": "node/9775466857",
+   "name": "HAN 1772 HOTEL",
+   "name_en": null,
+   "stars": null,
+   "address": "Mimar Vedat Sokağı 3",
+   "lat": 41.01483,
+   "lon": 28.974059,
+   "notable": 5
+  },
+  {
+   "osm": "node/9825316753",
+   "name": "MAGNOVA STUDİOS",
+   "name_en": null,
+   "stars": null,
+   "address": "İstiklal Caddesi 165",
+   "lat": 41.032728,
+   "lon": 28.976597,
+   "notable": 5
+  },
+  {
+   "osm": "way/1112531038",
+   "name": "Imagine Istanbul - Sultanahmet",
+   "name_en": null,
+   "stars": "4",
+   "address": "Pertevpaşa Sokağı 57",
+   "lat": 41.005428,
+   "lon": 28.969721,
+   "notable": 6
+  },
+  {
+   "osm": "way/1318101891",
+   "name": "Армада",
+   "name_en": "Armada",
+   "stars": "4",
+   "address": "Ahırkapı Caddesi 10",
+   "lat": 41.003815,
+   "lon": 28.981403,
+   "notable": 5
+  },
+  {
+   "osm": "way/165517584",
+   "name": "Les Temps Istanbul Karakoy, Curio Collection by Hilton",
+   "name_en": null,
+   "stars": null,
+   "address": "Bankalar Caddesi 9",
+   "lat": 41.023674,
+   "lon": 28.973774,
+   "notable": 6
+  },
+  {
+   "osm": "way/224467857",
+   "name": "Grand Hyatt Istanbul",
+   "name_en": null,
+   "stars": "5",
+   "address": "aşkışla Cd 1",
+   "lat": 41.04103,
+   "lon": 28.988304,
+   "notable": 7
+  },
+  {
+   "osm": "way/248051020",
+   "name": "The Wings Hotel Collection",
+   "name_en": null,
+   "stars": null,
+   "address": "Sadri Alişık Sokağı 33",
+   "lat": 41.033779,
+   "lon": 28.981723,
+   "notable": 5
+  },
+  {
+   "osm": "way/252672894",
+   "name": "Pera Palace Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Meşrutiyet Caddesi 52",
+   "lat": 41.031042,
+   "lon": 28.97347,
+   "notable": 5
+  },
+  {
+   "osm": "way/262201429",
+   "name": "DoubleTree by Hilton Hotel Istanbul - Old Town",
+   "name_en": null,
+   "stars": "5",
+   "address": "Ordu Caddesi 31",
+   "lat": 41.00905,
+   "lon": 28.960347,
+   "notable": 8
+  },
+  {
+   "osm": "way/330501049",
+   "name": "Hagia Sofia Mansions Istanbul, Curio Collection by Hilton",
+   "name_en": null,
+   "stars": "5",
+   "address": "Kabasakal Caddesi 5",
+   "lat": 41.006561,
+   "lon": 28.97908,
+   "notable": 8
+  },
+  {
+   "osm": "way/372264928",
+   "name": "Best Western Amber",
+   "name_en": null,
+   "stars": null,
+   "address": "Çifte Gelinler Caddesi 3/7",
+   "lat": 41.004814,
+   "lon": 28.964827,
+   "notable": 6
+  },
+  {
+   "osm": "way/453731294",
+   "name": "Angel's Home Hotel",
+   "name_en": null,
+   "stars": "3",
+   "address": "Amiral Tafdil Sokak 26",
+   "lat": 41.004244,
+   "lon": 28.979597,
+   "notable": 7
+  },
+  {
+   "osm": "way/499202710",
+   "name": "Hotel Alp Guesthouse",
+   "name_en": null,
+   "stars": null,
+   "address": "Adliye Sokağı 4",
+   "lat": 41.006116,
+   "lon": 28.981506,
+   "notable": 5
+  },
+  {
+   "osm": "way/527172444",
+   "name": "The Ritus Hotel Istanbul Sultanahmet, Tapestry Collection by Hilton",
+   "name_en": null,
+   "stars": null,
+   "address": "Terzihane Sokağı 19",
+   "lat": 41.006385,
+   "lon": 28.973345,
+   "notable": 6
+  },
+  {
+   "osm": "way/530509261",
+   "name": "Royan Hotel Hagia Sophia Istanbul",
+   "name_en": null,
+   "stars": "4",
+   "address": "Yeni Saraçhane Sokak 18",
+   "lat": 41.005448,
+   "lon": 28.981254,
+   "notable": 5
+  },
+  {
+   "osm": "way/572392195",
+   "name": "Sheraton Istanbul City Center",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 41.039546,
+   "lon": 28.974686,
+   "notable": 5
+  }
+ ],
+ "AYT": [
+  {
+   "osm": "node/10010753017",
+   "name": "The Easy Rooms",
+   "name_en": null,
+   "stars": null,
+   "address": "Kadirpaşa Gecidi 6",
+   "lat": 36.881834,
+   "lon": 30.707132,
+   "notable": 3
+  },
+  {
+   "osm": "node/10220439412",
+   "name": "Grand Nergiz Otel",
+   "name_en": null,
+   "stars": "3",
+   "address": "472 Sokak 3",
+   "lat": 36.894809,
+   "lon": 30.705368,
+   "notable": 3
+  },
+  {
+   "osm": "node/10936703705",
+   "name": "Basel Otel",
+   "name_en": "Hotel Basel",
+   "stars": null,
+   "address": "657. Sokak 02",
+   "lat": 36.873517,
+   "lon": 30.647515,
+   "notable": 3
+  },
+  {
+   "osm": "node/11158852907",
+   "name": "Grand Güllük Hotel & Spa",
+   "name_en": null,
+   "stars": null,
+   "address": "Güllük Caddesi 28 / B",
+   "lat": 36.888592,
+   "lon": 30.696498,
+   "notable": 3
+  },
+  {
+   "osm": "node/12104211224",
+   "name": "COMFORT BAŞARAN OTEL",
+   "name_en": null,
+   "stars": null,
+   "address": "561 Sokak 12",
+   "lat": 36.895145,
+   "lon": 30.702972,
+   "notable": 4
+  },
+  {
+   "osm": "node/13041113901",
+   "name": "7inn",
+   "name_en": null,
+   "stars": null,
+   "address": "551. sokak 4",
+   "lat": 36.872351,
+   "lon": 30.649,
+   "notable": 3
+  },
+  {
+   "osm": "node/13257030693",
+   "name": "Wind Of Lara Resort & Spa",
+   "name_en": null,
+   "stars": null,
+   "address": "1003 Sokak 8",
+   "lat": 36.859791,
+   "lon": 30.868675,
+   "notable": 3
+  },
+  {
+   "osm": "node/14066541745",
+   "name": "Lavin Garden Butik Otel",
+   "name_en": null,
+   "stars": null,
+   "address": "425 14",
+   "lat": 36.867104,
+   "lon": 30.638607,
+   "notable": 3
+  },
+  {
+   "osm": "node/14066660901",
+   "name": "Lavin Garden Butik Otel",
+   "name_en": "Lavin Garden Boutique Hotel",
+   "stars": null,
+   "address": "425 Sokak 14",
+   "lat": 36.867104,
+   "lon": 30.638608,
+   "notable": 4
+  },
+  {
+   "osm": "node/14090662102",
+   "name": "Echinus Lara Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Güzeloba Mh. Yaşar Sobutay Blv. Ahi Evran No.99/E2",
+   "lat": 36.861301,
+   "lon": 30.839425,
+   "notable": 3
+  },
+  {
+   "osm": "node/14201897703",
+   "name": "Privado Hotels",
+   "name_en": null,
+   "stars": null,
+   "address": "441 Sokak 2/201",
+   "lat": 36.891506,
+   "lon": 30.710248,
+   "notable": 3
+  },
+  {
+   "osm": "node/1654133400",
+   "name": "UpOn Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "2050 Sokak 2",
+   "lat": 36.84854,
+   "lon": 30.770805,
+   "notable": 3
+  },
+  {
+   "osm": "node/1852010185",
+   "name": "Hotel Delphin Diva Premiere",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 36.854946,
+   "lon": 30.870798,
+   "notable": 4
+  },
+  {
+   "osm": "node/2291851186",
+   "name": "Rixos Downtown Antalya Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Sakıp Sabancı Bulvarı",
+   "lat": 36.885875,
+   "lon": 30.674333,
+   "notable": 4
+  },
+  {
+   "osm": "node/2300063902",
+   "name": "Ant Royal",
+   "name_en": null,
+   "stars": "3",
+   "address": null,
+   "lat": 36.891289,
+   "lon": 30.694859,
+   "notable": 3
+  },
+  {
+   "osm": "node/3623376904",
+   "name": "Puding Marina Residence",
+   "name_en": null,
+   "stars": "4",
+   "address": "Mermerli Sokak 15",
+   "lat": 36.883981,
+   "lon": 30.704145,
+   "notable": 7
+  },
+  {
+   "osm": "node/5138144580",
+   "name": "Konyaaltı Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 36.872329,
+   "lon": 30.648093,
+   "notable": 3
+  },
+  {
+   "osm": "node/530098775",
+   "name": "Hotel Frankfurt",
+   "name_en": null,
+   "stars": null,
+   "address": "Hıdırlık Sokak 17",
+   "lat": 36.882826,
+   "lon": 30.704586,
+   "notable": 3
+  },
+  {
+   "osm": "node/5369186570",
+   "name": "Elit Başaran Otel Antalya",
+   "name_en": null,
+   "stars": null,
+   "address": "7. Cadde 1",
+   "lat": 36.874884,
+   "lon": 30.653095,
+   "notable": 3
+  },
+  {
+   "osm": "node/5369319739",
+   "name": "Barut Akra V Otel",
+   "name_en": null,
+   "stars": null,
+   "address": "Metin Kasapoğlu Caddesi 281",
+   "lat": 36.865398,
+   "lon": 30.727742,
+   "notable": 4
+  },
+  {
+   "osm": "node/5369319975",
+   "name": "Sky Business Hotel",
+   "name_en": null,
+   "stars": "5",
+   "address": "917. Sokak 1",
+   "lat": 36.888062,
+   "lon": 30.725365,
+   "notable": 6
+  },
+  {
+   "osm": "node/6633132388",
+   "name": "Eva Butik Otel",
+   "name_en": "Eva Boutique Hotel",
+   "stars": null,
+   "address": "304. Sokak 4/2",
+   "lat": 36.862117,
+   "lon": 30.635798,
+   "notable": 5
+  },
+  {
+   "osm": "node/7835079186",
+   "name": "Luna Boutique Hotel",
+   "name_en": "Luna Boutique Hotel",
+   "stars": "3",
+   "address": "Hesapci Sokak 54",
+   "lat": 36.882221,
+   "lon": 30.705133,
+   "notable": 3
+  },
+  {
+   "osm": "node/8051803785",
+   "name": "Antalya Inn Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Hıdırlık Sokak 41",
+   "lat": 36.88154,
+   "lon": 30.704026,
+   "notable": 4
+  },
+  {
+   "osm": "node/8958034655",
+   "name": "Elysium Green Suites",
+   "name_en": null,
+   "stars": null,
+   "address": "2348. Sokak 21",
+   "lat": 36.859867,
+   "lon": 30.820836,
+   "notable": 4
+  },
+  {
+   "osm": "way/1063676742",
+   "name": "Hadrian Gate Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Hesapçı Sokak 10",
+   "lat": 36.884834,
+   "lon": 30.707841,
+   "notable": 4
+  },
+  {
+   "osm": "way/1064391632",
+   "name": "Argos Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Balıkpazarı Sokak 6",
+   "lat": 36.884684,
+   "lon": 30.705169,
+   "notable": 4
+  },
+  {
+   "osm": "way/1245479772",
+   "name": "Hampton by Hilton Antalya Airport",
+   "name_en": null,
+   "stars": "4",
+   "address": "Serik Caddesi 25/B",
+   "lat": 36.908536,
+   "lon": 30.767505,
+   "notable": 7
+  },
+  {
+   "osm": "way/163375117",
+   "name": "Delphin BE Grand",
+   "name_en": null,
+   "stars": "5",
+   "address": "Yaşar Sobutay Bulvarı 38",
+   "lat": 36.854258,
+   "lon": 30.865252,
+   "notable": 4
+  },
+  {
+   "osm": "way/304547612",
+   "name": "Ramada Plaza Antalya",
+   "name_en": null,
+   "stars": "5",
+   "address": "Fevzi Çakmak Caddesi 22",
+   "lat": 36.876763,
+   "lon": 30.707979,
+   "notable": 4
+  },
+  {
+   "osm": "way/347259719",
+   "name": "Atan Park Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Eski Lara Caddesi 117",
+   "lat": 36.866338,
+   "lon": 30.724736,
+   "notable": 5
+  },
+  {
+   "osm": "way/432156890",
+   "name": "DoubleTree by Hilton Antalya City Centre",
+   "name_en": null,
+   "stars": "5",
+   "address": "Etiler, Adnan Menderes Bulvarı 61",
+   "lat": 36.896617,
+   "lon": 30.710633,
+   "notable": 8
+  },
+  {
+   "osm": "way/465171651",
+   "name": "Crowne Plaza",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 36.858135,
+   "lon": 30.631225,
+   "notable": 4
+  },
+  {
+   "osm": "way/527495455",
+   "name": "Grand Park Lara",
+   "name_en": null,
+   "stars": null,
+   "address": "Lara Cd 339",
+   "lat": 36.857168,
+   "lon": 30.875864,
+   "notable": 5
+  },
+  {
+   "osm": "way/556617986",
+   "name": "Marmara Otel Antalya",
+   "name_en": "The Marmara Antalya",
+   "stars": "5",
+   "address": "Lara Caddesi",
+   "lat": 36.856541,
+   "lon": 30.738601,
+   "notable": 6
+  },
+  {
+   "osm": "way/563126081",
+   "name": "Adalia Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "1470 Sokak 61",
+   "lat": 36.867053,
+   "lon": 30.724146,
+   "notable": 4
+  },
+  {
+   "osm": "way/707643496",
+   "name": "Ramada Plaza Antalya",
+   "name_en": null,
+   "stars": "5",
+   "address": "Fevzi Çakmak Caddesi 22",
+   "lat": 36.876509,
+   "lon": 30.707153,
+   "notable": 4
+  },
+  {
+   "osm": "way/715051789",
+   "name": "Tuvana Hotel",
+   "name_en": null,
+   "stars": "3",
+   "address": "Karanlık Sokak 18",
+   "lat": 36.885644,
+   "lon": 30.706261,
+   "notable": 4
+  },
+  {
+   "osm": "way/715051791",
+   "name": "Tuvana Hotel",
+   "name_en": null,
+   "stars": "3",
+   "address": "Karanlık Sokak 18",
+   "lat": 36.885665,
+   "lon": 30.70594,
+   "notable": 4
+  },
+  {
+   "osm": "way/866579526",
+   "name": "Anelli Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Hürriyet Caddesi 42B",
+   "lat": 36.901385,
+   "lon": 30.654942,
+   "notable": 4
+  }
+ ],
+ "SSH": [
+  {
+   "osm": "node/1999879455",
+   "name": "Iberotel Palace",
+   "name_en": "Iberotel Palace",
+   "stars": null,
+   "address": null,
+   "lat": 27.863544,
+   "lon": 34.293684,
+   "notable": 1
+  },
+  {
+   "osm": "node/1999879456",
+   "name": "La Perla",
+   "name_en": "La Perla",
+   "stars": null,
+   "address": null,
+   "lat": 27.865125,
+   "lon": 34.312079,
+   "notable": 1
+  },
+  {
+   "osm": "node/1999879458",
+   "name": "Seti Sharm",
+   "name_en": "Seti Sharm",
+   "stars": null,
+   "address": null,
+   "lat": 27.863428,
+   "lon": 34.296812,
+   "notable": 1
+  },
+  {
+   "osm": "node/2000859121",
+   "name": "Sanafir",
+   "name_en": "Sanafir",
+   "stars": null,
+   "address": null,
+   "lat": 27.910179,
+   "lon": 34.324955,
+   "notable": 1
+  },
+  {
+   "osm": "node/2001287088",
+   "name": "Hotel Royal Plaza",
+   "name_en": "Hotel Royal Plaza",
+   "stars": null,
+   "address": null,
+   "lat": 27.911165,
+   "lon": 34.319508,
+   "notable": 1
+  },
+  {
+   "osm": "node/356269753",
+   "name": "Turquoise",
+   "name_en": "Turquoise Beach Hotel",
+   "stars": null,
+   "address": null,
+   "lat": 27.86226,
+   "lon": 34.288781,
+   "notable": 1
+  },
+  {
+   "osm": "node/4228346689",
+   "name": "Otium Hotel Aloha Resort",
+   "name_en": null,
+   "stars": null,
+   "address": "salah taher",
+   "lat": 27.869656,
+   "lon": 34.320738,
+   "notable": 2
+  },
+  {
+   "osm": "node/6068467636",
+   "name": "Sinai Old Spices",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.911836,
+   "lon": 34.284231,
+   "notable": 2
+  },
+  {
+   "osm": "node/6594291551",
+   "name": "Naama Blue Hotel",
+   "name_en": null,
+   "stars": "3",
+   "address": "King Abdullah Street, Naama Bay",
+   "lat": 27.910039,
+   "lon": 34.320912,
+   "notable": 5
+  },
+  {
+   "osm": "node/7274270140",
+   "name": "Aqua Blu Resort",
+   "name_en": "Aqua Blu Resort",
+   "stars": "4",
+   "address": null,
+   "lat": 27.857274,
+   "lon": 34.304206,
+   "notable": 5
+  },
+  {
+   "osm": "node/9309502472",
+   "name": "Sol Y Mar Sharming Inn",
+   "name_en": "Sol Y Mar Sharming Inn",
+   "stars": null,
+   "address": null,
+   "lat": 27.869461,
+   "lon": 34.317406,
+   "notable": 1
+  },
+  {
+   "osm": "node/9310241942",
+   "name": "Sharm Dreams Vacation Club",
+   "name_en": "Sharm Dreams Vacation Club",
+   "stars": null,
+   "address": "46D",
+   "lat": 27.917752,
+   "lon": 34.325254,
+   "notable": 1
+  },
+  {
+   "osm": "node/9310241943",
+   "name": "Tropicana Rosetta & Jasmine Club 4*",
+   "name_en": "Tropicana Rosetta & Jasmine Club 4*",
+   "stars": null,
+   "address": null,
+   "lat": 27.91693,
+   "lon": 34.326402,
+   "notable": 1
+  },
+  {
+   "osm": "node/9310241945",
+   "name": "Sinai Sunset",
+   "name_en": "Sinai Sunset",
+   "stars": null,
+   "address": null,
+   "lat": 27.917393,
+   "lon": 34.327996,
+   "notable": 1
+  },
+  {
+   "osm": "node/9310241946",
+   "name": "Novotel Palm",
+   "name_en": "Novotel Palm",
+   "stars": null,
+   "address": null,
+   "lat": 27.917103,
+   "lon": 34.330268,
+   "notable": 2
+  },
+  {
+   "osm": "node/9368597243",
+   "name": "\"Naama Heights\"",
+   "name_en": "\"Naama Heights\"",
+   "stars": null,
+   "address": null,
+   "lat": 27.921927,
+   "lon": 34.32266,
+   "notable": 1
+  },
+  {
+   "osm": "node/9385180344",
+   "name": "Sheraton",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.921786,
+   "lon": 34.366931,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12107784",
+   "name": "Savita resort & SPA",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.964565,
+   "lon": 34.404896,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12162822",
+   "name": "Golf & Resort",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 27.937783,
+   "lon": 34.378818,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12162823",
+   "name": "Melia Sharm Resort",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.935078,
+   "lon": 34.376576,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12162829",
+   "name": "Sheraton Sharm Hotel, Resort, Villas & Spa",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 27.91922,
+   "lon": 34.365736,
+   "notable": 2
+  },
+  {
+   "osm": "relation/12162831",
+   "name": "Reef Oasis Blue Bay",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 27.918126,
+   "lon": 34.362048,
+   "notable": 2
+  },
+  {
+   "osm": "relation/12163216",
+   "name": "Sunrise White Hills",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 27.965055,
+   "lon": 34.402638,
+   "notable": 3
+  },
+  {
+   "osm": "relation/12163217",
+   "name": "Meraki Resort Sharm el Sheikh",
+   "name_en": null,
+   "stars": "5",
+   "address": null,
+   "lat": 27.964882,
+   "lon": 34.401329,
+   "notable": 2
+  },
+  {
+   "osm": "relation/12163218",
+   "name": "DoubleTree by Hilton Sharm El Sheikh - Sharks Bay Resort",
+   "name_en": null,
+   "stars": "4",
+   "address": "Ras Nusrani",
+   "lat": 27.964545,
+   "lon": 34.400458,
+   "notable": 8
+  },
+  {
+   "osm": "relation/12169650",
+   "name": "Iberotel Club Fanara",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.852332,
+   "lon": 34.312916,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12195657",
+   "name": "Renaissance Sharm El Sheikh Golden View Beach Resort",
+   "name_en": "Renaissance Sharm El Sheikh Golden View Beach Resort",
+   "stars": null,
+   "address": "Al Fanar Street",
+   "lat": 27.850644,
+   "lon": 34.314998,
+   "notable": 4
+  },
+  {
+   "osm": "relation/12204073",
+   "name": "Mövenpick Resort Sharm el Sheikh",
+   "name_en": null,
+   "stars": "5",
+   "address": "South Sinai Governorate, Naama Bay",
+   "lat": 27.913555,
+   "lon": 34.339913,
+   "notable": 3
+  },
+  {
+   "osm": "relation/12204074",
+   "name": "Sonesta Beach",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.917394,
+   "lon": 34.33826,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12204077",
+   "name": "Naama Bay Promenade Beach Resort",
+   "name_en": null,
+   "stars": null,
+   "address": "El Salam Road",
+   "lat": 27.915989,
+   "lon": 34.332586,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12204078",
+   "name": "Novotel Beach",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.915346,
+   "lon": 34.331128,
+   "notable": 1
+  },
+  {
+   "osm": "relation/12249529",
+   "name": "Four Seasons Sharm",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.956096,
+   "lon": 34.392807,
+   "notable": 1
+  },
+  {
+   "osm": "way/1219293494",
+   "name": "Fun & Sun Naama Waves",
+   "name_en": null,
+   "stars": null,
+   "address": "طريق حلومي 215",
+   "lat": 27.90501,
+   "lon": 34.32262,
+   "notable": 2
+  },
+  {
+   "osm": "way/185274621",
+   "name": "Camel Dive Club & Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.909498,
+   "lon": 34.324812,
+   "notable": 2
+  },
+  {
+   "osm": "way/25687905",
+   "name": "فندق حياة ريجنسي",
+   "name_en": "Park Regency Sharm El Sheikh Resort",
+   "stars": "5",
+   "address": "Peace Road",
+   "lat": 27.916835,
+   "lon": 34.348958,
+   "notable": 6
+  },
+  {
+   "osm": "way/659807132",
+   "name": "Otium Hotel Amphoras Resort",
+   "name_en": null,
+   "stars": null,
+   "address": "شارع صلاح طاهر",
+   "lat": 27.868441,
+   "lon": 34.319609,
+   "notable": 3
+  },
+  {
+   "osm": "way/99376243",
+   "name": "Safir Sharm Waterfalls Resort",
+   "name_en": null,
+   "stars": "5",
+   "address": "شارع الفنارة",
+   "lat": 27.855864,
+   "lon": 34.31529,
+   "notable": 6
+  },
+  {
+   "osm": "way/99406626",
+   "name": "Coral Hills Resort",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.864569,
+   "lon": 34.309386,
+   "notable": 2
+  },
+  {
+   "osm": "way/99425872",
+   "name": "Arabesque Sharm Resort & Spa",
+   "name_en": null,
+   "stars": null,
+   "address": null,
+   "lat": 27.862427,
+   "lon": 34.304544,
+   "notable": 3
+  },
+  {
+   "osm": "way/99430294",
+   "name": "ريتز كارلتون",
+   "name_en": "Ritz Carlton",
+   "stars": null,
+   "address": null,
+   "lat": 27.866289,
+   "lon": 34.320189,
+   "notable": 2
+  }
+ ],
+ "DXB": [
+  {
+   "osm": "node/12299353871",
+   "name": "Embassy Suites by Hilton Dubai Business Bay",
+   "name_en": null,
+   "stars": "5",
+   "address": "Marasi Drive, Business Bay",
+   "lat": 25.180739,
+   "lon": 55.277917,
+   "notable": 7
+  },
+  {
+   "osm": "node/12301324523",
+   "name": "Hilton Garden Inn Dubai Business Bay",
+   "name_en": null,
+   "stars": "4",
+   "address": "Marasi Drive, Business Bay",
+   "lat": 25.180876,
+   "lon": 55.278629,
+   "notable": 8
+  },
+  {
+   "osm": "node/3755781034",
+   "name": "Hilton Garden Inn Dubai Jumeirah",
+   "name_en": "Hilton Garden Inn Dubai Jumeirah",
+   "stars": "4",
+   "address": "Al Mina Road, Port Rashid",
+   "lat": 25.24791,
+   "lon": 55.278242,
+   "notable": 9
+  },
+  {
+   "osm": "node/3896699589",
+   "name": "رافلز دبي",
+   "name_en": "Raffles Dubai",
+   "stars": "5",
+   "address": "sheik rashid rd 13th street",
+   "lat": 25.22793,
+   "lon": 55.320481,
+   "notable": 8
+  },
+  {
+   "osm": "node/4375193193",
+   "name": "Staybridge Suites Dubai Financial Centre",
+   "name_en": null,
+   "stars": null,
+   "address": "Financial Centre Metro Station, Sheikh Zayed Road",
+   "lat": 25.2115,
+   "lon": 55.274402,
+   "notable": 6
+  },
+  {
+   "osm": "node/5526220328",
+   "name": "منتجع فور سيزونز دبي جميرا بيتش",
+   "name_en": "Four Seasons Resort Dubai",
+   "stars": "5",
+   "address": null,
+   "lat": 25.202165,
+   "lon": 55.239687,
+   "notable": 5
+  },
+  {
+   "osm": "node/5543614221",
+   "name": "Radisson Blu Hotel, Dubai Waterfront",
+   "name_en": "Radisson Blu Hotel, Dubai Waterfront",
+   "stars": null,
+   "address": "Marasi Drive",
+   "lat": 25.186755,
+   "lon": 55.267928,
+   "notable": 5
+  },
+  {
+   "osm": "node/6149663008",
+   "name": "Waldorf Astoria Dubai International Financial Centre",
+   "name_en": null,
+   "stars": "5",
+   "address": "Al Mustaqbal St",
+   "lat": 25.210669,
+   "lon": 55.282111,
+   "notable": 8
+  },
+  {
+   "osm": "node/7706798563",
+   "name": "Beach Walk Hotel - Jumeriah",
+   "name_en": null,
+   "stars": "4",
+   "address": "Jumeira Street",
+   "lat": 25.173866,
+   "lon": 55.218783,
+   "notable": 6
+  },
+  {
+   "osm": "node/8975092052",
+   "name": "La Quinta by Wyndham Bur Dubai",
+   "name_en": null,
+   "stars": "4",
+   "address": "Mina Rashid Port - Sheikh Rashid Road",
+   "lat": 25.249136,
+   "lon": 55.283103,
+   "notable": 8
+  },
+  {
+   "osm": "way/1076132569",
+   "name": "The First Collection Business Bay, Dubai, a Tribute Portfolio Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Al A’amal Street",
+   "lat": 25.178119,
+   "lon": 55.267981,
+   "notable": 5
+  },
+  {
+   "osm": "way/1083733029",
+   "name": "Mandarin Oriental Jumeira",
+   "name_en": null,
+   "stars": null,
+   "address": "Jumeirah Beach Rd",
+   "lat": 25.216948,
+   "lon": 55.250604,
+   "notable": 5
+  },
+  {
+   "osm": "way/1084655122",
+   "name": "Sofitel Dubai The Obelisk",
+   "name_en": null,
+   "stars": null,
+   "address": "Sheikh Rashid Rd",
+   "lat": 25.231002,
+   "lon": 55.318418,
+   "notable": 6
+  },
+  {
+   "osm": "way/1124087253",
+   "name": "Hyatt Place Dubai Jumeirah",
+   "name_en": null,
+   "stars": "4",
+   "address": "Al Mina St",
+   "lat": 25.246483,
+   "lon": 55.277129,
+   "notable": 7
+  },
+  {
+   "osm": "way/118263839",
+   "name": "Four Points by Sheraton",
+   "name_en": "Four Points by Sheraton",
+   "stars": "4",
+   "address": "Sheikh Zayed Road 76",
+   "lat": 25.214085,
+   "lon": 55.276006,
+   "notable": 5
+  },
+  {
+   "osm": "way/1208562102",
+   "name": "Hyatt Centric Jumeirah Dubai",
+   "name_en": null,
+   "stars": "5",
+   "address": "Jumeirah 1 67M6+M8",
+   "lat": 25.234638,
+   "lon": 55.260431,
+   "notable": 7
+  },
+  {
+   "osm": "way/125848289",
+   "name": "فندق جيفورا",
+   "name_en": "Gevora Hotel",
+   "stars": "4",
+   "address": "Sheikh Zayed Road 101",
+   "lat": 25.21237,
+   "lon": 55.277145,
+   "notable": 7
+  },
+  {
+   "osm": "way/125848290",
+   "name": "ريزيدنس ان",
+   "name_en": "Residence Inn",
+   "stars": null,
+   "address": "Sheikh Zayed Road 115",
+   "lat": 25.209485,
+   "lon": 55.275153,
+   "notable": 5
+  },
+  {
+   "osm": "way/125848293",
+   "name": "Number One Tower Suites",
+   "name_en": "Number One Tower Suites",
+   "stars": null,
+   "address": "Sheikh Zayed Road 96",
+   "lat": 25.210488,
+   "lon": 55.273534,
+   "notable": 6
+  },
+  {
+   "osm": "way/126601134",
+   "name": "The Palace - Downtown Dubai",
+   "name_en": "The Palace - Downtown Dubai",
+   "stars": null,
+   "address": "Shaikh Mohammed bin Rashid Boulevard",
+   "lat": 25.193665,
+   "lon": 55.275705,
+   "notable": 5
+  },
+  {
+   "osm": "way/1528954686",
+   "name": "Al Habtoor Palace, Preferred Hotels & Resorts",
+   "name_en": null,
+   "stars": "5",
+   "address": "شارع الشيخ زاي",
+   "lat": 25.183594,
+   "lon": 55.254447,
+   "notable": 6
+  },
+  {
+   "osm": "way/194199918",
+   "name": "Crowne Plaza Dubai Jumeirah Hotel",
+   "name_en": "Crowne Plaza Dubai Jumeirah Hotel",
+   "stars": "4",
+   "address": "Street 21",
+   "lat": 25.240306,
+   "lon": 55.275495,
+   "notable": 5
+  },
+  {
+   "osm": "way/200025808",
+   "name": "Hyatt Regency Dubai Creek Heights",
+   "name_en": "Hyatt Regency Dubai Creek Heights",
+   "stars": "5",
+   "address": null,
+   "lat": 25.23438,
+   "lon": 55.32394,
+   "notable": 5
+  },
+  {
+   "osm": "way/230622943",
+   "name": "Fairmont Dubai",
+   "name_en": "Fairmont Dubai",
+   "stars": null,
+   "address": "Sheikh Zayed Road 18",
+   "lat": 25.226505,
+   "lon": 55.284152,
+   "notable": 5
+  },
+  {
+   "osm": "way/238284905",
+   "name": "JW Marriott Marquis Hotel",
+   "name_en": "The Vault bar lounge L71 & 72 - JW Marriott Marquis Hotel",
+   "stars": "5",
+   "address": "شارع الشيخ زايد",
+   "lat": 25.185674,
+   "lon": 55.258139,
+   "notable": 8
+  },
+  {
+   "osm": "way/259708738",
+   "name": "Majestic Premier Hotel",
+   "name_en": "Four Points By Sheraton Bur Dubai",
+   "stars": "5",
+   "address": "Khalid Bin Waleed Road",
+   "lat": 25.257735,
+   "lon": 55.299668,
+   "notable": 6
+  },
+  {
+   "osm": "way/327379135",
+   "name": "Conrad Dubai",
+   "name_en": null,
+   "stars": "5",
+   "address": "Sheikh Zayed Road",
+   "lat": 25.226159,
+   "lon": 55.283438,
+   "notable": 8
+  },
+  {
+   "osm": "way/386252974",
+   "name": "ibis Styles Dubai Jumeira",
+   "name_en": null,
+   "stars": "3",
+   "address": null,
+   "lat": 25.240447,
+   "lon": 55.273258,
+   "notable": 5
+  },
+  {
+   "osm": "way/386266181",
+   "name": "Grand Hyatt Dubai",
+   "name_en": "Grand Hyatt Dubai",
+   "stars": "5",
+   "address": "Riyadh Street - Sheikh Rashid Rd",
+   "lat": 25.227875,
+   "lon": 55.327854,
+   "notable": 8
+  },
+  {
+   "osm": "way/399874888",
+   "name": "Anantara Downtown Dubai",
+   "name_en": "Anantara Downtown Dubai",
+   "stars": null,
+   "address": "Business Bay",
+   "lat": 25.185883,
+   "lon": 55.263738,
+   "notable": 5
+  },
+  {
+   "osm": "way/412943019",
+   "name": "Novotel World Trade Centre Dubai",
+   "name_en": "Novotel",
+   "stars": "4",
+   "address": null,
+   "lat": 25.221456,
+   "lon": 55.288276,
+   "notable": 5
+  },
+  {
+   "osm": "way/479429859",
+   "name": "Rotana Towers",
+   "name_en": "Rotana Towers",
+   "stars": "4",
+   "address": "Sheikh Zayed Road 82",
+   "lat": 25.212985,
+   "lon": 55.275261,
+   "notable": 6
+  },
+  {
+   "osm": "way/514827143",
+   "name": "DoubleTree by Hilton Dubai - Business Bay",
+   "name_en": "DoubleTree by Hilton Dubai - Business Bay",
+   "stars": "4",
+   "address": "باي سكوير 5",
+   "lat": 25.186443,
+   "lon": 55.28035,
+   "notable": 9
+  },
+  {
+   "osm": "way/554488167",
+   "name": "Hilton Dubai Al Habtoor City",
+   "name_en": null,
+   "stars": "5",
+   "address": "شارع الشيخ زايد",
+   "lat": 25.184388,
+   "lon": 55.255202,
+   "notable": 8
+  },
+  {
+   "osm": "way/610627924",
+   "name": "City Seasons Towers Hotel",
+   "name_en": "City Seasons Towers Hotel",
+   "stars": "4",
+   "address": "Khalif Bin Zayed Roaf",
+   "lat": 25.252831,
+   "lon": 55.302658,
+   "notable": 6
+  },
+  {
+   "osm": "way/618247811",
+   "name": "V Hotel Dubai, Curio Collection by Hilton",
+   "name_en": null,
+   "stars": "5",
+   "address": "Sheikh Zayed Rd",
+   "lat": 25.184312,
+   "lon": 55.254675,
+   "notable": 8
+  },
+  {
+   "osm": "way/643306145",
+   "name": "DoubleTree by Hilton Dubai Al Jadaf",
+   "name_en": null,
+   "stars": "4",
+   "address": "Al Jaddaf",
+   "lat": 25.222364,
+   "lon": 55.331759,
+   "notable": 7
+  },
+  {
+   "osm": "way/646828353",
+   "name": "The Atria 2",
+   "name_en": null,
+   "stars": "5",
+   "address": "Al Abraj Street, Business Bay",
+   "lat": 25.179733,
+   "lon": 55.263841,
+   "notable": 5
+  },
+  {
+   "osm": "way/723551986",
+   "name": "Residence Inn by Marriott Al Jaddaf",
+   "name_en": null,
+   "stars": null,
+   "address": "Oud Metha Road, Al Jaddaf Area",
+   "lat": 25.210804,
+   "lon": 55.314422,
+   "notable": 7
+  },
+  {
+   "osm": "way/885108374",
+   "name": "DoubleTree by Hilton Dubai M Square Hotel & Residences",
+   "name_en": null,
+   "stars": null,
+   "address": "11b شارع",
+   "lat": 25.25027,
+   "lon": 55.300694,
+   "notable": 7
+  }
+ ],
+ "EVN": [
+  {
+   "osm": "node/11216072768",
+   "name": "Holiday Inn Yerevan",
+   "name_en": "Holiday Inn Yerevan",
+   "stars": null,
+   "address": null,
+   "lat": 40.178827,
+   "lon": 44.511126,
+   "notable": 4
+  },
+  {
+   "osm": "node/11945124969",
+   "name": "Rooms Apart Hotel by RED",
+   "name_en": "Rooms Apart Hotel by RED",
+   "stars": null,
+   "address": "Հանրապետության փողոց 61",
+   "lat": 40.177673,
+   "lon": 44.517333,
+   "notable": 4
+  },
+  {
+   "osm": "node/12134277270",
+   "name": "Рамада",
+   "name_en": "Ramada",
+   "stars": null,
+   "address": null,
+   "lat": 40.179742,
+   "lon": 44.511797,
+   "notable": 4
+  },
+  {
+   "osm": "node/12949078769",
+   "name": "Aspar Boutique Hotel",
+   "name_en": null,
+   "stars": null,
+   "address": "Սայաթ-Նովայի պողոտա 38",
+   "lat": 40.17765,
+   "lon": 44.52592,
+   "notable": 5
+  },
+  {
+   "osm": "node/1432874051",
+   "name": "Президент",
+   "name_en": "President",
+   "stars": null,
+   "address": "Ձորափի փողոց 72",
+   "lat": 40.18522,
+   "lon": 44.501569,
+   "notable": 4
+  },
+  {
+   "osm": "node/1908549061",
+   "name": "Наири Отель Ереван",
+   "name_en": "\"Nairi \"Hotel",
+   "stars": "4",
+   "address": "Արմենակ Արմենակյան փողոց 121/7",
+   "lat": 40.187705,
+   "lon": 44.534479,
+   "notable": 6
+  },
+  {
+   "osm": "node/1915405731",
+   "name": "Авиатранс",
+   "name_en": "Aviatrans",
+   "stars": "3",
+   "address": null,
+   "lat": 40.180094,
+   "lon": 44.515228,
+   "notable": 4
+  },
+  {
+   "osm": "node/2280775641",
+   "name": "Национал",
+   "name_en": "National",
+   "stars": "4",
+   "address": "Պապ Թագավորի փողոց 4/3",
+   "lat": 40.179299,
+   "lon": 44.510413,
+   "notable": 6
+  },
+  {
+   "osm": "node/2300185507",
+   "name": "\"Режине\" Гостиница",
+   "name_en": "\"Regineh\" Hotel",
+   "stars": null,
+   "address": null,
+   "lat": 40.184604,
+   "lon": 44.532921,
+   "notable": 4
+  },
+  {
+   "osm": "node/2333643720",
+   "name": "Туфенкян",
+   "name_en": "Tufenkian",
+   "stars": null,
+   "address": "Հանրապետության փողոց 48",
+   "lat": 40.176675,
+   "lon": 44.516353,
+   "notable": 4
+  },
+  {
+   "osm": "node/2379810450",
+   "name": "Villa Rosa",
+   "name_en": null,
+   "stars": null,
+   "address": "Ջեյմս Բրայսի փողոց 13",
+   "lat": 40.19232,
+   "lon": 44.498647,
+   "notable": 4
+  },
+  {
+   "osm": "node/3370889932",
+   "name": "North Avenue",
+   "name_en": null,
+   "stars": "4",
+   "address": "Հյուսիսային պողոտա 10/1",
+   "lat": 40.180984,
+   "lon": 44.514775,
+   "notable": 4
+  },
+  {
+   "osm": "node/3647794452",
+   "name": "Гостиница \"Наре\"",
+   "name_en": "\"Nare\" Hotel",
+   "stars": null,
+   "address": null,
+   "lat": 40.177569,
+   "lon": 44.538421,
+   "notable": 4
+  },
+  {
+   "osm": "node/370158319",
+   "name": "Роял Тюлип Гранд Отель Ереван",
+   "name_en": null,
+   "stars": "4",
+   "address": "Աբովյան փողոց 14",
+   "lat": 40.181322,
+   "lon": 44.516306,
+   "notable": 5
+  },
+  {
+   "osm": "node/372617914",
+   "name": "Европа",
+   "name_en": "Europe",
+   "stars": "3",
+   "address": "Հանրապետության փողոց 38",
+   "lat": 40.176212,
+   "lon": 44.515223,
+   "notable": 6
+  },
+  {
+   "osm": "node/373178375",
+   "name": "Метрополь",
+   "name_en": "Metropol",
+   "stars": "3",
+   "address": "Մեսրոպ Մաշտոցի պողոտա 2/2",
+   "lat": 40.174297,
+   "lon": 44.501653,
+   "notable": 5
+  },
+  {
+   "osm": "node/374197359",
+   "name": "\"Мариот Армения\" Отель",
+   "name_en": "\"Marriott Armenia\" Hotel",
+   "stars": "5",
+   "address": "Պապ Թագավորի փողոց 1",
+   "lat": 40.177914,
+   "lon": 44.511341,
+   "notable": 6
+  },
+  {
+   "osm": "node/374208966",
+   "name": "Ширак",
+   "name_en": "Shirak",
+   "stars": "3",
+   "address": null,
+   "lat": 40.177319,
+   "lon": 44.507905,
+   "notable": 4
+  },
+  {
+   "osm": "node/4178675988",
+   "name": "МИНОТЕЛЬ БАРСАМ СЮИТС",
+   "name_en": null,
+   "stars": null,
+   "address": "Մհեր Մկրտչյան փողոց 8",
+   "lat": 40.174763,
+   "lon": 44.511979,
+   "notable": 4
+  },
+  {
+   "osm": "node/4232347394",
+   "name": "Опера Сюит отель",
+   "name_en": "Opera Suite Hotel",
+   "stars": "4",
+   "address": "Ռաֆայել Լեմկինի փողոց 3",
+   "lat": 40.189342,
+   "lon": 44.512405,
+   "notable": 6
+  },
+  {
+   "osm": "node/4237303992",
+   "name": "Форум",
+   "name_en": "Forum",
+   "stars": "4",
+   "address": null,
+   "lat": 40.182306,
+   "lon": 44.498587,
+   "notable": 5
+  },
+  {
+   "osm": "node/4430774289",
+   "name": "Երևան Փլեյս",
+   "name_en": "Yerevan Place",
+   "stars": "4",
+   "address": null,
+   "lat": 40.176132,
+   "lon": 44.512838,
+   "notable": 4
+  },
+  {
+   "osm": "node/4434410397",
+   "name": "Париж",
+   "name_en": "Paris",
+   "stars": "4",
+   "address": "Պապ Թագավորի փողոց 4/6",
+   "lat": 40.179771,
+   "lon": 44.510473,
+   "notable": 6
+  },
+  {
+   "osm": "node/4814082537",
+   "name": "Беладжио",
+   "name_en": "\"Bellagio\" Hotel",
+   "stars": "5",
+   "address": null,
+   "lat": 40.192245,
+   "lon": 44.53272,
+   "notable": 5
+  },
+  {
+   "osm": "node/4854251740",
+   "name": "Ани Плаза",
+   "name_en": "Ani Plaza",
+   "stars": "4",
+   "address": "Սայաթ-Նովայի պողոտա 19",
+   "lat": 40.183354,
+   "lon": 44.51963,
+   "notable": 7
+  },
+  {
+   "osm": "node/5109830411",
+   "name": "Ибис",
+   "name_en": null,
+   "stars": "3",
+   "address": "Հյուսիսային պողոտա 5/1",
+   "lat": 40.181303,
+   "lon": 44.515284,
+   "notable": 8
+  },
+  {
+   "osm": "node/5178783071",
+   "name": "Гостиница \"Эребуни\"",
+   "name_en": "\"Erebuni\" Hotel",
+   "stars": "3",
+   "address": "Վազգեն Սարգսյանի փողոց 26/4",
+   "lat": 40.176495,
+   "lon": 44.512498,
+   "notable": 5
+  },
+  {
+   "osm": "node/5431056858",
+   "name": "\"Исраэл Ори\" Гостиница",
+   "name_en": "\"Israel Ori\" Hotel",
+   "stars": null,
+   "address": "Պռոշյան փողոց 42",
+   "lat": 40.187733,
+   "lon": 44.504299,
+   "notable": 5
+  },
+  {
+   "osm": "node/5567441401",
+   "name": "The Alexander",
+   "name_en": null,
+   "stars": "5",
+   "address": "Աբովյան փողոց 3/4",
+   "lat": 40.180752,
+   "lon": 44.515089,
+   "notable": 7
+  },
+  {
+   "osm": "node/5698890270",
+   "name": "Golden Palace Boutique Hotel",
+   "name_en": null,
+   "stars": "5",
+   "address": "Հյուսիսային պողոտա 11",
+   "lat": 40.180454,
+   "lon": 44.514677,
+   "notable": 5
+  },
+  {
+   "osm": "node/6159035617",
+   "name": "Հոլիդեյ Ինն Էքսպրես Երևան",
+   "name_en": "Holiday Inn Express Yerevan",
+   "stars": "3",
+   "address": "Կարեն Դեմիրճյանի փողոց 97/2",
+   "lat": 40.183193,
+   "lon": 44.506814,
+   "notable": 7
+  },
+  {
+   "osm": "node/6238059353",
+   "name": "Централ Ереван",
+   "name_en": "\"Central\" Hotel",
+   "stars": null,
+   "address": "Զաքյան փողոց 7/1",
+   "lat": 40.177736,
+   "lon": 44.508462,
+   "notable": 5
+  },
+  {
+   "osm": "node/7660150868",
+   "name": "Ани Гранд Отель",
+   "name_en": "Ani Grand Hotel",
+   "stars": "4",
+   "address": null,
+   "lat": 40.177961,
+   "lon": 44.517767,
+   "notable": 5
+  },
+  {
+   "osm": "way/1289266159",
+   "name": "Radisson Blu",
+   "name_en": "Radisson Blu Hotel",
+   "stars": null,
+   "address": null,
+   "lat": 40.197056,
+   "lon": 44.518911,
+   "notable": 7
+  },
+  {
+   "osm": "way/218703446",
+   "name": "Република",
+   "name_en": "Republica",
+   "stars": "4",
+   "address": "Պապ Թագավորի փողոց 7/1",
+   "lat": 40.179361,
+   "lon": 44.509265,
+   "notable": 5
+  },
+  {
+   "osm": "way/31621519",
+   "name": "Бест Вестерн Конгресс Отель",
+   "name_en": "Best Western Congress Hotel",
+   "stars": "4",
+   "address": "Իտալիայի փողոց 1",
+   "lat": 40.175364,
+   "lon": 44.508791,
+   "notable": 6
+  },
+  {
+   "osm": "way/31661139",
+   "name": "Арарат",
+   "name_en": "Ararat",
+   "stars": "4",
+   "address": "Գրիգոր Լուսավորչի փողոց 7",
+   "lat": 40.173307,
+   "lon": 44.506245,
+   "notable": 5
+  },
+  {
+   "osm": "way/363710498",
+   "name": "Роял Плаза",
+   "name_en": "Royal Plaza",
+   "stars": "3",
+   "address": "Սարյանի փողոց 9",
+   "lat": 40.186494,
+   "lon": 44.508778,
+   "notable": 5
+  },
+  {
+   "osm": "way/475433309",
+   "name": "Хилтон",
+   "name_en": "DoubleTree by Hilton Hotel Yerevan City Centre",
+   "stars": "4",
+   "address": null,
+   "lat": 40.172066,
+   "lon": 44.508356,
+   "notable": 7
+  },
+  {
+   "osm": "way/498264543",
+   "name": "\"Messier 53 Yerevan\" Hotel",
+   "name_en": "\"Messier 53 Yerevan\" Hotel",
+   "stars": "4",
+   "address": "Վարդանանց փողոց 15/4",
+   "lat": 40.17509,
+   "lon": 44.521195,
+   "notable": 6
+  }
+ ]
+}

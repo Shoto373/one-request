@@ -1,0 +1,127 @@
+# Трек A — каталог и расчёт плана
+
+Маленький согласованный каталог (3 города отправления × 8 направлений) и детерминированные
+инструменты поверх него: поиск предложений (`Offer`), сборка комплекта, проверки состыковок.
+
+## Что лежит в репозитории
+
+| Путь | Что это |
+|---|---|
+| `app/catalog/models.py` | Pydantic-модели каталога и `Offer` (контракт п.4 архитектуры) |
+| `app/catalog/store.py` | `Catalog.load()` / `get_catalog()` — каталог в памяти с индексами |
+| `app/tools/search.py` | `search_transport`, `search_hotels`, `search_transfers` → `list[Offer]` |
+| `app/planning/models.py` | `Bundle`, `Check`, `CheckOption`, `Claim` (п.6) — TripState импортирует их отсюда |
+| `app/planning/validate.py` | `validate_plan` v0 (п.7) |
+| `app/planning/build.py` | `build_bundles` v0: один комплект — самый дешёвый выполнимый |
+| `data/seed/*.json` | каталог (JSON-массив, один объект на строку) + `meta.json` |
+| `data/examples/*.json` | реальные ответы инструментов для UI и моков (в БД не сидятся) |
+| `pipeline/` | офлайн-сбор (`fetch`) и генерация (`build`, `examples`) |
+| `pipeline/snapshots/` | компактные выгрузки реальных данных; генерация читает только их |
+| `tests/test_catalog.py` | проверки сида, контракта Offer и сценариев |
+
+## Как пересобрать
+
+```bash
+pip install -r pipeline/requirements.txt
+python -m pipeline.build        # snapshots -> data/seed (офлайн, детерминированно, ~2 с)
+python -m pipeline.examples     # data/examples
+python -m pytest tests
+python -m pipeline.fetch        # только если нужно обновить реальные данные (сеть)
+```
+
+`random seed = 42`, у каждой сущности свой поток случайных чисел: добавление отеля не меняет рейсы.
+Два запуска `pipeline.build` дают побайтово одинаковые файлы. При `docker compose up` ничего не скачивается.
+
+Overpass по HTTPS из некоторых сетей сбрасывается: `pipeline/sources.py` ходит на него по HTTP
+и с ретраями (сервер часто перегружен, сбор OSM занимает 10–20 минут).
+
+## Каталог (`data/seed`)
+
+| Файл | Объект | Кол-во | Источник |
+|---|---|---|---|
+| `cities.json` | `City` | 11 | Wikidata (координаты, население, описание) + справочник виз для граждан РФ |
+| `hubs.json` | `Hub` | 21 | OurAirports (14 аэропортов) + Wikidata (7 вокзалов) |
+| `climate.json` | `CityClimate` | 8 | Open-Meteo: воздух 2021–2025, море (Marine) 2023–2025 |
+| `hotels.json` | `Hotel` | 56 | **гибрид**: название и координаты — OSM, всё остальное сгенерировано |
+| `flights.json` | `Flight` | ~11.6k | **синтетика** по реальной геометрии аэропортов |
+| `trains.json` | `Train` | ~1.5k | **синтетика** на реальных вокзалах |
+| `transfers.json` | `TransferRoute` | 283 | **синтетика** по реальному расстоянию хаб ↔ отель |
+| `meta.json` | `SeedMeta` | 1 | окно дат, счётчики, реестр крайних случаев, источники |
+
+Города отправления: `MOW`, `LED`, `SVX`. Направления: `AER` Сочи, `KGD` Калининград, `KZN` Казань,
+`IST` Стамбул, `AYT` Анталья, `SSH` Шарм-эль-Шейх, `DXB` Дубай, `EVN` Ереван. id города = код IATA города.
+
+Транспорт сгенерирован на окно **2026-10-26 … 2027-01-15** (`meta.window`, конец не включён).
+Время полёта = расстояние / 750 км/ч + 40 мин. Поезда: Москва↔Казань, Москва↔Сочи/Адлер,
+СПб↔Москва, Екатеринбург↔Казань.
+
+Синтетику обязательно маркируем на карточках («сгенерированные условия»): у каждого объекта и
+`Offer` есть `synthetic: true` и `source_refs` (`osm:node/…`, `gen:hotels@seed42`, `flight:<id>`).
+
+### Лицензии и атрибуция (нужно показать в UI/README)
+
+- OpenStreetMap — ODbL: «© участники OpenStreetMap».
+- Open-Meteo — CC BY 4.0: «Weather data by Open-Meteo.com».
+- Wikidata — CC0, OurAirports — public domain.
+
+## Контракт `Offer` (п.4)
+
+- `total_rub == unit_price_rub × units × quantity + Σ variant.extras[].price_rub` — проверяется валидатором.
+- Отель: `price_unit=per_room_night`, `units` = ночи, `quantity` = номера, `unit_price_rub` = средняя цена ночи
+  (по ночам — `variant.nightly_rub`). Цена номера покрывает до 2 гостей; гости сверх двух — в `extras`
+  (дети младше `child_free_age` бесплатно), животное — в `extras`.
+- Рейс / поезд: `per_person`, `units` = платные места (младенцы до 2 лет и дети до 5 лет в поезде без места бесплатно).
+- Трансфер: такси/минивэн `per_vehicle` (`quantity` = машины), шаттл/автобус `per_person`.
+- `cancel_policy.free_until = null` — бесплатной отмены нет; `penalty_rub` — сколько теряется при отмене.
+  Для тарифов с возвратом (рейс «Гибкий», поезд) `penalty_rub` = сбор за возврат.
+- `times` — ISO-время с часовым поясом. Дата заезда отеля — локальная дата города.
+- `capacity` — на какой состав рассчитано предложение; вместимость номеров/машин проверена при поиске.
+- `variant` — описательные поля по виду (`title`, `hotel_name`, `room_type`, `tariff`, `fare`, `car_class`,
+  `mode`, `from_hub`/`to_hub`, `direction`, `extras` …). Всегда есть `title` для карточки.
+
+## API для трека B
+
+```python
+from datetime import date
+from app.catalog.models import Party, Pet
+from app.catalog.store import get_catalog
+from app.planning.build import TripQuery, build_bundles
+from app.tools.search import search_hotels, search_transfers, search_transport
+
+cat = get_catalog()                       # SEED_DIR или <repo>/data/seed
+party = Party(adults=2, children_ages=[5], pets=[Pet(kind="dog", weight_kg=7)])
+search_transport(cat, "MOW", "AYT", date(2026, 11, 12), party)            # рейсы + поезда, дешевле первыми
+search_hotels(cat, "AYT", date(2026, 11, 12), date(2026, 11, 19), party, cheapest_per_hotel=True)
+search_transfers(cat, "AYT", "h_AYT_06", party, at=arrival_dt, direction="to_hotel")
+res = build_bundles(cat, TripQuery("MOW", "AER", date(2026, 11, 10), date(2026, 11, 17), Party(adults=2)))
+res.bundles      # [Bundle] — 0 или 1 комплект в v0
+res.notes        # почему вариантов нет (для честного ответа)
+res.cheapest_total_rub  # минимум без учёта бюджета («+N ₽ к бюджету»)
+```
+
+`TripQuery.kinds=("train",)` — только поезда («поездом в Казань»).
+Нужные зависимости в образе `app`: `pydantic>=2.11`, `tzdata`.
+
+## Крайние случаи (A3)
+
+Полный реестр с id объектов — `data/seed/meta.json` → `edge_cases`.
+
+| id | Что | Где |
+|---|---|---|
+| `ec_night_arrival` | ночной прилёт на следующий день | SVX→AYT 22:30 → 01:20, SVO→AER 23:55 → 02:25, DME→KGD 23:40 → 00:50, поезд 104В в Адлер 03:44 |
+| `ec_aer_no_night_reception`, `ec_ayt_no_night_reception` | нет круглосуточной стойки, ночью не заселиться → `block` | самый дешёвый отель Сочи и Антальи |
+| `ec_kgd_keybox` | стойка закрывается, но есть ключница → `warn` | Калининград |
+| `ec_no_pets_hotels` | отели без животных | в каждом направлении |
+| `ec_no_pets_transfer` | ни один трансфер не берёт животных | Шарм-эль-Шейх, Дубай |
+| `ec_dxb_pets`, `ec_n4_pets` | перевозчик не берёт животных | все рейсы в ОАЭ, чартер Nordwind |
+| `ec_ayt_closed_season` | отели закрыты с 1 ноября | 2 курорта Антальи |
+| `ec_evn_sold_out` | направление без вариантов на часть дат | Ереван, ночи 20–23.11.2026 |
+| `ec_svx_ayt_program`, `ec_ssh_svx_days`, `ec_window_end` | даты вне расписания | Екб→Анталья после 15.11 только ср/вс, Екб→Шарм вт/сб, вне окна каталога |
+| `ec_night_public` | ночью нет автобуса и шаттла | все города |
+| `ec_budget_dxb` | бюджет невыполним | «Дубай на неделю на троих за 30 000» |
+
+## Отклонения от текста архитектуры (на согласование)
+
+- `Check` дополнен необязательным `refs: list[str]` — ссылки на данные, как у `Claim`.
+- В `early_checkin` поле цены называется `price_rub` (единый суффикс `_rub`), ключ `from` сохранён.
+- `Bundle` / `Check` / `Claim` определены в `app/planning/models.py`; TripState (трек B) импортирует их.
