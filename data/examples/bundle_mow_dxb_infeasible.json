@@ -15,7 +15,12 @@
     "kinds": [
       "flight",
       "train"
-    ]
+    ],
+    "max_stops": null,
+    "max_travel_min": null,
+    "limits_hard": false,
+    "dates_hard": false,
+    "dest_hard": false
   },
   "bundles": [],
   "notes": [

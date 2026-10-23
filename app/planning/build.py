@@ -76,12 +76,47 @@ def _tradeoffs(items: list[Offer]) -> list[Claim]:
     return out
 
 
+def fits_limits(o: Offer, q: TripQuery) -> bool:
+    if q.max_stops is not None and o.variant.get("stops", 0) > q.max_stops:
+        return False
+    return q.max_travel_min is None or o.variant.get("duration_min", 0) <= q.max_travel_min
+
+
+def limits_text(q: TripQuery) -> str:
+    parts = []
+    if q.max_stops == 0:
+        parts.append("без пересадок")
+    if q.max_travel_min is not None:
+        parts.append(f"в пути до {q.max_travel_min // 60} ч")
+    return ", ".join(parts)
+
+
 def build_trip_bundles(cat: Catalog, q: TripQuery) -> BuildResult:
+    """Soft travel limits are tried first and dropped (with a note) if nothing fits; hard ones never."""
+    if q.max_stops is None and q.max_travel_min is None:
+        return _build(cat, q, limited=False)
+    res = _build(cat, q, limited=True)
+    if res.bundles or q.limits_hard:
+        if not res.bundles:
+            res.notes.append(f"Нет вариантов с ограничением «{limits_text(q)}».")
+        return res
+    relaxed = _build(cat, q, limited=False)
+    if relaxed.bundles:
+        relaxed.notes.append(f"Вариантов «{limits_text(q)}» нет — показан ближайший без этого ограничения.")
+        relaxed.bundles[0].risks.append(Claim(text=f"Не выполнено пожелание «{limits_text(q)}».",
+                                              refs=[f"offer:{relaxed.bundles[0].items[0].offer_id}"]))
+    return relaxed
+
+
+def _build(cat: Catalog, q: TripQuery, limited: bool) -> BuildResult:
     notes: list[str] = []
     if q.return_date <= q.depart_date:
         return BuildResult([], ["Дата обратной дороги должна быть позже даты отправления."])
-    outs = search_transport(cat, q.origin_city, q.dest_city, q.depart_date, q.party, q.kinds)[:TOP_TRANSPORT]
-    backs = search_transport(cat, q.dest_city, q.origin_city, q.return_date, q.party, q.kinds)[:TOP_TRANSPORT]
+    outs = search_transport(cat, q.origin_city, q.dest_city, q.depart_date, q.party, q.kinds)
+    backs = search_transport(cat, q.dest_city, q.origin_city, q.return_date, q.party, q.kinds)
+    if limited:
+        outs, backs = [o for o in outs if fits_limits(o, q)], [o for o in backs if fits_limits(o, q)]
+    outs, backs = outs[:TOP_TRANSPORT], backs[:TOP_TRANSPORT]
     if not outs:
         notes.append(f"Нет рейсов и поездов {q.origin_city}→{q.dest_city} на {q.depart_date:%d.%m} под этот состав.")
     if not backs:

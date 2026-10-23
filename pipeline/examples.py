@@ -14,7 +14,9 @@ from pathlib import Path
 
 from app.catalog.models import Party, Pet
 from app.catalog.store import Catalog
+from app.planning.alternatives import trip_alternatives
 from app.planning.build import build_trip_bundles
+from app.planning.destinations import suggest_destinations_report
 from app.planning.models import bundle_to_wire
 from app.planning.query import TripQuery
 from app.tools.search import search_hotels, search_transfers, search_transport
@@ -32,6 +34,12 @@ SCENARIOS = {
     "bundle_mow_dxb_infeasible.json": TripQuery("MOW", "DXB", date(2026, 11, 10), date(2026, 11, 17), Party(adults=3),
                                                 budget_rub=30_000, budget_hard=True),
 }
+
+
+VAGUE = {"origin": "Москва", "destination_type": "тёплое море", "month": "ноябрь", "budget": "недорого",
+         "children": 1, "flight_duration": "без долгих перелётов"}
+DXB_30000 = {"origin": "Москва", "destination": "Дубай", "dates": {"start": "2026-11-10", "end": "2026-11-17"},
+             "adults": 3, "budget_total_rub": 30000}
 
 
 def dump(name: str, data) -> None:
@@ -52,6 +60,12 @@ def main() -> None:
             "notes": res.notes,
             "cheapest_total_rub": res.cheapest_total_rub,
         })
+    # Sprint 2 checkpoint: vague request -> destinations; impossible request -> two minimal changes.
+    dump("destinations_vague_sea.json", {
+        "requirements": VAGUE,
+        **suggest_destinations_report(VAGUE),
+    })
+    dump("changes_dxb_30000.json", {"requirements": DXB_30000, "changes": trip_alternatives(DXB_30000)})
     party = Party(adults=2)
     flights = search_transport(cat, "MOW", "AER", date(2026, 11, 10), party, ("flight",))
     hotels = search_hotels(cat, "AER", date(2026, 11, 10), date(2026, 11, 17), party, cheapest_per_hotel=True)

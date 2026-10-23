@@ -13,6 +13,8 @@
 | `app/planning/models.py` | `Bundle`, `Check`, `CheckOption`, `Claim` (п.6) — TripState импортирует их отсюда |
 | `app/planning/validate.py` | `validate_plan` v0 (п.7) |
 | `app/planning/build.py` | `build_bundles` v0: один комплект — самый дешёвый выполнимый |
+| `app/planning/destinations.py` | `suggest_destinations`: только выполнимые направления, скоринг с разложением |
+| `app/planning/alternatives.py` | минимальные изменения для невыполнимого запроса |
 | `data/seed/catalog/*.json` | каталог (JSON-массив, один объект на строку) + `meta.json`; в подпапке, чтобы `app.db.load_seed` (трек B) его не трогал |
 | `data/examples/*.json` | реальные ответы инструментов для UI и моков (в БД не сидятся) |
 | `pipeline/` | офлайн-сбор (`fetch`) и генерация (`build`, `examples`) |
@@ -127,6 +129,45 @@ res.cheapest_total_rub  # минимум без учёта бюджета («+N 
 ```
 
 `TripQuery.kinds=("train",)` — только поезда («поездом в Казань»).
+
+## Направления и невыполнимые запросы (спринт 2)
+
+| Функция | Для чего |
+|---|---|
+| `app.planning.destinations.suggest_destinations(requirements, state)` | `list[dict]` для `TripState.destinations`: топ-3 **выполнимых** направления |
+| `app.planning.destinations.suggest_destinations_report(requirements, state)` | `{options, rejected, assumptions, changes, problems}` — всё сразу, для честного ответа |
+| `app.planning.alternatives.trip_alternatives(requirements, state)` | два минимальных изменения для конкретной поездки без подходящего комплекта |
+| `app.tools.climate.get_climate(cat, city_id, month)` | климат месяца из seed (Open-Meteo); ссылка — `climate:AYT:11.sea_temp` |
+
+**`suggest_destinations`.** Для каждого из 8 направлений реально запускается `build_trip_bundles` на 4 стартовых
+датах месяца (10, 17, 3, 24), берётся самый дешёвый выполнимый комплект. Направления без комплекта уходят в
+`rejected` с причиной. Скоринг 0…1 по факторам `weather`, `price`, `travel`, `visa`, `match`. Веса смещаются
+от пожеланий: «недорого» или бюджет — цена важнее, «без долгих перелётов» — дорога, «море/тепло» — погода.
+Направления с тёплым пляжным морем (≥ 21°C) при запросе «море» всегда выше остальных.
+
+Опция направления: `id`, `name`, `country`, `feasible`, `est_total_rub`, `dates`, `nights`, `travel`
+(`kind`, `duration_min`, `stops`, `title`), `climate`, `visa`, `score`, `score_breakdown`
+(`factor`, `weight`, `value`, `contribution`, `text`, `refs`), `why` и `risks` (Claim со ссылками),
+`bundle` (готовый комплект, `id = b_<город>`), `rank`, `assumptions`.
+
+Что понимается из требований: `origin`; `month` или `dates` («ноябрь», «2026-11», `{start, end}`); `nights`
+(«неделя», «10 дней», «выходные»; по умолчанию 7 — это видно в `assumptions`); состав (без `adults` — 2 взрослых,
+предположение); `budget` (число или «недорого»); `transport`; «без долгих перелётов» → до 5 ч в одну сторону;
+«без пересадок» → `max_stops=0`; ключевые слова о море, тепле, культуре, еде, горах, дайвинге, «всё включено».
+Жёсткое «море» (`kind: hard`) отбрасывает направления без тёплого пляжного моря.
+
+**Мягкие и жёсткие ограничения дороги.** Мягкие «без пересадок» и «до N часов» сначала применяются. Если с
+ними ничего нет, комплект собирается без них, а в `risks` пишется «Не выполнено пожелание…». Жёсткие не снимаются.
+
+**Минимальные изменения.** Если комплекта нет или он дороже бюджета, по одному ослабляется: даты ±1…3 дня,
+поездка на 1–3 ночи короче, снять жёсткое ограничение дороги, разрешить другой транспорт, другое направление,
+бюджет. Каждый вариант собирается по-настоящему. Возвращаются 2 лучших изменения разных видов:
+сначала те, что не трогают hard-требования, затем меньший перерасход бюджета, затем меньшее изменение.
+Поля: `kind`, `text` («Даты на 3 дня позже: 23.11–26.11 — 50 620 ₽»), `total_rub`, `over_budget_rub`,
+`needs_consent` (затрагивает hard), `change` (`key`, `from`, `to` — под команду правки требования), `bundle`.
+Сами изменения не применяются: их предлагают пользователю.
+
+Примеры: `data/examples/destinations_vague_sea.json`, `data/examples/changes_dxb_30000.json`.
 
 ## Крайние случаи (A3)
 
