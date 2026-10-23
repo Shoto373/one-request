@@ -5,7 +5,7 @@
  * невыполнимый запрос → «вариантов нет, вот минимальные изменения». Данные вымышленные.
  */
 import type {
-  Bundle, Cart, CartIn, ChatMessage, CheckoutIn, CommandIn, DestinationOption, MessageIn, Offer, Order, Relaxation,
+  Bundle, Cart, CartIn, ChatMessage, CheckoutIn, CommandIn, DestinationOption, MessageIn, Offer, Order, ProposedChange,
   Requirement, SessionCreated, SessionView, StreamEvent, TraceStep, TripState,
 } from './types'
 import type { Api } from './client'
@@ -85,21 +85,21 @@ function bundlesSochi(): Bundle[] {
 const DESTINATIONS: DestinationOption[] = [
   {
     id: 'AYT', name: 'Анталья', country: 'Турция', feasible: true, est_total_rub: 142000,
-    climate: { month: 11, air_temp_day: 22, sea_temp: 22, rainy_days: 6 }, travel: { kind: 'flight', minutes: 245, direct: true },
+    climate: { month: 11, air_temp_day: 22, sea_temp: 22, rainy_days: 6 }, travel: { kind: 'flight', duration_min: 245, stops: 0, title: 'Pegasus PC 395' },
     visa: { regime: 'visa_free', note: 'до 60 дней, загранпаспорт' }, tags: ['море', 'пляж', 'всё включено'],
     why: [{ text: 'Море +22 °C — ещё купаются', refs: ['climate:AYT:11.sea_temp'] }, { text: 'Прямой рейс 4 ч 05 мин', refs: ['offer:flight'] }, { text: 'Много отелей с детским клубом', refs: ['catalog:hotels:AYT'] }],
     risks: [{ text: 'В ноябре 6 дождливых дней', refs: ['climate:AYT:11.rainy_days'] }],
   },
   {
     id: 'SSH', name: 'Шарм-эль-Шейх', country: 'Египет', feasible: true, est_total_rub: 168000,
-    climate: { month: 11, air_temp_day: 29, sea_temp: 26, rainy_days: 0 }, travel: { kind: 'flight', minutes: 320, direct: true },
+    climate: { month: 11, air_temp_day: 29, sea_temp: 26, rainy_days: 0 }, travel: { kind: 'flight', duration_min: 320, stops: 0, title: 'Azur Air ZF 676' },
     visa: { regime: 'visa_on_arrival', note: 'виза по прилёте, 25 $' }, tags: ['море', 'риф', 'жара'],
     why: [{ text: 'Самое тёплое море из вариантов, +26 °C', refs: ['climate:SSH:11.sea_temp'] }, { text: 'Дождей почти нет', refs: ['climate:SSH:11.rainy_days'] }],
     risks: [{ text: 'Перелёт 5 ч 20 мин — длиннее, чем вы хотели', refs: ['offer:flight'] }, { text: 'Виза по прилёте — очередь в аэропорту', refs: ['visa:SSH'] }],
   },
   {
     id: 'AER', name: 'Сочи', country: 'Россия', feasible: true, est_total_rub: 96000,
-    climate: { month: 11, air_temp_day: 15, sea_temp: 16, rainy_days: 12 }, travel: { kind: 'flight', minutes: 155, direct: true },
+    climate: { month: 11, air_temp_day: 15, sea_temp: 16, rainy_days: 12 }, travel: { kind: 'flight', duration_min: 155, stops: 0, title: 'Аэрофлот SU 1120' },
     visa: { regime: 'domestic' }, tags: ['море', 'горы', 'без загранпаспорта'],
     why: [{ text: 'Дешевле всех — около 96 000 ₽ на троих', refs: ['estimate:AER'] }, { text: 'Лететь 2 ч 35 мин, можно поездом', refs: ['offer:flight'] }],
     risks: [{ text: 'Море +16 °C — купаться холодно', refs: ['climate:AER:11.sea_temp'] }, { text: '12 дождливых дней', refs: ['climate:AER:11.rainy_days'] }],
@@ -125,17 +125,16 @@ function think(s: MockSession, text: string): Turn {
 
   // невыполнимый запрос
   if (/дуба/.test(t) && /30\s*(000|тыс)/.test(t)) {
-    const relaxations: Relaxation[] = [
-      { id: 'r-budget', key: 'budget_total_rub', value: 350000, text: 'Поднять бюджет до 350 000 ₽', est_total_rub: 349500 },
-      { id: 'r-dest', key: 'destination', value: 'AYT', text: 'Анталья вместо Дубая — от 132 000 ₽ на троих', est_total_rub: 132000 },
+    const proposed_changes: ProposedChange[] = [
+      { id: 'alt-destination-1', kind: 'destination', label: 'Другое направление — Сочи — 53 786 ₽ (+23 786 ₽ к бюджету)', total_rub: 53786, over_budget_rub: 23786, needs_consent: false, changes: [{ key: 'destination', from: 'DXB', to: 'AER', to_name: 'Сочи' }] },
+      { id: 'alt-budget-2', kind: 'budget', label: 'Поднять бюджет до 349 500 ₽ — Дубай, как вы хотели', total_rub: 349500, over_budget_rub: 319500, needs_consent: true, changes: [{ key: 'budget_total_rub', from: 30000, to: 349500 }] },
     ]
     return {
-      steps: [step('llm', 'parse_request', { text }), step('tool', 'build_bundles', { dest: 'DXB', budget: 30000 }, { bundles: 0 }), step('tool', 'explain_no_bundles', {}, { cheapest_total_rub: 349500 }), step('tool', 'suggest_relaxations', {}, { count: 2 })],
+      steps: [step('llm', 'parse_request', { text }), step('tool', 'build_bundles', { dest: 'DXB', budget: 30000 }, { bundles: 0 }), step('tool', 'explain_no_bundles', {}, { cheapest_total_rub: 349500 }), step('tool', 'suggest_destinations', {}, { alternatives: 2 })],
       patch: {
         stage: 'select',
         requirements: [req('origin', 'Москва', 'hard', 'Из Москвы'), req('destination', 'DXB', 'hard', 'Дубай', 'Дубай'), req('nights', 7, 'hard', '7 ночей', 'на неделю'), req('travelers', { adults: 3 }, 'hard', '3 взрослых', 'на троих'), req('budget_total_rub', 30000, 'hard', 'Бюджет до 30 000 ₽', 'за 30 000')],
-        bundles: [], destinations: [], open_questions: [], relaxations,
-        no_options_reasons: ['Самая дешёвая поездка в Дубай на троих — 349 500 ₽: только перелёт стоит от 186 000 ₽.'],
+        bundles: [], destinations: [], open_questions: [], proposed_changes,
       },
       reply: 'Честно: под все условия вариантов нет — неделя в Дубае на троих стоит от 349 500 ₽. Бюджет сам не повышаю. Предлагаю два минимальных изменения — выберите, если подходит.',
     }
@@ -187,7 +186,7 @@ function think(s: MockSession, text: string): Turn {
       : [req('destination', 'AER', 'hard', 'Сочи', text)]
     return {
       steps: [step('llm', 'parse_request', { text }), step('tool', 'search_transport', { from: 'MOW', to: 'AER' }, { offers: 14 }), step('tool', 'search_hotels', { city: 'AER', nights: 7 }, { offers: 9 }), step('tool', 'build_bundles', {}, { bundles: 2 }), step('tool', 'validate_plan', {}, { warn: 1, block: 0 })],
-      patch: { stage: 'assemble', requirements: upsert(st.requirements, reqs), destinations: [], open_questions: [], relaxations: [], no_options_reasons: [], bundles: bundlesSochi() },
+      patch: { stage: 'assemble', requirements: upsert(st.requirements, reqs), destinations: [], open_questions: [], proposed_changes: [], bundles: bundlesSochi() },
       reply: 'Собрал два проверенных комплекта на 10–17 ноября: «дешевле» — поездом, «быстрее» — самолётом. В обоих вы будете в отеле раньше заселения — показал варианты.',
     }
   }
@@ -252,25 +251,22 @@ export const mockApi: Api = {
       case 'remove_requirement':
         turn = { steps: [step('state', 'remove_requirement', p)], patch: { requirements: s.state.requirements.filter((r) => r.key !== p.key) }, reply: 'Убрал это условие — план перепроверю с учётом изменения.' }
         break
-      case 'confirm_requirement':
-        turn = { steps: [step('state', 'confirm_requirement', p)], patch: { requirements: s.state.requirements.map((r) => (r.key === p.key ? { ...r, kind: 'hard', source: 'user_edit' } : r)) }, reply: 'Отлично, теперь это ваше требование, а не моя догадка.' }
+      case 'remove_assumption':
+        turn = { steps: [step('state', 'remove_assumption', p)], patch: { requirements: s.state.requirements.filter((r) => r.key !== p.key), suppressed_assumptions: [...(s.state.suppressed_assumptions ?? []), p.key] }, reply: 'Понял, эту догадку больше не учитываю.' }
         break
       case 'edit_requirement':
-        turn = { steps: [step('state', 'edit_requirement', p)], patch: { requirements: s.state.requirements.map((r) => (r.key === p.key ? { ...r, value: p.value, kind: 'hard', source: 'user_edit', label: String(p.value) } : r)) }, reply: 'Исправил. Если это меняет расчёт — пересоберу план.' }
+        turn = { steps: [step('state', 'edit_requirement', p)], patch: { requirements: s.state.requirements.map((r) => (r.key === p.key ? { ...r, value: p.value, kind: (p.kind as Requirement['kind']) ?? 'hard', source: 'user_edit', label: p.label ?? r.label } : r)) }, reply: 'Зафиксировал — теперь это ваше требование, а не моя догадка.' }
         break
       case 'select_destination':
         turn = think(s, 'выбираю Сочи')
         break
-      case 'apply_relaxation': {
-        const r = s.state.relaxations?.find((x) => x.id === p.relaxation_id)
-        turn = { steps: [step('state', 'apply_relaxation', p), step('tool', 'build_bundles', {}, { bundles: 2 })], patch: { relaxations: [], no_options_reasons: [], stage: 'assemble', bundles: bundlesSochi() }, reply: `Принято: ${r?.text ?? 'изменение'}. Собрал варианты (в моке — на примере Сочи).` }
+      case 'accept_alternative': {
+        const r = s.state.proposed_changes?.find((x) => x.id === p.alternative_id)
+        turn = { steps: [step('tool', 'accept_alternative', p), step('tool', 'build_bundles', {}, { bundles: 2 })], patch: { proposed_changes: [], stage: 'assemble', bundles: bundlesSochi() }, reply: `Принято: ${r?.label ?? 'изменение'}. Собрал варианты (в моке — на примере Сочи).` }
         break
       }
-      case 'answer_question':
-        turn = think(s, String(p.value))
-        break
       default:
-        err(404, 'unknown_command', 'Команда не поддерживается')
+        err(422, 'validation', `unsupported command type: ${body.type}`)
     }
     await emitTurn(s, turn, null, onEvent)
   },

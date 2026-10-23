@@ -77,7 +77,7 @@ export default function TripPage() {
               busy={s.busy}
               disabled={!s.sessionId}
               onSend={s.send}
-              onAnswer={(q, v) => s.act('answer_question', { key: q.key, value: v }, v)}
+              onAnswer={(_q, v) => s.send(v)}
             />
           </div>
         </section>
@@ -87,11 +87,19 @@ export default function TripPage() {
             state={s.state}
             busy={s.busy}
             checkoutBusyId={checkoutBusy}
-            onEditRequirement={(r, text) => s.act('edit_requirement', { key: r.key, value: text }, `Исправь: ${reqLabel(r)} → ${text}`)}
-            onRemoveRequirement={(r) => s.act('remove_requirement', { key: r.key }, `Убери условие: ${reqLabel(r)}`)}
-            onConfirmRequirement={(r) => s.act('confirm_requirement', { key: r.key }, `Да, это верно: ${reqLabel(r)}`)}
+            // правка — свободным текстом: агент сам разберёт значение (бюджет, даты, состав)
+            onEditRequirement={(r, text) => s.send(`Исправь: ${reqLabel(r)} → ${text}`)}
+            onRemoveRequirement={(r) =>
+              r.kind === 'assumption'
+                ? s.act('remove_assumption', { key: r.key }, `Не учитывай: ${reqLabel(r)}`)
+                : s.act('remove_requirement', { key: r.key }, `Убери условие: ${reqLabel(r)}`)
+            }
+            // подтвердить догадку = сделать её обязательной с тем же значением
+            onConfirmRequirement={(r) =>
+              s.act('edit_requirement', { key: r.key, value: r.value, kind: 'hard', label: r.label ?? reqLabel(r) }, `Да, это верно: ${reqLabel(r)}`)
+            }
             onSelectDestination={(d) => s.act('select_destination', { destination_id: d.id }, `Выбираю ${d.name}`)}
-            onApplyRelaxation={(r) => s.act('apply_relaxation', { relaxation_id: r.id }, `Согласен: ${r.text}`)}
+            onApplyChange={(c) => s.act('accept_alternative', { alternative_id: c.id }, `Согласен: ${c.label}`)}
             onCheckout={toCart}
           />
         </section>

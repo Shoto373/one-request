@@ -10,6 +10,9 @@ const ERROR_TEXT: Record<string, string> = {
   llm_request_failed: 'LLM не ответила — попробуйте ещё раз.',
   invalid_llm_response: 'LLM вернула некорректный ответ — попробуйте переформулировать.',
   catalog_integration_missing: 'Агент понял запрос, но каталог поездок не подключён.',
+  a_tool_unavailable: 'Инструмент расчёта поездки недоступен — попробуйте ещё раз.',
+  agent_step_limit: 'Агент не уложился в лимит шагов — уточните запрос.',
+  invalid_command: 'Это действие сейчас недоступно — план мог измениться.',
   agent_error: 'Агент не смог обработать запрос.',
   database_unavailable: 'База данных недоступна.',
 }
@@ -30,9 +33,10 @@ function store(id: string | null) {
   }
 }
 
-/** Команды ещё не поддержаны бэкендом → действие уходит обычным сообщением в чат */
+/** Команду бэкенд не знает (нет эндпоинта или типа) → действие уходит обычным сообщением в чат */
 function unsupported(e: unknown): boolean {
-  return e instanceof ApiError && (e.status === 404 || e.status === 405) && e.detail.code !== 'session_not_found'
+  if (!(e instanceof ApiError) || e.detail.code === 'session_not_found') return false
+  return e.status === 404 || e.status === 405 || (e.status === 422 && e.detail.code === 'validation')
 }
 
 /**

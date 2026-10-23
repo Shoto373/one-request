@@ -17,12 +17,18 @@ export const STEP_LABEL: Record<string, string> = {
   build_bundles: 'Собираю комплекты',
   validate_plan: 'Проверяю стыковки',
   explain_no_bundles: 'Выясняю, почему нет вариантов',
-  suggest_relaxations: 'Ищу минимальные изменения',
+  suggest_destinations_result: 'Получил направления',
+  build_bundles_result: 'Получил комплекты',
+  explain_destination: 'Объясняю выбор по данным',
+  stage_transition: 'Перехожу к следующему этапу',
+  state_diff: 'Обновляю план',
   replan: 'Пересобираю план',
   edit_requirement: 'Меняю требование',
   remove_requirement: 'Убираю требование',
-  confirm_requirement: 'Фиксирую требование',
-  apply_relaxation: 'Применяю изменение',
+  remove_assumption: 'Убираю догадку',
+  select_destination: 'Фиксирую направление',
+  accept_alternative: 'Применяю изменение',
+  select_bundle: 'Фиксирую комплект',
 }
 
 const TYPE_STYLE: Record<string, { label: string; cls: string }> = {
@@ -43,7 +49,8 @@ function Json({ value }: { value: unknown }) {
 function StepRow({ s, n }: { s: TraceStep; n: number }) {
   const [open, setOpen] = useState(false)
   const t = TYPE_STYLE[s.step_type] ?? { label: s.step_type, cls: 'bg-canvas text-ink-grey' }
-  const failed = s.status !== 'ok'
+  // 'calling' — вызов начат (результат идёт следующим шагом), это не ошибка
+  const failed = s.status !== 'ok' && s.status !== 'calling'
   return (
     <li className="relative pl-7">
       <span

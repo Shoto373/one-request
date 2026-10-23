@@ -1,4 +1,4 @@
-import type { DestinationOption, Relaxation, Requirement, Stage, TripState } from '../api/types'
+import type { DestinationOption, ProposedChange, Requirement, Stage, TripState } from '../api/types'
 import BundleCard from './BundleCard'
 import { Destinations, NoOptions } from './Destinations'
 import Icon from './Icon'
@@ -43,13 +43,13 @@ interface Props {
   onRemoveRequirement: (r: Requirement) => void
   onConfirmRequirement: (r: Requirement) => void
   onSelectDestination: (d: DestinationOption) => void
-  onApplyRelaxation: (r: Relaxation) => void
+  onApplyChange: (r: ProposedChange) => void
   onCheckout: (bundleId: string) => void
 }
 
 export default function TripCanvas(p: Props) {
   const s = p.state
-  const noOptions = !!(s?.relaxations?.length || s?.no_options_reasons?.length)
+  const noOptions = !!s?.proposed_changes?.length
   const empty = !s?.requirements.length && !s?.bundles.length && !s?.destinations.length && !noOptions
 
   return (
@@ -70,7 +70,7 @@ export default function TripCanvas(p: Props) {
             />
 
             {noOptions && (
-              <NoOptions reasons={s?.no_options_reasons ?? []} relaxations={s?.relaxations ?? []} busy={p.busy} onApply={p.onApplyRelaxation} />
+              <NoOptions changes={s?.proposed_changes ?? []} busy={p.busy} onApply={p.onApplyChange} />
             )}
 
             {!!s?.destinations.length && <Destinations items={s.destinations} busy={p.busy} onSelect={p.onSelectDestination} />}

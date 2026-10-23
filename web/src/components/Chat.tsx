@@ -189,7 +189,7 @@ function Thinking({ steps }: { steps: TraceStep[] }) {
           <ul className="mt-2 space-y-1">
             {steps.map((s, i) => (
               <li key={i} className="flex items-center gap-2 text-xs text-ink-grey">
-                <Icon name={s.status === 'ok' ? 'check' : 'x'} className={`h-3.5 w-3.5 ${s.status === 'ok' ? 'text-ok' : 'text-bad'}`} strokeWidth={2.4} />
+                <Icon name={s.status === 'error' ? 'x' : 'check'} className={`h-3.5 w-3.5 ${s.status === 'error' ? 'text-bad' : 'text-ok'}`} strokeWidth={2.4} />
                 {STEP_LABEL[s.name] ?? s.name}
               </li>
             ))}

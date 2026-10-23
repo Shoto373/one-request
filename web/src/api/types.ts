@@ -85,7 +85,7 @@ export interface Bundle {
 }
 
 /**
- * Направление-кандидат (спринт 2, A suggest_destinations → B state.destinations).
+ * Направление-кандидат: A app/planning/suggest.py → B state.destinations (только feasible, до 3 шт.).
  * Обязательны id и name; остальное фронт показывает, если пришло.
  */
 export interface DestinationOption {
@@ -96,29 +96,38 @@ export interface DestinationOption {
   /** оценка поездки целиком на весь состав, ₽ */
   est_total_rub?: number
   /** погода в месяц поездки */
-  climate?: { month: number; air_temp_day?: number; sea_temp?: number | null; rainy_days?: number }
+  climate?: { month: number; air_temp_day?: number; air_temp_night?: number; sea_temp?: number | null; rainy_days?: number; sun_hours?: number }
   /** дорога в одну сторону */
-  travel?: { kind: 'flight' | 'train'; minutes: number; direct?: boolean }
+  travel?: { kind: 'flight' | 'train'; duration_min: number; stops?: number; title?: string }
   visa?: { regime: 'domestic' | 'visa_free' | 'visa_on_arrival' | 'evisa' | 'visa_required'; note?: string }
+  nights?: number
+  dates?: { start: string; end: string }
+  /** предположения A при подборе: «без долгих перелётов» = до 5 ч */
+  assumptions?: string[]
   tags?: string[]
   why?: Claim[]
   risks?: Claim[]
+  rank?: number
   [k: string]: unknown
 }
 
 /**
- * «Под все условия вариантов нет — вот минимальные изменения» (спринт 2, A3).
- * Жёсткие требования сами не ослабляются: пользователь выбирает изменение кнопкой.
+ * «Под все условия вариантов нет — вот минимальные изменения»: A app/planning/suggest.py → B state.proposed_changes.
+ * Жёсткие требования сами не ослабляются: пользователь принимает изменение командой accept_alternative.
  */
-export interface Relaxation {
-  id: string
-  /** что меняем: «Бюджет до 360 000 ₽», «Вылет 13 ноября» */
-  text: string
-  /** какое требование трогаем */
-  key: string
-  value?: unknown
-  est_total_rub?: number
+export interface ProposedChange {
+  id: string // alt-budget-1
+  /** «Другое направление — Сочи — 53 786 ₽ (+23 786 ₽ к бюджету)» */
+  label: string
+  kind: string
+  total_rub?: number
+  /** на сколько выходит за бюджет; 0/null — укладывается */
+  over_budget_rub?: number | null
+  /** изменение ослабляет обязательное условие — нужно явное согласие */
+  needs_consent?: boolean
+  changes?: { key: string; from?: unknown; to?: unknown; to_name?: string }[]
   refs?: string[]
+  [k: string]: unknown
 }
 
 export type Stage = 'clarify' | 'inspire' | 'select' | 'compare' | 'assemble' | 'checkout' | 'booked'
@@ -141,10 +150,11 @@ export interface TripState {
   bundles: Bundle[]
   selected_bundle_id: string | null
   history: HistoryEntry[]
-  /** честный ответ на невыполнимый запрос (спринт 2) */
-  relaxations?: Relaxation[]
-  /** причины, почему ничего не собралось (A explain_no_bundles) */
-  no_options_reasons?: string[]
+  /** честный ответ на невыполнимый запрос: подтверждённые минимальные изменения */
+  proposed_changes?: ProposedChange[]
+  /** догадки, которые пользователь убрал — агент их больше не подставляет */
+  suppressed_assumptions?: string[]
+  selected_destination_id?: string | null
 }
 
 // ---------- сессии и поток событий (п.10) ----------
@@ -201,17 +211,15 @@ export interface MessageIn {
   expected_version: number
 }
 
+/** POST /api/sessions/{id}/commands — список и payload как в CommandRequest (app/main.py) */
 export interface CommandIn {
   type:
-    | 'edit_requirement' // {key, value}
+    | 'edit_requirement' // {key, value, kind?: hard|soft, label?}
     | 'remove_requirement' // {key}
-    | 'confirm_requirement' // {key} — предположение → hard
-    | 'answer_question' // {key, value}
+    | 'remove_assumption' // {key}
     | 'select_destination' // {destination_id}
-    | 'apply_relaxation' // {relaxation_id}
-    | 'select_bundle'
-    | 'replace_item'
-    | string
+    | 'accept_alternative' // {alternative_id}
+    | 'select_bundle' // {bundle_id}
   payload: Record<string, unknown>
   expected_version: number
 }

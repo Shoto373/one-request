@@ -1,4 +1,4 @@
-import type { Claim, DestinationOption, Relaxation } from '../api/types'
+import type { Claim, DestinationOption, ProposedChange } from '../api/types'
 import { MONTH_NAME, VISA_LABEL, duration, rub } from '../lib/format'
 import Icon from './Icon'
 
@@ -65,8 +65,8 @@ function DestinationCard({ d, best, busy, onSelect }: { d: DestinationOption; be
           )}
           {d.travel && (
             <span className="chip border-transparent bg-canvas text-ink">
-              <Icon name={d.travel.kind === 'train' ? 'train' : 'plane'} className="h-3.5 w-3.5" /> {duration(d.travel.minutes)}
-              {d.travel.direct ? ', прямой' : ''}
+              <Icon name={d.travel.kind === 'train' ? 'train' : 'plane'} className="h-3.5 w-3.5" /> {duration(d.travel.duration_min)}
+              {d.travel.kind === 'flight' && d.travel.stops === 0 ? ', прямой' : d.travel.stops ? `, пересадок: ${d.travel.stops}` : ''}
             </span>
           )}
           {visa && (
@@ -77,7 +77,10 @@ function DestinationCard({ d, best, busy, onSelect }: { d: DestinationOption; be
         </div>
 
         {d.climate?.month && (
-          <div className="-mt-1 text-[11px] text-ink-muted">погода — средняя в {MONTH_NAME[d.climate.month - 1]}</div>
+          <div className="-mt-1 text-[11px] text-ink-muted">
+            погода — средняя в {MONTH_NAME[d.climate.month - 1]}
+            {d.nights ? ` · ${d.nights} ноч.` : ''}
+          </div>
         )}
 
         <ClaimList items={d.why} kind="why" />
@@ -117,7 +120,7 @@ export function Destinations({ items, busy, onSelect }: { items: DestinationOpti
   )
 }
 
-export function NoOptions({ reasons, relaxations, busy, onApply }: { reasons: string[]; relaxations: Relaxation[]; busy: boolean; onApply: (r: Relaxation) => void }) {
+export function NoOptions({ changes, busy, onApply }: { changes: ProposedChange[]; busy: boolean; onApply: (r: ProposedChange) => void }) {
   return (
     <section className="card overflow-hidden">
       <div className="flex gap-3 border-b border-black/[.05] bg-bad-bg/60 p-4">
@@ -126,15 +129,13 @@ export function NoOptions({ reasons, relaxations, busy, onApply }: { reasons: st
         </span>
         <div>
           <h2 className="text-[17px] font-bold">Под все условия вариантов нет</h2>
-          {reasons.map((r, i) => (
-            <p key={i} className="mt-0.5 text-sm text-ink-grey">{r}</p>
-          ))}
+          <p className="mt-0.5 text-sm text-ink-grey">Агент нашёл минимальные изменения, при которых поездка собирается, и проверил каждое.</p>
           <p className="mt-1 text-xs text-ink-muted">Ваши обязательные условия агент сам не ослабляет — выберите изменение, если оно подходит.</p>
         </div>
       </div>
-      {relaxations.length > 0 && (
+      {changes.length > 0 && (
         <div className="grid gap-3 p-4 sm:grid-cols-2">
-          {relaxations.map((r, i) => (
+          {changes.map((r, i) => (
             <button
               key={r.id}
               onClick={() => onApply(r)}
@@ -143,8 +144,15 @@ export function NoOptions({ reasons, relaxations, busy, onApply }: { reasons: st
             >
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-light text-sm font-bold text-brand">{i + 1}</span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-ink">{r.text}</span>
-                {r.est_total_rub != null && <span className="text-xs text-ink-muted">итого ≈ {rub(r.est_total_rub)}</span>}
+                <span className="block text-sm font-semibold text-ink">{r.label}</span>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                  {r.total_rub != null && <span>итого {rub(r.total_rub)}</span>}
+                  {r.needs_consent && (
+                    <span className="rounded-full bg-warn-bg px-2 py-0.5 font-semibold text-[#8a4b00]" title="Изменение ослабляет ваше обязательное условие">
+                      меняет обязательное условие
+                    </span>
+                  )}
+                </span>
               </span>
               <Icon name="chevron" className="h-4 w-4 text-ink-muted group-hover:text-brand" />
             </button>
