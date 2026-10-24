@@ -81,7 +81,8 @@ def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
             # Inferences never carry a user quote and are labeled as agent-originated.
             req = req.model_copy(update={"source": "agent", "quote": None})
         elif req.kind == "unknown":
-            req = req.model_copy(update={"value": None, "quote": req.quote if req.quote in text else None})
+            # модели присылают unknown без цитаты: None in str раньше ронял весь ход
+            req = req.model_copy(update={"value": None, "quote": req.quote if req.quote and req.quote in text else None})
         valid[req.key] = req
 
     # Guard the common ambiguity rules even if the model returns an invalid parse.

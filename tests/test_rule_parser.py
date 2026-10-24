@@ -59,3 +59,12 @@ async def test_offline_turn_reaches_bundles():
         TripState(session_id=uuid4()), "Из Москвы в Сочи 10–17 ноября 2026, двое взрослых")
     assert trace[0]["name"] == "parse_request_rules"
     assert state.bundles, reply
+
+
+def test_unknown_requirement_without_quote_does_not_crash():
+    """Модели присылают unknown с quote=null — раньше это роняло весь ход TypeError."""
+    from app.agent.requirements import ParsedRequest, validate_extraction
+    from app.state.models import Requirement
+
+    raw = ParsedRequest(requirements=[Requirement(key="dates", value=None, kind="unknown", source="agent", quote=None)])
+    assert validate_extraction(raw, "Хочу в Сочи").requirements[0].key == "dates"
