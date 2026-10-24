@@ -1,6 +1,7 @@
 """Sprint 1 and 2 agent state machine: clarify -> inspire -> select."""
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
 import logging
@@ -347,10 +348,10 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                              "output": diff, "status": "ok"})
         self._record(trace, {"step_type": "tool", "name": "replan", "input": diff, "output": None, "status": "calling"})
         result = dict(await self._call(self.replanner, source_state, diff))
-        bundles = []
-        for raw_bundle in result.get("bundles") or []:
-            bundle = raw_bundle if isinstance(raw_bundle, StateBundle) else StateBundle.model_validate(raw_bundle)
-            bundles.append(await self._complete_bundle_explanation(bundle, state, trace))
+        bundles = list(await asyncio.gather(*(
+            self._complete_bundle_explanation(
+                b if isinstance(b, StateBundle) else StateBundle.model_validate(b), state, trace)
+            for b in result.get("bundles") or [])))
         for bundle in bundles:
             if sum(item.total_rub for item in bundle.items) != bundle.total_rub:
                 raise ValueError(f"Track A replan bundle {bundle.id} total does not match offer totals")
@@ -557,11 +558,9 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         # A hard destination is never silently replaced by another destination.
         if explicit_destination:
             raw_destinations = []
-        candidates = []
-        for raw in raw_destinations[:3]:
-            if raw.get("feasible") is not True:
-                continue
-            candidates.append(await self._enrich_candidate(raw, trace))
+        # объяснения направлений — параллельно: каждое ограничено LLM_EXPLAIN_TIMEOUT_SECONDS
+        candidates = list(await asyncio.gather(*(
+            self._enrich_candidate(raw, trace) for raw in raw_destinations[:3] if raw.get("feasible") is True)))
         alternatives = await self._validated_alternatives(result.alternatives)
         state.destinations = candidates
         state.proposed_changes = alternatives
@@ -590,10 +589,11 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         })
         self._record(trace, {"step_type": "tool", "name": "build_bundles", "input": requirements, "output": None, "status": "calling"})
         bundles = await self._call(self.bundle_builder, requirements, search_state)
-        state.bundles = []
-        for raw_bundle in bundles or []:
-            bundle = raw_bundle if isinstance(raw_bundle, StateBundle) else StateBundle.model_validate(raw_bundle)
-            state.bundles.append(await self._complete_bundle_explanation(bundle, state, trace))
+        # три комплекта объясняются параллельно, а не по очереди (на бесплатных моделях это минуты)
+        state.bundles = list(await asyncio.gather(*(
+            self._complete_bundle_explanation(
+                b if isinstance(b, StateBundle) else StateBundle.model_validate(b), state, trace)
+            for b in bundles or [])))
         for bundle in state.bundles:
             if sum(item.total_rub for item in bundle.items) != bundle.total_rub:
                 raise ValueError(f"Track A bundle {bundle.id} total does not match offer totals")

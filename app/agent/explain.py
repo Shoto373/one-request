@@ -1,6 +1,9 @@
 """Evidence-backed destination claims; LLM may phrase facts, never add them."""
 from __future__ import annotations
 
+import asyncio
+import os
+
 import re
 from typing import Any
 
@@ -31,6 +34,11 @@ class BundleExplanation(BaseModel):
     tradeoffs: list[Claim] = Field(default_factory=list)
     risks: list[Claim] = Field(default_factory=list)
 
+
+
+# Объяснения — только формулировка уже посчитанных фактов: если модель не уложилась,
+# берём детерминированные утверждения, а не держим пользователя минутами.
+EXPLAIN_TIMEOUT = float(os.getenv("LLM_EXPLAIN_TIMEOUT_SECONDS", "20"))
 
 def _numbers(value: Any) -> set[str]:
     if isinstance(value, bool) or value is None:
@@ -165,10 +173,10 @@ Checks: {check_facts}
 Bundle result: {by_ref[bundle_ref].model_dump(mode='json')}
 User requirements: {requirement_facts}
 Available refs: {sorted(allowed_refs)}"""
-    raw = await llm.chat_json(
+    raw = await asyncio.wait_for(llm.chat_json(
         [{"role": "system", "content": system}, {"role": "user", "content": "Explain this selected travel bundle."}],
         BundleExplanation, fast=True,
-    )
+    ), EXPLAIN_TIMEOUT)
     candidate = raw if isinstance(raw, BundleExplanation) else BundleExplanation.model_validate(raw)
     valid: dict[str, list[Claim]] = {}
     for name in ("advantages", "tradeoffs", "risks"):
@@ -212,7 +220,7 @@ async def explain_destination(
         return [], [], {}, {"step_type": "tool_result", "name": "explain", "input": {"destination_id": destination.get("id")}, "output": {"claims": []}, "status": "ok"}
     prompt_facts = [fact.model_dump(mode="json") for fact in facts]
     try:
-        response = await llm.chat_json(
+        response = await asyncio.wait_for(llm.chat_json(
             [
                 {"role": "system", "content": (
                     "Write short Russian recommendation claims using ONLY supplied facts. "
@@ -224,7 +232,7 @@ async def explain_destination(
                 )},
                 {"role": "user", "content": str(prompt_facts)},
             ], Explanation, fast=True,
-        )
+        ), EXPLAIN_TIMEOUT)
         all_claims = response.claims
         if not validate_claims(all_claims, facts):
             raise ValueError("explanation claims contain an unknown ref or unsupported number")
