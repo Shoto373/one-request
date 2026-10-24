@@ -1,0 +1,18 @@
+id: s4_06_yerevan_sold_out
+description: В Ереване нет номеров на 20–23 ноября; агент не выдумывает отель и предлагает сдвиг дат с ценой.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Ереван 20–23 ноября 2026, двое взрослых.
+actions: []
+expected:
+  final_stage: select
+  requirements:
+    - {key: destination, kind: hard, value: Ереван}
+    - {key: dates, kind: hard, value: {start: '2026-11-20', end: '2026-11-23'}}
+    - {key: adults, kind: hard, value: 2}
+  checks: [honest_no_bundle, alternatives_confirmed_by_A, zero_fabricated_bundles]
+fixtures:
+  track_a:
+    expect: no_bundle
+    requirements:
+      - {key: origin, kind: hard, value: Москва}

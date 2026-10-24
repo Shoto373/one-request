@@ -1,0 +1,26 @@
+id: s4_08_family_replan_two_days_later
+description: Семейная поездка сдвигается на два дня; в итоговом снимке нет позиций со старых дат, цена пересчитана.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Анталью 12–19 ноября 2026, двое взрослых и ребёнок 5 лет.
+actions:
+  - {type: command, command: select_bundle, payload: {bundle_id: b1}}
+  - {type: message, text: 'А если на два дня позже?'}
+  - {type: command, command: request_checkout}
+expected:
+  final_stage: checkout
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: destination, kind: hard, value: Анталья}
+    - {key: dates, kind: hard, value: {start: '2026-11-14', end: '2026-11-21'}}
+    - {key: adults, kind: hard, value: 2}
+    - {key: children_ages, kind: hard, value: [5]}
+  checks: [no_stale_offers, dates_match_requirements, party_in_every_offer, snapshot_total_matches_items, prices_recomputed_from_catalog]
+fixtures:
+  track_a:
+    select: b1
+    requirements:
+      - {key: dates, kind: hard, value: {start: '2026-11-12', end: '2026-11-19'}}
+    then:
+      requirements:
+        - {key: dates, kind: hard, value: {start: '2026-11-14', end: '2026-11-21'}}

@@ -1,0 +1,20 @@
+id: s4_02_family_antalya_all_inclusive
+description: Семья с ребёнком 5 лет, строго всё включено; покупка комплекта «удобнее» с детскими местами и номером.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Анталью 12–19 ноября 2026, двое взрослых и ребёнок 5 лет, обязательно всё включено.
+actions:
+  - {type: command, command: select_bundle, payload: {bundle_id: b2}}
+  - {type: command, command: request_checkout}
+  - {type: command, command: pay, payload: {payer: {name: Тест Тестов, email: test@example.com}}}
+expected:
+  final_stage: checkout
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: destination, kind: hard, value: Анталья}
+    - {key: dates, kind: hard, value: {start: '2026-11-12', end: '2026-11-19'}}
+    - {key: adults, kind: hard, value: 2}
+    - {key: children_ages, kind: hard, value: [5]}
+    - {key: meal_preference, kind: hard, value: all_inclusive}
+  checks: [snapshot_total_matches_items, prices_recomputed_from_catalog, party_in_every_offer, dates_match_requirements, lodging_wish_respected, order_snapshot_frozen]
+fixtures: {track_a: {select: b2}}

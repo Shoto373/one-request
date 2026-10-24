@@ -34,6 +34,9 @@ class TripQuery:
     limits_hard: bool = False  # soft limits fall back to any transport (with a note)
     dates_hard: bool = False  # alternatives never move hard dates without consent
     date_flex_days: int = 0  # user-stated flexibility: shifts within it need no consent
+    min_stars: int | None = None  # "не ниже 4 звёзд", "5 звёзд"
+    meal: str | None = None  # minimal meal plan: RO < BB < HB < FB < AI
+    lodging_hard: bool = False  # hard stars/meal filter hotels; soft ones only rank the comfortable bundle
     dest_hard: bool = False
 
 
@@ -202,6 +205,33 @@ def parse_transport(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple[
     return ("flight", "train")
 
 
+MEAL_RANK = {"RO": 0, "BB": 1, "HB": 2, "FB": 3, "AI": 4}
+
+
+def parse_meal(value: Any) -> str | None:
+    text = str(value or "").lower().replace("ё", "е")
+    if re.search(r"all|вс[е] включ|ультра|\bai\b|uai", text):
+        return "AI"
+    if re.search(r"полн\w* пансион|full|\bfb\b", text):
+        return "FB"
+    if re.search(r"полупансион|half|\bhb\b|ужин|dinner", text):
+        return "HB"
+    if re.search(r"завтрак|breakfast|\bbb\b", text):
+        return "BB"
+    return None
+
+
+def parse_lodging(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple[int | None, str | None, bool]:
+    """(min_stars, meal code, hard) from lodging_stars / meal_preference."""
+    stars_key, stars_value = _pick(req, "lodging_stars", "stars", "hotel_stars")
+    stars = parse_int(stars_value) if stars_value is not None else None
+    stars = stars if stars and 1 <= stars <= 5 else None
+    meal_key, meal_value = _pick(req, "meal_preference", "meal", "meals")
+    meal = parse_meal(meal_value)
+    hard = any(k and kinds_by_key.get(k) == "hard" for k, v in ((stars_key, stars), (meal_key, meal)) if v)
+    return stars, meal, hard
+
+
 def requirement_text(req: dict[str, Any]) -> str:
     """All keys and values as one lowercase string, for keyword preferences."""
     return " ".join(f"{k} {v}" for k, v in req.items()).lower().replace("ё", "е")
@@ -315,6 +345,7 @@ def query_from_requirements(
 
     kinds = parse_transport(req, kinds_by_key)
     max_stops, max_travel_min, limits_hard = parse_travel_limits(req, kinds_by_key)
+    min_stars, meal, lodging_hard = parse_lodging(req, kinds_by_key)
 
     if problems:
         return None, problems
@@ -328,4 +359,5 @@ def query_from_requirements(
         max_stops=max_stops, max_travel_min=max_travel_min, limits_hard=limits_hard,
         dates_hard=kinds_by_key.get(dates_key) == "hard", dest_hard=kinds_by_key.get(dest_key) == "hard",
         date_flex_days=parse_int(req.get("date_flex_days")) or 0,
+        min_stars=min_stars, meal=meal, lodging_hard=lodging_hard,
     ), []

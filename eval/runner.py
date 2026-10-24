@@ -21,6 +21,8 @@ from uuid import uuid4
 
 import httpx
 
+from eval.assertions import CHECKS as TRACK_A_CHECKS
+from eval.assertions import run_check as run_track_a_check
 from eval.schema import Scenario, load_scenario
 
 
@@ -65,6 +67,7 @@ class HTTPRuntime:
         self.session_id: str | None = None
         self.trace_id: str | None = None
         self.order_id: str | None = None
+        self.order: dict[str, Any] | None = None
         self.tool_names: set[str] = set()
         self.started_at: float | None = None
         self.first_recommendation_ms: float | None = None
@@ -131,6 +134,23 @@ class HTTPRuntime:
         self._raise(response)
         return response.json()
 
+    async def pay(self, state: dict[str, Any], payload: dict[str, Any]):
+        """Scenario step ``pay``: cart for the selected bundle of this version, then mock checkout."""
+        response = await self.client.post("/api/cart", json={
+            "session_id": self.session_id, "version": state["version"], "bundle_id": state.get("selected_bundle_id"),
+        })
+        self._raise(response)
+        cart = response.json()
+        payer = payload.get("payer") or {"name": "Eval User", "email": "eval@example.com"}
+        response = await self.client.post(f"/api/cart/{cart['cart_id']}/checkout",
+                                          json={"payer": payer, "idempotency_key": f"eval-{uuid4()}"})
+        self._raise(response)
+        self.order_id = response.json()["order_id"]
+        response = await self.client.get(f"/api/orders/{self.order_id}")
+        self._raise(response)
+        self.order = response.json()
+        return self.order
+
     async def get_trace(self):
         response = await self.client.get(f"/api/sessions/{self.session_id}/trace")
         self._raise(response)
@@ -153,7 +173,7 @@ def _requirements_map(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _base_checks(scenario: Scenario, state: dict[str, Any], trace: list[dict[str, Any]],
-                 questions_per_turn: int, total_questions: int):
+                 questions_per_turn: int, total_questions: int, order: dict[str, Any] | None = None):
     results = []
 
     def add(name: str, passed: bool, detail: str = ""):
@@ -244,6 +264,9 @@ def _base_checks(scenario: Scenario, state: dict[str, Any], trace: list[dict[str
                 add(name, bool(implemented[name]()))
             except Exception as exc:
                 add(name, False, type(exc).__name__)
+        elif name in TRACK_A_CHECKS:
+            # Track A snapshot assertions (eval/assertions.py): re-derived from the catalog, never via validate_plan.
+            results.append(run_track_a_check(name, state, order))
         else:
             results.append({"name": name, "status": "blocked", "detail": "no independent checker is implemented for this assertion"})
     return results
@@ -283,7 +306,11 @@ async def run_one(scenario: Scenario, *, mode: str, runtime: Any, max_turns: int
                     break
                 if turns >= max_turns:
                     raise TimeoutError(f"turn limit {max_turns} reached")
-                if action.type == "command":
+                if action.type == "command" and action.command == "pay":
+                    if not hasattr(runtime, "pay"):
+                        raise RuntimeError("runtime cannot pay: scenario step 'pay' needs cart and checkout")
+                    await runtime.pay(state, action.payload)
+                elif action.type == "command":
                     await runtime.send_command(action.command or "", action.payload, state["version"])
                 else:
                     await runtime.send_message(action.text or "", state["version"])
@@ -295,7 +322,8 @@ async def run_one(scenario: Scenario, *, mode: str, runtime: Any, max_turns: int
             trace = trace_obj.get("steps", [])
             return final_state
         await asyncio.wait_for(execution(), timeout=timeout)
-        checks = _base_checks(scenario, final_state, trace, max_questions_per_turn, questions_asked)
+        checks = _base_checks(scenario, final_state, trace, max_questions_per_turn, questions_asked,
+                              getattr(runtime, "order", None))
         failed = [x for x in checks if x["status"] == "failed"]
         blocked = [x for x in checks if x["status"] == "blocked"]
         status = "failed" if failed else "blocked" if blocked else "passed"
@@ -382,7 +410,7 @@ def main():
     parser.add_argument("--timeout", type=float, default=180)
     args = parser.parse_args()
     if not args.scenario_dir:
-        args.scenario_dir = [Path("eval/scenarios"), Path("eval/sprint3")]
+        args.scenario_dir = [Path("eval/scenarios"), Path("eval/sprint3"), Path("eval/sprint4")]
     raise SystemExit(asyncio.run(run(args)))
 
 

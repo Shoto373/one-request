@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 from app.catalog.models import Offer, Party
 from app.catalog.store import Catalog, get_catalog
-from app.planning.build import _assemble, fits_limits
+from app.planning.build import _assemble, fits_limits, hotel_fits
 from app.planning.models import Bundle, Check, Claim, bundle_to_wire, rub
 from app.planning.query import TripQuery, query_from_requirements
 from app.planning.validate import EXIT_MIN, hub_class, split_legs
@@ -265,6 +265,7 @@ def replan_bundle(cat: Catalog, old_bundle_items: list[Offer], q: TripQuery,
         for checkin in checkins:
             if checkin not in hotels_cache:
                 found = search_hotels(cat, q.dest_city, checkin, q.return_date, q.party) if checkin < q.return_date else []
+                found = [h for h in found if hotel_fits(cat, h, q)]
                 hotels_cache[checkin] = sorted(found, key=lambda o: hotel_rank(o, old_map["hotel"]))[:TOP_HOTELS]
             hotels += hotels_cache[checkin]
         for hotel in hotels:

@@ -7,6 +7,7 @@ price, so all three objectives share one search and one lower bound (the plain t
 
 from __future__ import annotations
 
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from app.catalog.models import Offer, Party
@@ -14,13 +15,15 @@ from app.catalog.store import Catalog
 from app.planning.models import Check, Claim, rub
 
 FLEX_WEIGHT = 0.8  # each rouble lost on cancellation counts as 0.8 rouble of price
+UNMET_WISH = 1_000_000  # an unmet stated hotel wish outweighs any price difference
+MEAL_RANK = {"RO": 0, "BB": 1, "HB": 2, "FB": 3, "AI": 4}
 
 
 def _transport(items: list[Offer]) -> list[Offer]:
     return [o for o in items if o.kind in ("flight", "train")]
 
 
-def comfort_penalty(cat: Catalog, items: list[Offer], checks: list[Check], party: Party) -> int:
+def comfort_penalty(cat: Catalog, items: list[Offer], checks: list[Check], party: Party, q: Any = None) -> int:
     """Roubles of discomfort for this party: stops, long travel, night hours, waiting, hotel quality."""
     kids = party.children > 0
     people = party.people
@@ -51,6 +54,12 @@ def comfort_penalty(cat: Catalog, items: list[Offer], checks: list[Check], party
         penalty += int(max(0.0, 9.0 - h.rating) * 3000)
         if (h.stars or 3) < 3:
             penalty += 4000
+        # Stated stars/meal wishes («желательно 5 звёзд», «лучше всё включено») come first for the
+        # comfortable bundle whenever any feasible hotel meets them: a lexicographic, not a price, trade-off.
+        if q is not None and q.min_stars and (h.stars or 0) < q.min_stars:
+            penalty += UNMET_WISH
+        if q is not None and q.meal and MEAL_RANK.get(hotel.variant.get("meal", "RO"), 0) < MEAL_RANK[q.meal]:
+            penalty += UNMET_WISH
         if kids:
             if not (h.kids.kids_club or h.kids.kids_pool):
                 penalty += 6000
@@ -67,7 +76,14 @@ def cancel_loss(items: list[Offer]) -> int:
     return sum(o.cancel_policy.penalty_rub if o.cancel_policy else o.total_rub for o in items)
 
 
-def comfort_label(party: Party, prefer_direct: bool) -> str:
+def comfort_label(party: Party, prefer_direct: bool, q: Any = None) -> str:
+    wishes = []
+    if q is not None and q.min_stars:
+        wishes.append(f"от {q.min_stars}★")
+    if q is not None and q.meal == "AI":
+        wishes.append("всё включено")
+    if wishes:
+        return "удобнее: " + ", ".join(wishes)
     if party.children:
         return "удобнее с ребёнком"
     if party.pets:
@@ -134,6 +150,8 @@ def comfort_phrase(cat: Catalog, items: list[Offer], base: list[Offer]) -> str:
         h, bh = cat.hotels[hotel.item_id], cat.hotels[base_hotel.item_id]
         if h.rating > bh.rating:
             gains.append(f"отель с рейтингом {h.rating:g} вместо {bh.rating:g}")
+        if (h.stars or 0) > (bh.stars or 0):
+            gains.append(f"отель {h.stars}★ вместо {bh.stars}★")
         if (h.kids.kids_club or h.kids.kids_pool) and not (bh.kids.kids_club or bh.kids.kids_pool):
             gains.append("детский клуб в отеле")
     if hotel and base_hotel and hotel.variant.get("meal") != base_hotel.variant.get("meal"):
