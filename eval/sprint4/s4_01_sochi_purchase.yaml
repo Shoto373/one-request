@@ -14,5 +14,5 @@ expected:
     - {key: destination, kind: hard, value: Сочи}
     - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-17'}}
     - {key: adults, kind: hard, value: 2}
-  checks: [snapshot_total_matches_items, offers_exist_in_catalog, prices_recomputed_from_catalog, party_in_every_offer, dates_match_requirements, return_transfer_in_time, night_arrival_has_reception, order_snapshot_frozen]
+  checks: [snapshot_total_matches_items, offers_exist_in_catalog, prices_recomputed_from_catalog, party_in_every_offer, dates_match_requirements, return_transfer_in_time, night_arrival_has_reception, order_snapshot_frozen, single_order_on_double_pay]
 fixtures: {track_a: {select: b1}}

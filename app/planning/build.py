@@ -70,10 +70,11 @@ def _assemble(cat: Catalog, q: TripQuery, out: Offer, hotel: Offer, back: Offer,
     to_hub = _best_transfer(cat, dep_hub, hotel.item_id, q, be_at_hub, "to_hub", prefer_modes.get("to_hub"))
     items = [o for o in (out, to_hotel, hotel, to_hub, back) if o is not None]
     checks = validate_plan(cat, items, q.party, q.budget_rub, q.budget_hard)
+    why = "который берёт животное" if q.party.pets else "в это время"
     if to_hotel is None:
-        checks.append(Check(kind="transfer_fit", status="block", text="Нет трансфера от прибытия до отеля в это время."))
+        checks.append(Check(kind="transfer_fit", status="block", text=f"Нет трансфера от прибытия до отеля {why}."))
     if to_hub is None:
-        checks.append(Check(kind="transfer_fit", status="block", text="Нет трансфера из отеля к отправлению в это время."))
+        checks.append(Check(kind="transfer_fit", status="block", text=f"Нет трансфера из отеля к отправлению {why}."))
     return items, checks
 
 
@@ -245,6 +246,8 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
             # Two check-in dates are tried around midnight arrivals; the wrong one always fails "checkin_date".
             kinds = [k for k, _ in blocks.most_common() if k != "checkin_date" or len(blocks) == 1]
             reasons = ", ".join(CHECK_KIND_RU.get(k, k) for k in kinds)
+            if q.party.pets and "transfer_fit" in kinds:
+                reasons += "; ни один трансфер здесь не берёт животное"
             notes.append(f"Ни одно сочетание транспорта и отеля не прошло проверку ({reasons}).")
         return BuildResult([], notes, cheapest_total_rub=cheapest_any)
 

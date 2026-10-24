@@ -29,6 +29,8 @@ from eval.assertions import CHECKS, run_check
 from eval.schema import Scenario, load_scenario
 
 DEFAULT_DIRS = [Path("eval/scenarios"), Path("eval/sprint3"), Path("eval/sprint4")]
+UNIVERSAL = ["snapshot_total_matches_items", "offers_exist_in_catalog", "prices_recomputed_from_catalog",
+             "party_in_every_offer"]
 
 
 def _requirements(scenario: Scenario, extra: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
@@ -81,6 +83,9 @@ def check_scenario(scenario: Scenario) -> dict[str, Any]:
                 "checks": []}
     cat = get_catalog()
     names = [n for n in scenario.expected.checks if n in CHECKS]
+    if state["bundles"]:
+        # Invariants every bought snapshot must satisfy, whatever the scenario asserts on top.
+        names += [n for n in UNIVERSAL if n not in names]
     checks = [run_check(n, state, None, cat) for n in names]
     expect = (scenario.fixtures.get("track_a") or {}).get("expect", "bundle")
     if expect == "bundle" and not state["bundles"]:

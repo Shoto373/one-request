@@ -25,6 +25,8 @@ WORKDIR /srv
 COPY app/ ./app/
 COPY db/ ./db/
 COPY data/ ./data/
+# сценарии и независимые проверки: нужны рантайму для GET /api/metrics (трек A)
+COPY eval/ ./eval/
 COPY --from=web /src/web/dist ./web/dist
 USER 10001
 EXPOSE 8080
@@ -39,7 +41,6 @@ USER root
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY tests/ ./tests/
-COPY eval/ ./eval/
 USER 10001
 CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"]
 

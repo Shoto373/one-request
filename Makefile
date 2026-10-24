@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps reset test eval-deterministic eval-e2e web-dev web-mock
+.PHONY: up down build logs ps reset test eval eval-deterministic eval-e2e web-dev web-mock
 
 up:            ## собрать и поднять
 	@test -f .env || cp .env.example .env
@@ -23,6 +23,10 @@ test:          ## тесты бэкенда; интеграционные — н
 	-docker compose exec -T db sh -c 'createdb -U "$$POSTGRES_USER" trip_test 2>/dev/null'
 	docker build --target test -t odin-zapros/test:dev .
 	docker run --rm --network odin-zapros_default --env-file .env -e TEST_DATABASE_URL=postgresql://app:app@db:5432/trip_test odin-zapros/test:dev
+
+eval:          ## регрессия: все сценарии через настоящий подбор без LLM + независимые проверки снимка
+	docker build --target test -t odin-zapros/test:dev .
+	docker run --rm odin-zapros/test:dev python -m eval.plan_check --output /tmp/plan_check.json
 
 eval-deterministic: ## фиксированный eval с инжектированным runtime (EVAL_RUNTIME_FACTORY)
 	python -m eval.runner --mode deterministic

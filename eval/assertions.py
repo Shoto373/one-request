@@ -358,6 +358,17 @@ def order_snapshot_frozen(snap: Snapshot, cat: Catalog) -> Result:
         f"status={o.get('status')}, order={o.get('total_rub')}, items={total}"
 
 
+def single_order_on_double_pay(snap: Snapshot, cat: Catalog) -> Result:
+    """Paying twice (same key, new key) returns the first order again: exactly one order exists."""
+    info = (snap.order or {}).get("eval_double_pay")
+    if not info:
+        return None, "повторной оплаты не было"
+    first = info.get("first_order_id")
+    ids = info.get("repeat_order_ids") or []
+    return bool(first) and all(i == first for i in ids) and all(info.get("repeat_replay") or [False]), \
+        f"first={first}, repeats={ids}"
+
+
 CHECKS: dict[str, Callable[[Snapshot, Catalog], Result]] = {
     "snapshot_total_matches_items": snapshot_total_matches_items,
     "snapshot_within_hard_budget": snapshot_within_hard_budget,
@@ -373,6 +384,7 @@ CHECKS: dict[str, Callable[[Snapshot, Catalog], Result]] = {
     "lodging_wish_respected": lodging_wish_respected,
     "honest_no_bundle": honest_no_bundle,
     "order_snapshot_frozen": order_snapshot_frozen,
+    "single_order_on_double_pay": single_order_on_double_pay,
 }
 
 
