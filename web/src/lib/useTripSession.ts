@@ -317,18 +317,17 @@ export function useTripSession() {
     }
   }, [sessionId, turn])
 
-  const send = useCallback((text: string) => {
-    const requestId = crypto.randomUUID()
-    return run((signal) => chat(text, requestId, signal))
-  }, [run, chat])
+  // request_id создаём на каждый запуск операции: «Повторить» после ошибки — это новый запрос,
+  // старый id бэкенд помнит как failed и вернул бы ту же ошибку. Сетевой повтор внутри stream() шлёт тот же id.
+  const send = useCallback((text: string) => run((signal) => chat(text, crypto.randomUUID(), signal)), [run, chat])
 
   /**
    * Действие из интерфейса (выбор направления, быстрый ответ, правка требования).
    * Сначала команда агенту; если бэкенд её ещё не знает — то же самое словами в чат.
    */
-  const act = useCallback((type: CommandIn['type'], payload: CommandIn['payload'], asText: string) => {
-    const requestId = crypto.randomUUID()
-    return run(async (signal) => {
+  const act = useCallback((type: CommandIn['type'], payload: CommandIn['payload'], asText: string) =>
+    run(async (signal) => {
+      const requestId = crypto.randomUUID()
       try {
         await turn((version, onEvent, sig) =>
           api.sendCommand(sessionId!, { request_id: requestId, type, payload, expected_version: version }, onEvent, sig), signal, false)
@@ -336,8 +335,7 @@ export function useTripSession() {
         if (!unsupported(e)) throw e
         await chat(asText, crypto.randomUUID(), signal)
       }
-    })
-  }, [run, turn, sessionId, chat])
+    }), [run, turn, sessionId, chat])
 
   return {
     sessionId, state, messages, steps, trace, busy, notice, diff,

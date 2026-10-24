@@ -1,71 +1,145 @@
 # О!дин запрос (трек «О!дин запрос»)
 
-AI-агент для путешествий: превращает одно сообщение («к тёплому морю в ноябре, недорого, с ребёнком») в готовую поездку — уточняет только нужное, подбирает и сравнивает комплекты (дорога, трансферы, отель), проверяет состыковки, пересобирает план при изменении условий и доводит до имитированной покупки.
+AI-агент для путешествий. Из одного сообщения («к тёплому морю в ноябре, недорого, с ребёнком») он делает готовую поездку: спрашивает только то, без чего нельзя, предлагает направления, собирает и сравнивает комплекты (дорога туда и обратно, трансферы, отель), проверяет стыковки, пересобирает план при изменении условий и доводит до имитированной оплаты.
 
 - Видео-скринкаст: _TBD_
-- Развёрнутый сервис: _TBD_
+- Развёрнутый сервис: нет, только локальный запуск
 
-> Данные частично синтетические (цены, тарифы, расписания, условия отелей) — на карточках они помечены «сгенерировано». Оплата имитируется.
+> **Данные частично синтетические, оплата имитируется.** Что реальное, а что сгенерировано, расписано в разделе [Данные](#данные-что-реальное-а-что-синтетическое). Синтетические позиции помечены на карточках меткой «демо-данные».
 
 ## Быстрый старт
 
 ```bash
 git clone https://github.com/ostrovok-hackathon-2026/5-ukazatelei.git
 cd 5-ukazatelei
-cp .env.example .env      # для работы агента впишите LLM_API_KEY
+cp .env.example .env      # впишите LLM_API_KEY (любой OpenAI-совместимый провайдер)
 docker compose up --build
 # открыть http://localhost:8080
 ```
 
+Больше ничего ставить не нужно: миграции и сид каталога применяются при старте контейнера `app`. Без `LLM_API_KEY` интерфейс открывается, корзина и заказы работают, а на сообщения агент отвечает понятной ошибкой «агенту не задан ключ LLM».
+
+Сборка с нуля занимает около _N_ мин (замер ниже, в разделе [Проверка чистого запуска](#проверка-чистого-запуска)).
+
 ## Зависимости и переменные окружения
 
-Рекомендованные ресурсы: 2 CPU, 4 GB RAM. Нужны только Docker и Docker Compose v2.
+Рекомендованные ресурсы:
+- 2 CPU cores
+- 4 GB RAM
+- около 2 GB диска под образы
 
-Сервисы: `app` (Python 3.12, FastAPI + React-сборка, порт 8080, один воркер) и `db` (PostgreSQL 16).
+Нужны только Docker и Docker Compose v2. Сервисы в `docker-compose.yml`:
+- `app`: Python 3.12, FastAPI и собранный React-фронт. Порт 8080, один воркер, процесс работает не от root.
+- `db`: PostgreSQL 16 (`postgres:16.6-alpine`), данные в volume `pgdata`.
+
+Кэш и очереди не используются. LLM подключается через внешний OpenAI-совместимый API, своих моделей в репозитории нет.
 
 | Переменная | По умолчанию | Назначение |
 |---|---|---|
 | `APP_PORT` | `8080` | Порт приложения в контейнере |
 | `DATABASE_URL` | `postgresql://app:app@db:5432/trip` | Подключение к БД |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `app` / `app` / `trip` | Инициализация Postgres |
-| `LOG_LEVEL` | `INFO` | Уровень логов |
+| `LOG_LEVEL` | `INFO` | Уровень логов (stdout, `docker compose logs app`) |
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | Любой OpenAI-совместимый API |
-| `LLM_API_KEY` | пусто | Ключ LLM. Без него UI открывается, но агент отвечает ошибкой `llm_not_configured` |
-| `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | Модели |
-| `LLM_TIMEOUT_SECONDS` | `30` | Таймаут запроса к LLM |
+| `LLM_API_KEY` | пусто | Ключ LLM. Без него UI работает, агент отвечает ошибкой `llm_not_configured` |
+| `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | Основная и быстрая модели |
+| `LLM_TIMEOUT_SECONDS` | `30` | Таймаут одного запроса к LLM |
 | `DEMO_MODE` | `false` | Только для локальной разработки |
 
 ## Сидирование
 
-Миграции (`db/migrations/*.sql`) и сид каталога (`data/seed/*.json`) применяются автоматически при старте `app`, повторный запуск ничего не дублирует. Начать с чистой БД: `make reset && make up`.
+Делать ничего не нужно. При старте `app` по порядку:
+1. применяются миграции `db/migrations/*.sql`;
+2. загружается сид `data/seed/*.json`;
+3. каталог поездок (`data/seed/catalog/*.json`) читается в память.
 
-## Маршруты
+Повторный запуск ничего не дублирует. Начать с чистой БД: `make reset && make up` (или `docker compose down -v && docker compose up --build`).
 
-- `/` — чат с агентом и «холст поездки»
-- `/checkout/:cartId` — оформление (имитация оплаты), `/orders/:id` — заказ
-- `/health` — `{"status":"ok"}`
-- `/api/*` — REST + SSE, см. ниже
+Каталог собран заранее и лежит в репозитории, при запуске ничего не скачивается. Пересборка каталога из снимков описана в [`pipeline/README.md`](pipeline/README.md).
+
+## Маршруты и доступ
+
+- `/` — чат с агентом и «холст поездки»: требования, направления, сравнение комплектов, таймлайн с проверками
+- `/checkout/:cartId` — оформление (имитация оплаты)
+- `/orders/:id` — заказ: неизменяемый снимок состава и цен
+- `/health` — `200`, `{"status":"ok"}`
+- `/api/*` — REST и SSE, контракт описан ниже, в разделе [Для разработчиков](#для-разработчиков)
+
+Учётных записей нет. Сессия поездки создаётся автоматически и хранится в браузере, кнопка «Заново» начинает новую. На оплате подойдут любые имя и email: деньги не списываются.
+
+## Демо-сценарий
+
+1. «Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов». Агент показывает понятые требования (свои догадки помечает отдельно) и спрашивает город вылета, даты и возраст ребёнка. Потом предлагает три **выполнимых** направления с погодой, ценой всей поездки и временем в пути.
+2. Выбор направления: три проверенных комплекта («дешевле», «удобнее», «гибче отмена»), у каждого общая цена и компромисс.
+3. Таймлайн комплекта: ночной прилёт → проверка круглосуточной стойки отеля → предупреждение и вариант.
+4. «А если на два дня позже и с нами собака?» Видно, что **сохранено** и что **заменено**, почему и на сколько изменилась цена.
+5. Корзина → имитация оплаты → заказ-снимок. Повторное нажатие «Оплатить» второго заказа не создаёт.
+6. Невозможный запрос («Неделя в Дубае на троих за 30 000»): честный ответ и два минимальных изменения, а не выдуманная покупка.
+7. Поездом: «Из Москвы в Казань на выходные поездом».
+8. Метрики по фиксированным сценариям: `make eval-e2e`, см. [Метрики](#метрики).
+
+Что ещё проверено: запрос на английском, «куда угодно», противоречия («дёшево, но 5 звёзд»), направления вне каталога («таких данных нет, ближайшее — …»), правки одного и того же плана из двух вкладок (409 и перечитывание), обрыв связи посреди ответа агента.
+
+## Данные: что реальное, а что синтетическое
+
+Каталог маленький, но согласованный: 3 города отправления (Москва, Санкт-Петербург, Екатеринбург) × 8 направлений (Сочи, Калининград, Казань, Стамбул, Анталья, Шарм-эль-Шейх, Дубай, Ереван). Транспорт сгенерирован на окно дат **26.10.2026 – 15.01.2027**.
+
+| Что | Реальное | Сгенерировано |
+|---|---|---|
+| Города, координаты, визовый режим для граждан РФ | Wikidata, справочник виз | — |
+| Аэропорты и вокзалы | OurAirports, Wikidata | — |
+| Климат по месяцам (воздух, море, дожди) | Open-Meteo, статистика 2021–2025 (это средние значения, а не прогноз) | — |
+| Отели | название и координаты из OpenStreetMap | звёзды, номера, цены по ночам, питание, правила с животными, стойка регистрации, политика отмены |
+| Рейсы | геометрия реальных аэропортов | расписания, номера рейсов, тарифы, багаж, цены |
+| Поезда | реальные вокзалы | расписания, классы, цены |
+| Трансферы | реальное расстояние хаб ↔ отель | классы машин, цены, время в пути |
+| Оплата | — | имитация: деньги не списываются, заказ хранит снимок |
+
+У каждого предложения есть флаг `synthetic` и ссылки на источник (`source_refs`). В интерфейсе синтетические позиции помечены «демо-данные». Генерация детерминированная (`seed = 42`), подробности в [`pipeline/README.md`](pipeline/README.md).
+
+Атрибуция: © участники OpenStreetMap (ODbL); Weather data by Open-Meteo.com (CC BY 4.0); Wikidata (CC0); OurAirports (public domain).
+
+## Метрики
+
+Фиксированные сценарии лежат в `eval/scenarios`, `eval/sprint3` и `eval/sprint4`. В каждом есть запрос, скриптовые ответы пользователя (это не LLM, которая со всем соглашается) и условия успеха. Проверяются бюджет, состав гостей в номере и цене, даты, животное во всех позициях, отсутствие позиций со старыми датами после пересборки, а для невозможных запросов — честный отказ.
+
+```bash
+make eval-e2e    # по запущенному API с реальным LLM, отчёт в eval/reports/
+```
+
+Успех — это доля сценариев, где выполнены условия, а не доля покупок: для невозможного запроса честный отказ тоже успех.
+
+## Проверка чистого запуска
+
+_Заполняется по результату замера._
 
 ## Разработка
 
 ```bash
 make up        # всё в Docker
-make test      # тесты; интеграционные — на отдельной БД trip_test
+make down
 make logs
+make test      # тесты; интеграционные — на отдельной БД trip_test
+make reset     # снести вместе с БД
 make web-dev   # фронт с hot-reload на :5173, API → :8080
-make web-mock  # фронт на моках, бэкенд не нужен
+make web-mock  # фронт на моках, бэкенд и LLM не нужны
 ```
 
+В режиме моков (`make web-mock`) сбои воспроизводятся тегом в сообщении: `#ошибка` — LLM не ответила, `#обрыв` — поток оборвался без ответа, `#конфликт` — план изменили в другой вкладке.
+
 Без Docker: `pip install -r requirements.txt`, `DATABASE_URL` на свой Postgres 16, `uvicorn app.main:app --port 8080 --workers 1`.
+
+## Для разработчиков
+
 Контракт фронт ↔ бэк: `web/src/api/types.ts`.
 
-### Корзина и оплата (трек C)
+### Корзина и оплата
 
 - `POST /api/cart` `{session_id, version, bundle_id}` → `201 {cart_id, status, total_rub, snapshot}`. 409 `version_conflict`, если версия плана устарела; 422 `plan_blocked` / `total_mismatch`. Повторный вызов с теми же данными возвращает ту же корзину.
 - `POST /api/cart/{id}/checkout` `{payer:{name,email}, idempotency_key}` → `201` новый заказ или `200` с `replay: true`, если заказ уже есть (тот же ключ или та же корзина). 409 `plan_changed`, если план изменился после добавления в корзину.
 - `GET /api/cart/{id}`, `GET /api/orders/{id}` — заказ хранит неизменяемый снимок состава и цен.
 
-## API contracts
+### API contracts
 
 - `GET /health` → `{"status":"ok"}`
 - `POST /api/sessions` → `{"session_id":"<uuid>","version":0}`
@@ -126,11 +200,11 @@ SSE `step` payloads use `{step_type,name,input,output,status}`, `state` uses `{s
 
 Run the fixed scenarios with `python -m eval.runner --mode deterministic` or against an isolated running API with `python -m eval.runner --mode e2e --base-url http://localhost:8080`. The deterministic mode requires `EVAL_RUNTIME_FACTORY=module:factory`; its factory returns an isolated engine with a stub LLM and declares substitutions on `engine.substitutions`. The E2E mode uses the real running server, its configured LLM and A tools. Both modes use the same YAML actions as the scripted user and write JSON reports under `eval/reports/` by default.
 
-## LLM
+### LLM
 
 Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and optionally `LLM_TIMEOUT_SECONDS`. `chat`, `chat_json`, and `chat_tools` are asynchronous; transient timeouts/network/408/429/5xx responses have at most two retries. `chat_json` allows one bounded format/schema correction attempt within a shared four-request maximum. Logs include model, duration and provider-reported usage only; credentials are never logged. Manual smoke check: `python -m app.agent.smoke`.
 
-## Tests
+### Tests
 
 ```sh
 pytest -q
@@ -138,7 +212,7 @@ pytest -q
 
 Unit tests use mocked LLM responses and in-memory test stores. PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` points to a dedicated test database. Never point it at the shared/development database. The real `build_bundles` regression uses the integrated track A module. Checkout tests (`tests/test_cart.py`) also need `TEST_DATABASE_URL`; `make test` creates `trip_test` in the compose db and runs everything.
 
-## Integration handoff
+### Integration handoff
 
 - **A:** implement `app.planning.suggest.suggest_destinations(requirements: dict, state: TripState) -> {destinations, alternatives, notes, required_inputs}`. A candidate has `feasible: true` only after A verifies it. Each alternative needs a stable `id`, `label`, `confirmed: true`, exact `changes`, refs and resolvable `evidence` (`ref,value,label,kind,source,source_refs`); B does not calculate alternatives. Assumptions are excluded from filter inputs; A may read them from state for ranking only.
 - **A / B replan contract:** `app.planning.replan.replan(requirements, state, bundle_id, changes)` returns A's single `bundle` (or `None`), `kept`, `replaced`, `notes`, `price_delta_rub`, `alternatives`, and echoed `input_changes`. `requirements` is the full current set; `state` carries the original selected bundle; `changes` is the accumulated typed diff from the requirements at selection time. B adapts the result to the agent state shape and verifies bundle totals and price delta; A remains responsible for search, checks and price calculations. Keep/replacement entries need offer IDs and a reason so B can distinguish a retained catalog object from a repriced offer.
