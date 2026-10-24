@@ -68,3 +68,16 @@ def test_unknown_requirement_without_quote_does_not_crash():
 
     raw = ParsedRequest(requirements=[Requirement(key="dates", value=None, kind="unknown", source="agent", quote=None)])
     assert validate_extraction(raw, "Хочу в Сочи").requirements[0].key == "dates"
+
+
+def test_za_amount_is_a_budget_cap():
+    """«за 30 000» — предел бюджета: невыполнимый запрос должен дать честный отказ, а не комплекты за 350 000."""
+    r = parsed("Неделя в Дубае на троих за 30 000")
+    assert r["budget_total_rub"].value == 30000 and r["budget_total_rub"].kind == "hard"
+    assert parsed("Сочи примерно за 80 000")["budget_total_rub"].kind == "soft"
+
+
+def test_age_answer_wins_over_open_duration_question():
+    state = TripState(session_id=uuid4(), open_questions=[OpenQuestion(key="duration_nights", question="?", why="")])
+    r = parsed("5 лет", state)
+    assert r["children_ages"].value == [5] and "duration_nights" not in r

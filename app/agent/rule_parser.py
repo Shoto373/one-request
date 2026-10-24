@@ -199,7 +199,9 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
             quote = text[b.start():b.end()].strip()
             per_person = re.search(r"на\s+(?:человека|одного|каждого)|per\s+person", low)
             key = "budget_per_person_rub" if per_person else "budget_total_rub"
-            strict = re.search(r"строго|не\s+дороже|максимум|\bдо\b|strictly|up\s+to|under", quote.lower())
+            # «за 30 000» по-русски — предел бюджета, как и «до»; «примерно/около» — мягко
+            strict = re.search(r"строго|не\s+дороже|максимум|\bдо\b|\bза\b|strictly|up\s+to|under", quote.lower()) \
+                and not re.search(r"примерно|около|желательно|about|around", low)
             put(_req(key, amount, "hard" if strict else "soft", quote))
             if re.search(r"на\s+(?:всю\s+)?поездку|на\s+всех|total|for\s+the\s+trip", low) and not per_person:
                 q = re.search(r"на\s+(?:всю\s+)?поездку|на\s+всех|total|for\s+the\s+trip", text, re.I)
@@ -231,6 +233,9 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
 
     # --- short answers to the open question ---
     stripped = text.strip()
+    # возраст в ответе — это дети, какой бы вопрос ни был открыт («5 лет» на «сколько ночей?» — не 5 ночей)
+    if "children_ages" not in reqs and ages and re.fullmatch(r"[\d\s,иand]+(?:лет|год\w*|years?(?:\s*old)?)\.?", low.strip()):
+        put(_req("children_ages", ages, "hard", stripped))
     for key in open_keys[:1]:
         if key in reqs:
             continue
@@ -243,7 +248,7 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
             put(_req("children_ages", [int(x) for x in nums], "hard", stripped))
         elif key == "pet_weight_kg" and (m := re.search(r"\d+(?:[.,]\d+)?", low)):
             put(_req("pet_weight_kg", float(m.group(0).replace(",", ".")), "hard", stripped if re.search(r"кг|kg", low) else text[m.start():m.end()] + ""))
-        elif key == "duration_nights" and (m := re.search(r"\d{1,2}", low)):
+        elif key == "duration_nights" and not ages and (m := re.search(r"\d{1,2}", low)):
             put(_req("duration_nights", int(m.group(0)), "hard", text[m.start():m.end()]))
         elif key == "budget_scope":
             if re.search(r"человек|person|одного", low):

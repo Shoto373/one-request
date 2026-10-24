@@ -69,7 +69,7 @@ def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
                 continue
             if req.key == "pet_weight_kg" and not re.search(r"\d+(?:[.,]\d+)?\s*кг|\d+(?:[.,]\d+)?\s*kg", quote_l):
                 continue
-            if req.key in {"budget_total_rub", "budget_per_person_rub"} and re.search(r"строго|не\s+больше|не\s+выше|не\s+дороже|максимум|лимит|\bдо\b", quote_l):
+            if req.key in {"budget_total_rub", "budget_per_person_rub"} and re.search(r"строго|не\s+больше|не\s+выше|не\s+дороже|максимум|лимит|\bдо\b|\bза\b|\bunder\b|\bup\s+to\b|\bmax", quote_l):
                 req = req.model_copy(update={"kind": "hard"})
             if req.key in {"budget_total_rub", "budget_per_person_rub"} and re.search(r"примерно|около|желательно", quote_l):
                 req = req.model_copy(update={"kind": "soft"})
