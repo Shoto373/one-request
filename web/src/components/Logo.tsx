@@ -26,10 +26,8 @@ export default function Logo() {
     <span className="flex items-center gap-2.5">
       <Mark />
       <span className="leading-none">
-        <span className="block text-[19px] font-bold tracking-tight text-ink">
-          О!дин запрос
-        </span>
-        <span className="block text-[11px] font-medium text-ink-muted">AI-агент путешествий</span>
+        <span className="block font-display text-[18px] font-bold tracking-tight text-brand">О!дин запрос</span>
+        <span className="block text-[11px] font-medium text-ink-grey">AI-агент путешествий</span>
       </span>
     </span>
   )

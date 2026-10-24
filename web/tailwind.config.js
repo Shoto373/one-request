@@ -6,6 +6,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ['"Onest Variable"', 'Helvetica', 'Arial', 'sans-serif'],
+        // широкий гротеск заголовков ostrovok.ru — открытая замена Unbounded
+        display: ['"Unbounded Variable"', '"Onest Variable"', 'Helvetica', 'sans-serif'],
       },
       colors: {
         brand: {

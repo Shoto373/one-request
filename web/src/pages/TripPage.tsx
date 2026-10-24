@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import Chat from '../components/Chat'
 import Icon from '../components/Icon'
+import Landing from '../components/Landing'
 import TracePanel from '../components/TracePanel'
 import TripCanvas from '../components/TripCanvas'
 import { reqLabel } from '../lib/format'
@@ -49,6 +50,8 @@ export default function TripPage() {
   }
 
   const found = (s.state?.bundles.length ?? 0) + (s.state?.destinations.length ?? 0)
+  // пока диалога нет — стартовый экран в стиле ostrovok.ru, после первого сообщения — рабочее пространство
+  const landing = s.messages.length === 0 && !s.busy && !s.state?.requirements.length
   // мобильный: вариантов стало больше, чем пользователь видел на вкладке «Поездка» — подсказываем перейти
   const [seen, setSeen] = useState(0)
   useEffect(() => {
@@ -78,6 +81,12 @@ export default function TripPage() {
         </div>
       )}
 
+      {landing ? (
+        <div className="min-h-0 flex-1">
+          <Landing disabled={!s.sessionId} connecting={s.connecting} onSend={s.send} />
+        </div>
+      ) : (
+      <>
       {/* мобильные вкладки */}
       <div className="flex gap-1 border-b border-black/[.06] bg-white p-1.5 text-sm font-semibold md:hidden">
         {(['chat', 'trip'] as const).map((t) => (
@@ -162,6 +171,8 @@ export default function TripPage() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   )
 }
