@@ -30,10 +30,10 @@ docker compose up --build
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `app` / `app` / `trip` | Инициализация Postgres |
 | `LOG_LEVEL` | `INFO` | Уровень логов |
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | Любой OpenAI-совместимый API |
-| `LLM_API_KEY` | пусто | Ключ LLM. Без него UI открывается, но агент отвечает ошибкой `llm_not_configured` |
+| `LLM_API_KEY` | пусто | Ключ LLM. Без него UI открывается, а чат отвечает понятным `llm_not_configured`; для локальной Ollama не нужен |
 | `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | Модели |
 | `LLM_TIMEOUT_SECONDS` | `30` | Таймаут запроса к LLM |
-| `DEMO_MODE` | `false` | Только для локальной разработки |
+| `LLM_JSON_MODE` | `auto` | `auto` — JSON-режим, если провайдер поддерживает (иначе отключается сам); `off` — не отправлять `response_format` |
 
 ## Сидирование
 
@@ -128,7 +128,13 @@ Run the fixed scenarios with `python -m eval.runner --mode deterministic` or aga
 
 ## LLM
 
-Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and optionally `LLM_TIMEOUT_SECONDS`. `chat`, `chat_json`, and `chat_tools` are asynchronous; transient timeouts/network/408/429/5xx responses have at most two retries. `chat_json` allows one bounded format/schema correction attempt within a shared four-request maximum. Logs include model, duration and provider-reported usage only; credentials are never logged. Manual smoke check: `python -m app.agent.smoke`.
+Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and optionally `LLM_TIMEOUT_SECONDS`. `chat`, `chat_json`, and `chat_tools` are asynchronous; transient timeouts/network/408/429/5xx responses have at most two retries. `chat_json` allows one bounded format/schema correction attempt within a shared four-request maximum. Logs go to stdout and include model, duration and provider-reported usage only; credentials are never logged.
+
+Провайдеры. Клиент сам сглаживает различия OpenAI-совместимых API: если провайдер отвергает `response_format` (Ollama, часть прокси) или `temperature` (reasoning-модели), запрос повторяется без параметра, и это запоминается; `content` из списка частей, `<think>…</think>`, ```-ограждения и текст вокруг JSON разбираются; `LLM_BASE_URL` можно вставить с хвостом `/chat/completions`; локальному серверу (localhost, `host.docker.internal`, `ollama`) ключ не нужен. Один и тот же ход агента проверен на трёх профилях провайдеров (строгий OpenAI-подобный, Ollama-подобный, reasoning) в `tests/test_llm_providers.py`.
+
+Проверка конкретного провайдера: `python -m app.agent.smoke` (или с переменными, например `LLM_BASE_URL=https://openrouter.ai/api/v1 LLM_API_KEY=... LLM_MODEL=... python -m app.agent.smoke`) — обычный ответ, JSON по схеме и найденные возможности; код выхода 0 только при успехе.
+
+Режим без ключа: UI и `/health` работают, `GET /api/status` → `{"llm": {"configured": false, ...}, "message": "Агенту не задан ключ LLM: …"}`, а сообщение в чате возвращает SSE-ошибку `llm_not_configured` с тем же текстом.
 
 ## Tests
 

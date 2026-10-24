@@ -113,11 +113,13 @@ Current requirements: {known}
 Open questions, in priority order: {questions}
 Assumption keys the user removed; do not restore them: {suppressed}
 
-Supported keys: origin, destination, dates ({{start,end}} ISO dates when explicit), travel_month (1..12), duration_nights,
-date_flex_days, adults, children_count, children_ages (list of ages), pets, pet_weight_kg,
-budget_total_rub, budget_per_person_rub, budget_scope, transport (flight|train|either), max_stops,
-travel_time_preference, max_duration_min, trip_style, lodging_stars, meal_preference, room_preference,
-assumption_child_flight_time, assumption_child_menu, budget_preference.
+Supported keys and value formats: origin and destination (city name as written), dates ({{start,end}} ISO dates when
+explicit), travel_month (1..12), duration_nights (int), date_flex_days (int), adults (int), children_count (int),
+children_ages (list of ints), pets ({{"kind":"dog|cat|other"}}), pet_weight_kg (number), budget_total_rub (int),
+budget_per_person_rub (int), budget_scope (trip|person), transport (flight|train|either), max_stops (int),
+travel_time_preference (short), max_duration_min (int minutes), trip_style (short text, e.g. "тёплое море"),
+lodging_stars (int 1..5), meal_preference (all_inclusive|full_board|half_board|breakfast), room_preference (text),
+assumption_child_flight_time, assumption_child_menu, budget_preference (low_cost).
 
 Rules: hard = explicitly required/strict; soft = explicit preference or qualitative wording; assumption = your clearly labeled
 inference only (source agent, quote null); unknown = value null. Every hard/soft user_text quote must be an exact substring
