@@ -8,6 +8,7 @@ import ReplanDiff from '../components/ReplanDiff'
 import { PageError, PageLoading } from '../components/PageState'
 import { diffPlans } from '../lib/diff'
 import { rub } from '../lib/format'
+import { profileId } from '../lib/profile'
 
 /** Имитация оплаты. Один idempotency_key на страницу: двойной клик / повтор запроса не создают второй заказ. */
 export default function CheckoutPage() {
@@ -63,7 +64,7 @@ export default function CheckoutPage() {
     setPaying(true)
     setPayError(null)
     try {
-      const order = await api.checkout(cartId, { payer: { name, email }, idempotency_key: keyRef.current })
+      const order = await api.checkout(cartId, { payer: { name, email }, idempotency_key: keyRef.current, profile_id: profileId() })
       navigate(`/orders/${order.order_id}`, { replace: true })
     } catch (err) {
       setPayError(err instanceof ApiError ? err.detail : { code: 'network', message: 'Сеть недоступна. Повторите — второй раз деньги не спишутся.' })

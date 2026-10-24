@@ -76,8 +76,9 @@ function Chip({ r, busy, onEdit, onRemove, onConfirm }: { r: Requirement; busy: 
   return (
     <span
       className={`chip group py-1.5 pl-3 pr-1.5 text-[13px] ${k.cls}`}
-      title={`${k.label}. ${k.hint}${r.quote ? `\nИз вашего сообщения: «${r.quote}»` : ''}`}
+      title={`${k.label}. ${k.hint}${r.quote ? `\nИз вашего сообщения: «${r.quote}»` : ''}${r.source === 'memory' ? '\nАгент запомнил это по прошлой поездке — уберите, если в этот раз иначе' : ''}`}
     >
+      {r.source === 'memory' && <Icon name="clock" className="-ml-0.5 h-3.5 w-3.5 opacity-70" />}
       {reqLabel(r)}
       <span className="flex items-center">
         {r.kind === 'assumption' && (

@@ -276,6 +276,15 @@ export interface Payer {
 export interface CheckoutIn {
   payer: Payer
   idempotency_key: string
+  /** анонимный профиль: после оплаты агент запомнит устойчивые предпочтения */
+  profile_id?: string
+}
+
+/** GET /api/profiles/{id} — что агент помнит о пользователе этого браузера */
+export interface Profile {
+  profile_id: string
+  prefs: Record<string, unknown>
+  trips: number
 }
 
 export interface Order {

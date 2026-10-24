@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
+from app import profile
 from app.cart import aftercare, service
 from app.cart.service import CartError
 
@@ -24,6 +25,8 @@ class Payer(BaseModel):
 class CheckoutIn(BaseModel):
     payer: Payer
     idempotency_key: str = Field(min_length=8, max_length=100)
+    # анонимный профиль браузера: после оплаты запоминаем устойчивые предпочтения (app/profile.py)
+    profile_id: UUID | None = None
 
 
 def _call(fn, *args):
@@ -47,6 +50,11 @@ def get_cart(cart_id: UUID) -> dict:
 def checkout(cart_id: UUID, body: CheckoutIn, response: Response) -> dict:
     order, replay = _call(service.checkout, str(cart_id), body.payer.model_dump(), body.idempotency_key)
     response.status_code = 200 if replay else 201
+    if body.profile_id and not replay:
+        try:
+            profile.remember(str(body.profile_id), order["snapshot"].get("requirements", []))
+        except Exception:  # noqa: BLE001 — память не должна ломать оплату
+            pass
     return {**order, "replay": replay}
 
 

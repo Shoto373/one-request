@@ -1,6 +1,6 @@
 import type {
   ApiErrorDetail, Cart, CartIn, CheckoutIn, CommandIn, MessageIn, Order, SessionCreated, SessionView, StreamEvent,
-  TraceView, RequestStatus, AppStatus, Aftercare, DateShiftQuote, OrderChange,
+  TraceView, RequestStatus, AppStatus, Aftercare, DateShiftQuote, OrderChange, Profile,
 } from './types'
 import { ApiError } from './errors'
 import { mockApi } from './mock'
@@ -77,7 +77,13 @@ async function stream(path: string, body: unknown, onEvent: (e: StreamEvent) => 
 
 const realApi = {
   getStatus: () => json<AppStatus>('/api/status'),
-  createSession: () => json<SessionCreated>('/api/sessions', { method: 'POST', body: '{}' }),
+  createSession: (profile_id?: string) =>
+    json<SessionCreated>('/api/sessions', { method: 'POST', body: JSON.stringify(profile_id ? { profile_id } : {}) }),
+  getProfile: (id: string) => json<Profile>(`/api/profiles/${id}`),
+  forgetProfile: async (id: string) => {
+    const res = await fetch(`/api/profiles/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw await toError(res)
+  },
   getSession: (id: string) => json<SessionView>(`/api/sessions/${id}`),
   getTrace: (id: string) => json<TraceView>(`/api/sessions/${id}/trace`),
   getRequestStatus: (id: string, requestId: string) => json<RequestStatus>(`/api/sessions/${id}/requests/${requestId}`),

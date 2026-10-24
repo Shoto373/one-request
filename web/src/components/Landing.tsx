@@ -1,5 +1,22 @@
 import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '../api/client'
+import { profileId } from '../lib/profile'
 import Icon, { type IconName } from './Icon'
+
+/** что агент помнит — короткими словами для приветствия */
+function memoryWords(prefs: Record<string, unknown>): string[] {
+  const out: string[] = []
+  if (prefs.origin) out.push(`вылет из ${prefs.origin}`)
+  if (prefs.adults) out.push(`${prefs.adults} взр.`)
+  if (Array.isArray(prefs.children_ages) && prefs.children_ages.length) out.push(`дети ${prefs.children_ages.join(', ')} лет`)
+  else if (prefs.children_count) out.push('с ребёнком')
+  if (prefs.pets) out.push((prefs.pets as { kind?: string }).kind === 'dog' ? 'с собакой' : 'с питомцем')
+  if (prefs.meal_preference === 'all_inclusive') out.push('всё включено')
+  if (prefs.transport === 'train') out.push('поездом')
+  if (prefs.budget_preference) out.push('подешевле')
+  return out
+}
 
 /** Стартовый экран в стиле ostrovok.ru: салатовый герой, большая строка запроса, карточки сценариев. */
 
@@ -36,6 +53,15 @@ interface Props {
 }
 
 export default function Landing({ disabled, connecting, onSend }: Props) {
+  const qc = useQueryClient()
+  const pid = profileId()
+  const { data: profile } = useQuery({ queryKey: ['profile', pid], queryFn: () => api.getProfile(pid!), enabled: !!pid, retry: false })
+  const remembered = profile ? memoryWords(profile.prefs) : []
+  const forget = async () => {
+    if (!pid) return
+    await api.forgetProfile(pid).catch(() => undefined)
+    qc.invalidateQueries({ queryKey: ['profile', pid] })
+  }
   const [text, setText] = useState('')
   const [mode, setMode] = useState(0)
   const submit = (t: string) => {
@@ -103,6 +129,17 @@ export default function Landing({ disabled, connecting, onSend }: Props) {
           <p className="mt-3 text-sm text-ink/70">
             Дорога туда и обратно, трансферы и отель — подберёт, сравнит, проверит и соберёт в один заказ.
           </p>
+          {remembered.length > 0 && (
+            <div className="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-white/60 px-4 py-2.5 text-sm text-ink">
+              <Icon name="clock" className="h-4 w-4 text-brand" />
+              <span>
+                <b>С возвращением!</b> Помню по прошлой поездке: {remembered.join(', ')} — учту как догадки, их можно убрать.
+              </span>
+              <button onClick={forget} className="font-semibold text-brand underline-offset-2 hover:underline">
+                Забыть
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

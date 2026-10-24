@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { ChatMessage, CommandIn, StreamEvent, TraceStep, TripState } from '../api/types'
 import { diffPlans, type PlanDiff } from './diff'
+import { profileId } from './profile'
 
 const KEY = 'trip_session_id'
 /** как часто сверяем версию плана, пока вкладка видна и агент не занят */
@@ -151,7 +152,8 @@ export function useTripSession() {
           if (!(e instanceof ApiError && e.status === 404)) throw e
         }
       }
-      const created = await api.createSession()
+      // профиль браузера: агент подставит предпочтения из прошлых поездок догадками
+      const created = await api.createSession(profileId())
       store(created.session_id)
       versionRef.current = created.version
       stateRef.current = null

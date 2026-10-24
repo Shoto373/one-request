@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
+from app import profile
 from app.agent.llm import NO_KEY_MESSAGE, InvalidLLMJSONError, LLMClient, LLMConfigurationError, LLMRequestError
 from app.agent.orchestrator import (
     CatalogIntegrationUnavailable, InvalidAgentCommand, OrchestrationLimitError, Orchestrator,
@@ -125,10 +126,32 @@ async def health():
     return {"status": "ok"}
 
 
+class CreateSessionRequest(BaseModel):
+    profile_id: UUID | None = None
+
+
 @app.post("/api/sessions", response_model=CreateSessionResponse)
-async def create_session(request: Request):
-    state = get_store(request).create_session()
+async def create_session(request: Request, body: CreateSessionRequest | None = None):
+    store = get_store(request)
+    memory = []
+    if body and body.profile_id:
+        try:
+            memory = profile.memory_requirements(str(body.profile_id))
+        except Exception:  # noqa: BLE001 — память вторична: без неё сессия всё равно создаётся
+            log.warning("profile memory unavailable", exc_info=True)
+    state = store.create_session(requirements=memory) if memory else store.create_session()
     return CreateSessionResponse(session_id=state.session_id, version=state.version)
+
+
+@app.get("/api/profiles/{profile_id}")
+async def read_profile(profile_id: UUID) -> dict[str, Any]:
+    """Что агент помнит о пользователе этого браузера."""
+    return profile.get(str(profile_id))
+
+
+@app.delete("/api/profiles/{profile_id}", status_code=204)
+async def forget_profile(profile_id: UUID) -> None:
+    profile.forget(str(profile_id))
 
 
 @app.get("/api/sessions/{session_id}")

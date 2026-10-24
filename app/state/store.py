@@ -35,8 +35,9 @@ class StateStore:
     def connect(self):
         return psycopg.connect(self.database_url, row_factory=dict_row)
 
-    def create_session(self) -> TripState:
-        state = TripState(session_id=uuid4())
+    def create_session(self, requirements: list | None = None) -> TripState:
+        # requirements — догадки из памяти профиля (app/profile.py), если они есть
+        state = TripState(session_id=uuid4(), requirements=list(requirements or []))
         with self.connect() as conn:
             conn.execute(
                 "INSERT INTO sessions (id, state, version) VALUES (%s, %s, 0)",

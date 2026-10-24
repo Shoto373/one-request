@@ -335,6 +335,10 @@ function checkVersion(s: MockSession, expected: number) {
 }
 
 export const mockApi: Api = {
+  async getProfile(id) {
+    return { profile_id: id, prefs: {}, trips: 0 }
+  },
+  async forgetProfile() {},
   async getStatus() {
     return { llm: { configured: false }, database: true, agent_mode: 'llm', message: null }
   },
