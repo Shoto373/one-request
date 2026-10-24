@@ -1,0 +1,119 @@
+# Продакшен-надстройка над docker-compose.yml (сервер): nginx спереди, app и db наружу не торчат,
+# мониторинг — профиль monitoring. Запуск — только через deploy/cd.sh:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml --profile monitoring up -d
+# Порты 80/443 на сервере заняты чужим проектом, поэтому наш вход — HTTP_PORT/HTTPS_PORT (по умолчанию 8080/8443).
+
+services:
+  app:
+    image: odin-zapros/app:${APP_TAG:-current}
+    ports: !reset []
+    expose: ["8080"]
+    mem_limit: 768m
+    logging: &logs
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  db:
+    mem_limit: 384m
+    logging: *logs
+
+  nginx:
+    image: nginx:1.27.2-alpine
+    depends_on:
+      app: {condition: service_healthy}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    mem_limit: 64m
+    restart: unless-stopped
+    logging: *logs
+
+  # самоподписанный сертификат по IP, пока нет домена; с доменом — deploy/certs.sh letsencrypt
+  certs-init:
+    image: alpine/openssl:3.3.2
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        test -s /certs/fullchain.pem || openssl req -x509 -nodes -newkey rsa:2048 -days 365
+        -subj "/CN=${PUBLIC_HOST:-localhost}" -addext "subjectAltName=IP:${PUBLIC_HOST:-127.0.0.1}"
+        -keyout /certs/privkey.pem -out /certs/fullchain.pem
+    volumes:
+      - certs:/certs
+    restart: "no"
+
+  # --- мониторинг ---
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=1GB
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+    mem_limit: 256m
+    restart: unless-stopped
+    logging: *logs
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    profiles: [monitoring]
+    mem_limit: 32m
+    restart: unless-stopped
+    logging: *logs
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    profiles: [monitoring]
+    command: [--path.rootfs=/host]
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    mem_limit: 48m
+    restart: unless-stopped
+    logging: *logs
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    profiles: [monitoring]
+    command: [--docker_only=true, --housekeeping_interval=30s, --store_container_labels=false]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *logs
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    profiles: [monitoring]
+    environment:
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+    mem_limit: 192m
+    restart: unless-stopped
+    logging: *logs
+
+volumes:
+  certs:
+  prometheus:
+  grafana:

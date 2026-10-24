@@ -43,3 +43,6 @@ Thumbs.db
 
 # --- eval reports (generated) ---
 eval/reports/
+deploy/.deployed
+deploy/.failed
+deploy/cd.log
