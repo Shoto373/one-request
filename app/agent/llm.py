@@ -7,6 +7,8 @@ import logging
 import os
 import re
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, TypeVar
 
 import httpx
@@ -19,6 +21,9 @@ T = TypeVar("T", bound=BaseModel)
 class _AttemptBudget:
     def __init__(self, remaining: int):
         self.remaining = remaining
+
+
+_TURN_BUDGET: ContextVar[_AttemptBudget | None] = ContextVar("llm_turn_attempt_budget", default=None)
 
 
 class LLMConfigurationError(RuntimeError):
@@ -39,6 +44,7 @@ class LLMClient:
         model: str | None = None, model_fast: str | None = None,
         timeout_seconds: float | None = None, http_client: httpx.AsyncClient | None = None,
         retries: int = 2, format_retries: int = 1,
+        turn_attempt_budget: int = 12,
     ):
         self.base_url = (base_url or os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("LLM_API_KEY", "")
@@ -48,6 +54,16 @@ class LLMClient:
         self.client = http_client
         self.retries = max(0, min(retries, 3))
         self.format_retries = max(0, min(format_retries, 1))
+        self.turn_attempt_budget = max(1, int(turn_attempt_budget))
+
+    @contextmanager
+    def request_budget(self, *, max_attempts: int | None = None):
+        """Share one bounded HTTP-attempt budget across nested calls in one turn."""
+        token = _TURN_BUDGET.set(_AttemptBudget(max_attempts or self.turn_attempt_budget))
+        try:
+            yield
+        finally:
+            _TURN_BUDGET.reset(token)
 
     def _require_config(self, model: str) -> None:
         if not self.api_key:
@@ -60,7 +76,9 @@ class LLMClient:
         own_client = self.client is None
         client = self.client or httpx.AsyncClient(timeout=self.timeout_seconds)
         started = time.monotonic()
-        budget = budget or _AttemptBudget(self.retries + 1)
+        budget = budget or _TURN_BUDGET.get() or _AttemptBudget(self.retries + 1)
+        if budget.remaining <= 0:
+            raise LLMRequestError("LLM turn request budget exhausted")
         try:
             for attempt in range(min(self.retries + 1, budget.remaining)):
                 budget.remaining -= 1
@@ -112,7 +130,9 @@ class LLMClient:
         self, messages: list[dict[str, Any]], schema: type[T], *, fast: bool = False,
     ) -> T:
         model = self.model_fast if fast else self.model
-        budget = _AttemptBudget(self.retries + 1 + self.format_retries)
+        budget = _TURN_BUDGET.get() or _AttemptBudget(self.retries + 1 + self.format_retries)
+        if budget.remaining <= 0:
+            raise LLMRequestError("LLM turn request budget exhausted")
         prompt = messages
         repair_count = 0
         while budget.remaining > 0:

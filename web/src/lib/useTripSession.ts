@@ -14,6 +14,8 @@ const ERROR_TEXT: Record<string, string> = {
   a_tool_unavailable: 'Инструмент расчёта поездки недоступен — попробуйте ещё раз.',
   agent_step_limit: 'Агент не уложился в лимит шагов — уточните запрос.',
   invalid_command: 'Это действие сейчас недоступно — план мог измениться.',
+  request_id_conflict: 'Повтор запроса не совпал с исходным. Обновите состояние и отправьте новое действие.',
+  request_in_progress: 'Запрос ещё выполняется.',
   agent_error: 'Агент не смог обработать запрос.',
   database_unavailable: 'База данных недоступна.',
 }
@@ -152,7 +154,31 @@ export function useTripSession() {
     try {
       await fn(abortRef.current.signal)
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
+      if (e instanceof ApiError && e.status === 409 && e.detail.code === 'request_in_progress' && typeof e.detail.request_id === 'string') {
+        const requestId = e.detail.request_id
+        let settled = false
+        for (let attempt = 0; attempt < 16; attempt++) {
+          const requestStatus = await api.getRequestStatus(sessionId, requestId).catch(() => null)
+          if (requestStatus?.status === 'completed') {
+            await reload(sessionId).catch(() => undefined)
+            setError('Запрос выполнен — состояние обновлено. Проверьте актуальный план.')
+            settled = true
+            break
+          }
+          if (requestStatus?.status === 'failed') {
+            await reload(sessionId).catch(() => undefined)
+            setError(ERROR_TEXT[requestStatus.error?.code ?? ''] ?? requestStatus.error?.message ?? 'Запрос завершился ошибкой. Состояние обновлено.')
+            settled = true
+            break
+          }
+          if (!requestStatus || requestStatus.status === 'not_found') break
+          await new Promise((resolve) => window.setTimeout(resolve, 250))
+        }
+        if (!settled) {
+          await reload(sessionId).catch(() => undefined)
+          setError('Запрос ещё выполняется. Состояние перечитано; не отправляйте это изменение повторно, пока не проверите результат.')
+        }
+      } else if (e instanceof ApiError && e.status === 409) {
         await reload(sessionId)
         setError('План обновился в другой вкладке — показываю актуальную версию. Повторите действие.')
       } else if (e instanceof ApiError) {

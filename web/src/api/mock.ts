@@ -6,7 +6,7 @@
  */
 import type {
   Bundle, Cart, CartIn, ChatMessage, CheckoutIn, CommandIn, DestinationOption, MessageIn, Offer, Order, ProposedChange,
-  Requirement, SessionCreated, SessionView, StreamEvent, TraceStep, TripState,
+  Requirement, RequestStatus, SessionCreated, SessionView, StreamEvent, TraceStep, TripState,
 } from './types'
 import type { Api } from './client'
 import { ApiError } from './errors'
@@ -341,6 +341,9 @@ export const mockApi: Api = {
   async getSession(id): Promise<SessionView> {
     const s = session(id)
     return { state: s.state, messages: [...s.messages] }
+  },
+  async getRequestStatus(id, requestId): Promise<RequestStatus> {
+    return { request_id: requestId, status: 'not_found', current_version: session(id).state.version, replay_available: false }
   },
   async getTrace(id) {
     return { session_id: id, steps: [...session(id).trace] }

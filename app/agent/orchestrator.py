@@ -5,6 +5,7 @@ import importlib
 import inspect
 import re
 from datetime import date, datetime, time
+from functools import wraps
 from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
 
@@ -38,6 +39,18 @@ class OrchestrationLimitError(RuntimeError):
 
 class InvalidAgentCommand(ValueError):
     pass
+
+
+def bounded_turn_llm(method):
+    """Apply a single HTTP-attempt budget across parser and explanation calls."""
+    @wraps(method)
+    async def wrapped(self, *args, **kwargs):
+        scope = getattr(self.llm, "request_budget", None)
+        if scope is None:
+            return await method(self, *args, **kwargs)
+        with scope():
+            return await method(self, *args, **kwargs)
+    return wrapped
 
 
 # Backward-compatible name used by the sprint 1 API error mapper.
@@ -662,6 +675,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         })
         return candidate
 
+    @bounded_turn_llm
     async def prepare_turn(self, state: TripState, text: str) -> tuple[TripState, str, list[dict[str, Any]]]:
         before = state
         parsed = await self.parse_request(text, state)
@@ -699,6 +713,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         trace.append(self._state_diff(before, candidate))
         return candidate, reply, trace
 
+    @bounded_turn_llm
     async def prepare_command(self, state: TripState, command_type: str, payload: dict[str, Any]) -> tuple[TripState, str, list[dict[str, Any]]]:
         before = state
         trace: list[dict[str, Any]] = []

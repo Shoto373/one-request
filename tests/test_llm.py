@@ -81,6 +81,29 @@ async def test_json_repair_uses_shared_attempt_budget():
 
 
 @pytest.mark.asyncio
+async def test_nested_json_calls_share_one_turn_http_attempt_budget():
+    calls = 0
+
+    def responder(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json={"choices": [{"message": {"content": "bad"}}]})
+
+    transport = httpx.MockTransport(responder)
+    async with httpx.AsyncClient(transport=transport) as client:
+        llm = LLMClient(api_key="test", model="test-model", http_client=client,
+                        retries=0, format_retries=0, turn_attempt_budget=2)
+        with llm.request_budget():
+            with pytest.raises(InvalidLLMJSONError):
+                await llm.chat_json([], Result)
+            with pytest.raises(InvalidLLMJSONError):
+                await llm.chat_json([], Result)
+            with pytest.raises(LLMRequestError, match="budget exhausted"):
+                await llm.chat_json([], Result)
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_missing_key_does_not_make_network_request():
     llm = LLMClient(api_key="", model="test-model", retries=0)
     with pytest.raises(LLMConfigurationError, match="LLM_API_KEY"):

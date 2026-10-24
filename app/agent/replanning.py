@@ -50,6 +50,8 @@ async def track_a_replan(state: TripState, changes: dict[str, Any]) -> dict[str,
         result = await result
     if not isinstance(result, dict) or "bundle" not in result:
         raise TypeError("Track A replan must return a mapping with a bundle field")
+    if result.get("input_changes") != changes:
+        raise TypeError("Track A replan did not confirm receipt of the full accumulated changes diff")
 
     new_bundle = result.get("bundle")
     bundles = [new_bundle] if new_bundle is not None else []

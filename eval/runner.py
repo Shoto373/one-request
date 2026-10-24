@@ -66,6 +66,8 @@ class HTTPRuntime:
         self.trace_id: str | None = None
         self.order_id: str | None = None
         self.tool_names: set[str] = set()
+        self.started_at: float | None = None
+        self.first_recommendation_ms: float | None = None
 
     async def create_session(self):
         response = await self.client.post("/api/sessions", json={})
@@ -84,25 +86,31 @@ class HTTPRuntime:
             raise EvalHTTPError(response.status_code, detail)
 
     async def _stream(self, path: str, payload: dict[str, Any]):
-        response = await self.client.post(path, json=payload, headers={"Accept": "text/event-stream"})
-        self._raise(response)
         events: dict[str, list[Any]] = {}
         event = "message"
         data = []
-        for line in response.text.splitlines() + [""]:
-            if line.startswith("event:"):
-                event = line[6:].strip()
-            elif line.startswith("data:"):
-                data.append(line[5:].lstrip())
-            elif not line and data:
-                try:
-                    item = json.loads("\n".join(data))
-                except json.JSONDecodeError:
-                    item = {"invalid_json": True}
-                events.setdefault(event, []).append(item)
-                if event == "step" and isinstance(item, dict) and item.get("name"):
-                    self.tool_names.add(str(item["name"]))
-                event, data = "message", []
+        async with self.client.stream("POST", path, json=payload, headers={"Accept": "text/event-stream"}) as response:
+            if response.is_error:
+                await response.aread()
+                self._raise(response)
+            async for line in response.aiter_lines():
+                if line.startswith("event:"):
+                    event = line[6:].strip()
+                elif line.startswith("data:"):
+                    data.append(line[5:].lstrip())
+                elif not line and data:
+                    try:
+                        item = json.loads("\n".join(data))
+                    except json.JSONDecodeError:
+                        item = {"invalid_json": True}
+                    events.setdefault(event, []).append(item)
+                    if event == "step" and isinstance(item, dict) and item.get("name"):
+                        self.tool_names.add(str(item["name"]))
+                    if event == "state" and isinstance(item, dict):
+                        state = item.get("state") or {}
+                        if self.first_recommendation_ms is None and (state.get("bundles") or state.get("destinations") or state.get("proposed_changes")):
+                            self.first_recommendation_ms = round((time.monotonic() - (self.started_at or time.monotonic())) * 1000, 2)
+                    event, data = "message", []
         if events.get("error"):
             detail = events["error"][-1]
             raise EvalHTTPError(200, detail)
@@ -205,6 +213,7 @@ def _base_checks(scenario: Scenario, state: dict[str, Any], trace: list[dict[str
             for b in active),
         "no_bundle_under_hard_budget": lambda: not active,
         "alternatives_confirmed_by_A": lambda: all(a.get("confirmed") and a.get("refs") for a in state.get("proposed_changes", [])),
+        "no_fabricated_alternative": lambda: all(a.get("confirmed") and a.get("refs") for a in state.get("proposed_changes", [])),
         "hard_budget_unchanged_until_accept": lambda: reqs.get("budget_total_rub", {}).get("kind") == "hard",
         "short_answers_follow_open_question_keys": lambda: all(a.type != "answer" or a.key for a in scenario.actions),
         "known_requirements_preserved": lambda: all(reqs.get(r.key, {}).get("value") == r.value for r in scenario.expected.requirements),
@@ -242,6 +251,7 @@ def _base_checks(scenario: Scenario, state: dict[str, Any], trace: list[dict[str
 
 async def run_one(scenario: Scenario, *, mode: str, runtime: Any, max_turns: int, timeout: float):
     started = time.monotonic()
+    runtime.started_at = started
     recommendation_ms = None
     questions_asked = turns = max_questions_per_turn = answers_count = 0
     checks: list[dict[str, Any]] = []
@@ -265,7 +275,9 @@ async def run_one(scenario: Scenario, *, mode: str, runtime: Any, max_turns: int
                 questions_asked += question_count
                 max_questions_per_turn = max(max_questions_per_turn, question_count)
                 if recommendation_ms is None and (state.get("bundles") or state.get("destinations") or state.get("proposed_changes")):
-                    recommendation_ms = round((time.monotonic() - started) * 1000, 2)
+                    recommendation_ms = getattr(runtime, "first_recommendation_ms", None)
+                    if recommendation_ms is None:
+                        recommendation_ms = round((time.monotonic() - started) * 1000, 2)
                 action = script.next(state.get("open_questions", []))
                 if action is None:
                     break
@@ -295,6 +307,13 @@ async def run_one(scenario: Scenario, *, mode: str, runtime: Any, max_turns: int
         status, reason, stop_step = "failed", f"scenario exceeded {timeout}s", "timeout"
     except UnexpectedQuestion as exc:
         status, reason, stop_step = "failed", str(exc), "scripted_user"
+    except EvalHTTPError as exc:
+        detail = exc.detail if isinstance(exc.detail, dict) else {}
+        code = detail.get("code")
+        if exc.status == 200 or exc.status == 409 or exc.status == 422:
+            status, reason, stop_step = "failed", str(detail or exc), code or "agent_response"
+        else:
+            status, reason, stop_step = "blocked", str(detail or exc), "http_runtime"
     except Exception as exc:
         detail = getattr(exc, "detail", None)
         status, reason, stop_step = "blocked", str(detail or exc), "runtime"

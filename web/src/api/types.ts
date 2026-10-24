@@ -183,6 +183,15 @@ export interface SessionView {
   messages: ChatMessage[]
 }
 
+export interface RequestStatus {
+  request_id: string
+  status: 'not_found' | 'processing' | 'completed' | 'failed'
+  committed_version?: number | null
+  current_version: number
+  error?: { code: string; message: string } | null
+  replay_available: false
+}
+
 /** Шаг трейса — реальные входы/выходы инструментов, не «мысли» модели */
 export interface TraceStep {
   step_type: 'llm' | 'tool' | 'state' | string

@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 import httpx
 import pytest
 import pytest_asyncio
+from starlette.requests import Request
 
 from app.agent.llm import InvalidLLMJSONError, LLMClient
 from app.agent.orchestrator import Orchestrator, ParsedRequest
@@ -205,6 +206,49 @@ async def test_request_id_cannot_be_reused_for_different_content(api_client):
     assert conflict.status_code == 409
     assert conflict.json()["detail"]["code"] == "request_id_conflict"
     assert len(app.state.store.messages[UUID(session_id)]) == 2
+    other_session = (await client.post("/api/sessions")).json()["session_id"]
+    cross_session = await client.post(
+        f"/api/sessions/{other_session}/messages",
+        json={"request_id": req_id, "text": "first", "expected_version": 0},
+    )
+    assert cross_session.status_code == 409
+    assert cross_session.json()["detail"]["code"] == "request_id_conflict"
+
+
+@pytest.mark.asyncio
+async def test_accepted_turn_finishes_after_sse_consumer_disconnects(api_client):
+    store = app.state.store
+    state = store.create_session()
+    request_id = uuid4()
+    started, finish = asyncio.Event(), asyncio.Event()
+    request = Request({"type": "http", "app": app, "method": "POST", "path": "/test",
+                       "headers": [], "query_string": b""})
+    request.state.user_text = "slow edit"
+
+    async def operation(current):
+        started.set()
+        await finish.wait()
+        return current.model_copy(deep=True), "committed", []
+
+    from app.main import _session_event_stream
+    response = await _session_event_stream(state.session_id, 0, request_id, "same-body", request, operation)
+
+    async def consume():
+        async for _ in response.body_iterator:
+            pass
+
+    consumer = asyncio.create_task(consume())
+    await asyncio.wait_for(started.wait(), timeout=1)
+    consumer.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await consumer
+    finish.set()
+    for _ in range(100):
+        if store.get_state(state.session_id).version == 1:
+            break
+        await asyncio.sleep(0.01)
+    assert store.get_state(state.session_id).version == 1
+    assert store.get_request(state.session_id, request_id)["status"] == "completed"
 
 
 @pytest.mark.asyncio

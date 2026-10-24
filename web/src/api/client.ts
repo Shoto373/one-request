@@ -1,6 +1,6 @@
 import type {
   ApiErrorDetail, Cart, CartIn, CheckoutIn, CommandIn, MessageIn, Order, SessionCreated, SessionView, StreamEvent,
-  TraceView,
+  TraceView, RequestStatus,
 } from './types'
 import { ApiError } from './errors'
 import { mockApi } from './mock'
@@ -79,6 +79,7 @@ const realApi = {
   createSession: () => json<SessionCreated>('/api/sessions', { method: 'POST', body: '{}' }),
   getSession: (id: string) => json<SessionView>(`/api/sessions/${id}`),
   getTrace: (id: string) => json<TraceView>(`/api/sessions/${id}/trace`),
+  getRequestStatus: (id: string, requestId: string) => json<RequestStatus>(`/api/sessions/${id}/requests/${requestId}`),
   sendMessage: (id: string, body: MessageIn, onEvent: (e: StreamEvent) => void, signal?: AbortSignal) =>
     stream(`/api/sessions/${id}/messages`, body, onEvent, signal),
   sendCommand: (id: string, body: CommandIn, onEvent: (e: StreamEvent) => void, signal?: AbortSignal) =>

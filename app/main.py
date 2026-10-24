@@ -183,12 +183,9 @@ async def _session_event_stream(
                 yield _sse("error", err)
                 yield _sse("done", {"ok": False})
             return StreamingResponse(failed_replay(), media_type="text/event-stream")
-        if prior["status"] == "processing" and prior.get("status") != "new":
-            # begin_request reports an existing in-flight id as processing.
-            # Fresh reservations are returned as status=new.
-            if prior["status"] != "new":
-                lock.release()
-                raise HTTPException(409, detail={"code": "request_in_progress", "message": "This request is still running; check its status or reload the session.", "request_id": str(request_id), "current_version": current.version})
+        if prior["status"] == "processing":
+            lock.release()
+            raise HTTPException(409, detail={"code": "request_in_progress", "message": "This request is still running; check its status or reload the session.", "request_id": str(request_id), "current_version": current.version})
         if current.version != expected_version:
             store.fail_request(request_id, {"code": "version_conflict", "message": "Session changed; reload state and submit a new request."})
             raise HTTPException(409, detail={
@@ -199,22 +196,33 @@ async def _session_event_stream(
         lock.release()
         raise
 
+    async def run_and_save():
+        try:
+            candidate, reply, trace = await operation(current)
+            saved_state = store.save_turn(
+                candidate, expected_version=expected_version, user_text=getattr(request.state, "user_text", ""),
+                assistant_text=reply, trace_steps=trace, request_id=request_id,
+            )
+            return saved_state, reply, trace
+        except VersionConflict:
+            store.fail_request(request_id, {"code": "version_conflict", "message": "Session changed; reload state and submit a new request."})
+            raise
+        except Exception:
+            store.fail_request(request_id, {"code": "request_failed", "message": "The request failed; reload state before continuing."})
+            raise
+        finally:
+            # Work begins as soon as the request is accepted, even if its client
+            # disconnects before the ASGI server starts sending the SSE body.
+            lock.release()
+
+    task = asyncio.create_task(run_and_save())
+    task.add_done_callback(lambda done: done.exception() if not done.cancelled() else None)
+
     async def event_stream():
         try:
-            async def run_and_save():
-                candidate, reply, trace = await operation(current)
-                saved_state = store.save_turn(
-                    candidate, expected_version=expected_version, user_text=getattr(request.state, "user_text", ""),
-                    assistant_text=reply, trace_steps=trace, request_id=request_id,
-                )
-                return saved_state, reply, trace
-            task = asyncio.create_task(run_and_save())
-            try:
-                saved, reply, trace = await asyncio.shield(task)
-            except asyncio.CancelledError:
-                # Once accepted, finish and persist the turn even if its SSE client disconnects.
-                await task
-                raise
+            # Shield: after reservation, cancellation of the SSE response does
+            # not cancel state computation or its atomic commit.
+            saved, reply, trace = await asyncio.shield(task)
             for item in trace:
                 yield _sse("step", item)
             # Emit only the state returned by the committed save operation.
@@ -244,8 +252,6 @@ async def _session_event_stream(
             store.fail_request(request_id, {"code": code, "message": message})
             yield _sse("error", {"code": code, "message": message})
             yield _sse("done", {"ok": False})
-        finally:
-            lock.release()
 
     return StreamingResponse(
         event_stream(), media_type="text/event-stream",
