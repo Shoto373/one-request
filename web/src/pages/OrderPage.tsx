@@ -1,16 +1,31 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { api } from '../api/client'
+import { api, ApiError } from '../api/client'
 import { OfferRow, SyntheticBadge } from '../components/BundleCard'
 import Icon from '../components/Icon'
+import { PageError, PageLoading } from '../components/PageState'
 import { rub, when } from '../lib/format'
 
 export default function OrderPage() {
   const { id = '' } = useParams()
-  const { data: order, isLoading, error } = useQuery({ queryKey: ['order', id], queryFn: () => api.getOrder(id) })
+  const { data: order, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ['order', id],
+    queryFn: () => api.getOrder(id),
+    retry: (n, e) => !(e instanceof ApiError && e.status === 404) && n < 2,
+  })
 
-  if (isLoading) return <div className="p-6 text-sm text-ink-muted">Загрузка…</div>
-  if (error || !order) return <div className="p-6 text-sm text-bad">Заказ не найден</div>
+  if (isLoading) return <PageLoading text="Загружаю заказ…" />
+  if (error || !order) {
+    const missing = error instanceof ApiError && error.status === 404
+    return (
+      <PageError
+        title={missing ? 'Заказ не найден' : 'Не удалось загрузить заказ'}
+        text={missing ? 'Проверьте ссылку. Оплаченный заказ не пропадает — он хранится со всеми ценами.' : 'Сервер не ответил. Заказ сохранён — повторите загрузку.'}
+        onRetry={missing ? undefined : () => refetch()}
+        retrying={isFetching}
+      />
+    )
+  }
 
   const b = order.snapshot.bundle
   return (

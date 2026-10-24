@@ -4,13 +4,21 @@ import { useQuery } from '@tanstack/react-query'
 import { api, ApiError } from '../api/client'
 import { Checks, OfferRow, SyntheticBadge, attachChecks } from '../components/BundleCard'
 import Icon from '../components/Icon'
+import ReplanDiff from '../components/ReplanDiff'
+import { PageError, PageLoading } from '../components/PageState'
+import { diffPlans } from '../lib/diff'
 import { rub } from '../lib/format'
 
 /** Имитация оплаты. Один idempotency_key на страницу: двойной клик / повтор запроса не создают второй заказ. */
 export default function CheckoutPage() {
   const { cartId = '' } = useParams()
   const navigate = useNavigate()
-  const { data: cart, isLoading, error } = useQuery({ queryKey: ['cart', cartId], queryFn: () => api.getCart(cartId) })
+  const { data: cart, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ['cart', cartId],
+    queryFn: () => api.getCart(cartId),
+    // 404 — повторять бессмысленно; сеть — пробуем ещё пару раз
+    retry: (n, e) => !(e instanceof ApiError && e.status === 404) && n < 2,
+  })
   const keyRef = useRef(`pay-${crypto.randomUUID()}`)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -18,7 +26,7 @@ export default function CheckoutPage() {
   const [payError, setPayError] = useState<{ code: string; message: string } | null>(null)
   // C4: следим, не ушёл ли план вперёд, пока пользователь на странице оплаты
   const sessionId = cart?.snapshot.session_id
-  const { data: live } = useQuery({
+  const { data: live, refetch: refetchLive } = useQuery({
     queryKey: ['session-version', sessionId],
     queryFn: () => api.getSession(sessionId!),
     enabled: !!sessionId && cart?.status === 'open',
@@ -26,13 +34,28 @@ export default function CheckoutPage() {
     refetchOnWindowFocus: true,
   })
 
-  if (isLoading) return <div className="p-6 text-sm text-ink-muted">Загрузка…</div>
-  if (error || !cart) return <div className="p-6 text-sm text-bad">Корзина не найдена</div>
+  if (isLoading) return <PageLoading text="Загружаю корзину…" />
+  if (error || !cart) {
+    const missing = error instanceof ApiError && error.status === 404
+    return (
+      <PageError
+        title={missing ? 'Корзина не найдена' : 'Не удалось загрузить корзину'}
+        text={missing ? 'Возможно, ссылка устарела. Соберите поездку заново — агент сохранит ваш план.' : 'Сервер не ответил. Проверьте подключение и повторите.'}
+        onRetry={missing ? undefined : () => refetch()}
+        retrying={isFetching}
+      />
+    )
+  }
 
   const b = cart.snapshot.bundle
   const { byOffer, general } = attachChecks(b)
   const liveVersion = live?.state.version
   const stale = cart.status === 'open' && liveVersion != null && liveVersion !== cart.snapshot.version
+  // что поменялось в плане относительно корзины: та же логика «сохранено / заменено», что и на холсте
+  const liveBundle = live && (live.state.bundles.find((x) => x.id === live.state.selected_bundle_id) ?? live.state.bundles[0])
+  const staleDiff = stale && live
+    ? diffPlans({ ...live.state, version: cart.snapshot.version, bundles: [b], selected_bundle_id: b.id }, live.state)
+    : null
 
   const pay = async (e: FormEvent) => {
     e.preventDefault()
@@ -43,7 +66,12 @@ export default function CheckoutPage() {
       const order = await api.checkout(cartId, { payer: { name, email }, idempotency_key: keyRef.current })
       navigate(`/orders/${order.order_id}`, { replace: true })
     } catch (err) {
-      setPayError(err instanceof ApiError ? err.detail : { code: 'network', message: 'Сеть недоступна, попробуйте ещё раз' })
+      setPayError(err instanceof ApiError ? err.detail : { code: 'network', message: 'Сеть недоступна. Повторите — второй раз деньги не спишутся.' })
+      // план ушёл вперёд — сразу подтягиваем свежую версию плана и корзины, чтобы показать, что изменилось
+      if (err instanceof ApiError && err.status === 409) {
+        refetchLive()
+        refetch()
+      }
     } finally {
       setPaying(false)
     }
@@ -76,6 +104,12 @@ export default function CheckoutPage() {
               </div>
             )}
           </div>
+          {stale && staleDiff && <ReplanDiff diff={staleDiff} />}
+          {stale && live && !liveBundle && (
+            <div className="card p-4 text-sm text-ink-grey">
+              В актуальной версии плана комплектов пока нет — агент ещё уточняет условия. Вернитесь к поездке, чтобы продолжить.
+            </div>
+          )}
         </section>
 
         <aside className="h-fit space-y-4 md:sticky md:top-8 md:mt-[76px]">
@@ -106,6 +140,9 @@ export default function CheckoutPage() {
                     <div>
                       <b>План обновился</b> (версия {cart.snapshot.version} → {liveVersion}). Оплатить устаревший нельзя —
                       проверьте новую версию и оформите её.
+                      {liveBundle && liveBundle.total_rub !== cart.total_rub && (
+                        <> Новый итог — <b className="tabular-nums">{rub(liveBundle.total_rub)}</b>.</>
+                      )}
                       <Link to="/" className="mt-1 block font-semibold underline">Открыть актуальный план</Link>
                     </div>
                   </div>
@@ -119,7 +156,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 <button type="submit" disabled={paying || stale} className="btn-primary w-full py-3.5 text-base">
-                  {paying ? 'Оплачиваю…' : `Оплатить ${rub(cart.total_rub)}`}
+                  {paying ? 'Оплачиваю…' : stale ? 'План изменился' : payError?.code === 'network' ? 'Повторить оплату' : `Оплатить ${rub(cart.total_rub)}`}
                 </button>
               </form>
             )}

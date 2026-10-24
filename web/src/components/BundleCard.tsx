@@ -129,9 +129,11 @@ interface Props {
   selected?: boolean
   onCheckout: () => void
   checkoutBusy: boolean
+  /** агент занят (пересборка, оформление другого комплекта) — кнопка недоступна */
+  disabled?: boolean
 }
 
-export default function BundleCard({ bundle, selected, onCheckout, checkoutBusy }: Props) {
+export default function BundleCard({ bundle, selected, onCheckout, checkoutBusy, disabled }: Props) {
   const { byOffer, general } = attachChecks(bundle)
   const blocked = bundle.checks.some((c) => c.status === 'block')
   const warns = bundle.checks.filter((c) => c.status === 'warn').length
@@ -195,7 +197,7 @@ export default function BundleCard({ bundle, selected, onCheckout, checkoutBusy 
         )}
         <button
           onClick={onCheckout}
-          disabled={blocked || checkoutBusy}
+          disabled={blocked || checkoutBusy || disabled}
           className="btn-primary w-full py-3 text-[15px]"
           title={blocked ? 'Сначала исправьте блокирующие проблемы' : undefined}
         >

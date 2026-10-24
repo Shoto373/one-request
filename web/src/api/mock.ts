@@ -24,6 +24,8 @@ const sessions = new Map<string, MockSession>()
 const carts = new Map<string, Cart>()
 const orders = new Map<string, Order>()
 const ordersByKey = new Map<string, string>()
+/** сессии, где уже сыграли #конфликт */
+const conflicted = new Set<string>()
 
 // ---------- каталог-заглушка ----------
 
@@ -347,7 +349,23 @@ export const mockApi: Api = {
   },
   async sendMessage(id, body: MessageIn, onEvent) {
     const s = session(id)
+    // сбои для проверки UI (спринт 4, C1/C2): #конфликт — план «поменяли в другой вкладке» (409 один раз),
+    // #ошибка — LLM упала (SSE error), #обрыв — поток закончился без done
+    if (body.text.includes('#конфликт') && !conflicted.has(id)) {
+      conflicted.add(id)
+      s.state = { ...s.state, version: s.state.version + 1 }
+    }
     checkVersion(s, body.expected_version)
+    if (body.text.includes('#ошибка')) {
+      await sleep(400)
+      onEvent({ event: 'error', data: { code: 'llm_request_failed', message: 'mock: LLM timeout' } })
+      onEvent({ event: 'done', data: { ok: false } })
+      return
+    }
+    if (body.text.includes('#обрыв')) {
+      await sleep(400)
+      return
+    }
     await emitTurn(s, think(s, body.text), body.text, onEvent)
   },
   async sendCommand(id, body: CommandIn, onEvent) {
