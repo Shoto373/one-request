@@ -4,6 +4,7 @@ import { api, ApiError } from '../api/client'
 import type { DateShiftQuote, Reminder } from '../api/types'
 import Icon, { type IconName } from './Icon'
 import { localParts, rub } from '../lib/format'
+import { uuid } from '../lib/uuid'
 
 /** После покупки: что дальше по времени, что будет при отмене, сдвиг дат с расчётом денег, ранний заезд. */
 
@@ -146,7 +147,7 @@ function DateShift({ orderId, onDone }: { orderId: string; onDone: () => void })
     setBusy(true)
     try {
       setQuote(await api.quoteDateShift(orderId, d))
-      keyRef.current = `shift-${crypto.randomUUID()}`
+      keyRef.current = `shift-${uuid()}`
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Не удалось пересчитать — попробуйте ещё раз')
     } finally {
@@ -237,7 +238,7 @@ function EarlyCheckin({ orderId, option, done, onDone }: {
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const keyRef = useRef(`ec-${crypto.randomUUID()}`)
+  const keyRef = useRef(`ec-${uuid()}`)
   const arrival = option.arrival_at ? localParts(option.arrival_at).time : null
   const request = async () => {
     setBusy(true)

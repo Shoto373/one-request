@@ -9,6 +9,7 @@ import { PageError, PageLoading } from '../components/PageState'
 import { diffPlans } from '../lib/diff'
 import { rub } from '../lib/format'
 import { profileId } from '../lib/profile'
+import { uuid } from '../lib/uuid'
 
 /** Имитация оплаты. Один idempotency_key на страницу: двойной клик / повтор запроса не создают второй заказ. */
 export default function CheckoutPage() {
@@ -20,7 +21,7 @@ export default function CheckoutPage() {
     // 404 — повторять бессмысленно; сеть — пробуем ещё пару раз
     retry: (n, e) => !(e instanceof ApiError && e.status === 404) && n < 2,
   })
-  const keyRef = useRef(`pay-${crypto.randomUUID()}`)
+  const keyRef = useRef(`pay-${uuid()}`)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [paying, setPaying] = useState(false)

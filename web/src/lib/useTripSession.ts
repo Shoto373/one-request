@@ -3,6 +3,7 @@ import { api, ApiError } from '../api/client'
 import type { ChatMessage, CommandIn, StreamEvent, TraceStep, TripState } from '../api/types'
 import { diffPlans, type PlanDiff } from './diff'
 import { profileId } from './profile'
+import { uuid } from './uuid'
 
 const KEY = 'trip_session_id'
 /** как часто сверяем версию плана, пока вкладка видна и агент не занят */
@@ -321,7 +322,7 @@ export function useTripSession() {
 
   // request_id создаём на каждый запуск операции: «Повторить» после ошибки — это новый запрос,
   // старый id бэкенд помнит как failed и вернул бы ту же ошибку. Сетевой повтор внутри stream() шлёт тот же id.
-  const send = useCallback((text: string) => run((signal) => chat(text, crypto.randomUUID(), signal)), [run, chat])
+  const send = useCallback((text: string) => run((signal) => chat(text, uuid(), signal)), [run, chat])
 
   /**
    * Действие из интерфейса (выбор направления, быстрый ответ, правка требования).
@@ -329,13 +330,13 @@ export function useTripSession() {
    */
   const act = useCallback((type: CommandIn['type'], payload: CommandIn['payload'], asText: string) =>
     run(async (signal) => {
-      const requestId = crypto.randomUUID()
+      const requestId = uuid()
       try {
         await turn((version, onEvent, sig) =>
           api.sendCommand(sessionId!, { request_id: requestId, type, payload, expected_version: version }, onEvent, sig), signal, false)
       } catch (e) {
         if (!unsupported(e)) throw e
-        await chat(asText, crypto.randomUUID(), signal)
+        await chat(asText, uuid(), signal)
       }
     }), [run, turn, sessionId, chat])
 

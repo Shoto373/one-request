@@ -1,11 +1,13 @@
 /** Анонимный профиль браузера для памяти предпочтений (app/profile.py). Не логин — просто id в localStorage. */
+import { uuid } from './uuid'
+
 const KEY = 'trip_profile_id'
 
 export function profileId(): string | undefined {
   try {
     let id = localStorage.getItem(KEY)
     if (!id) {
-      id = crypto.randomUUID()
+      id = uuid()
       localStorage.setItem(KEY, id)
     }
     return id

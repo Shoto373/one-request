@@ -10,9 +10,10 @@ import type {
 } from './types'
 import type { Api } from './client'
 import { ApiError } from './errors'
+import { uuid } from '../lib/uuid'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
-const uid = () => crypto.randomUUID()
+const uid = () => uuid()
 
 interface MockSession {
   state: TripState
