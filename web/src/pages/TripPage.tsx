@@ -51,7 +51,8 @@ export default function TripPage() {
 
   const found = (s.state?.bundles.length ?? 0) + (s.state?.destinations.length ?? 0)
   // пока диалога нет — стартовый экран в стиле ostrovok.ru, после первого сообщения — рабочее пространство
-  const landing = s.messages.length === 0 && !s.busy && !s.state?.requirements.length
+  // догадки из памяти (source=memory) не в счёт: их показывает приветствие «С возвращением»
+  const landing = s.messages.length === 0 && !s.busy && !s.state?.requirements.some((r) => r.source !== 'memory')
   // мобильный: вариантов стало больше, чем пользователь видел на вкладке «Поездка» — подсказываем перейти
   const [seen, setSeen] = useState(0)
   useEffect(() => {
