@@ -19,6 +19,7 @@ class MemoryStore:
     """Test-only CAS store; production state is PostgreSQL."""
     def __init__(self):
         self.states, self.messages, self.trace = {}, {}, {}
+        self.requests = {}
         self.guard = RLock()
 
     def create_session(self):
@@ -45,7 +46,30 @@ class MemoryStore:
         with self.guard:
             return list(self.trace[UUID(str(session_id))])
 
-    def save_turn(self, state, *, expected_version, user_text, assistant_text, trace_steps):
+    def begin_request(self, request_id, session_id, fingerprint):
+        key = UUID(str(request_id))
+        with self.guard:
+            old = self.requests.get(key)
+            if old is None:
+                self.requests[key] = {"session_id": UUID(str(session_id)), "fingerprint": fingerprint, "status": "processing"}
+                return {"status": "new"}
+            if old["session_id"] != UUID(str(session_id)) or old["fingerprint"] != fingerprint:
+                from app.state.store import RequestIdConflict
+                raise RequestIdConflict("request id reused")
+            return dict(old)
+
+    def fail_request(self, request_id, error):
+        with self.guard:
+            self.requests[UUID(str(request_id))].update(status="failed", error=error)
+
+    def get_request(self, session_id, request_id):
+        with self.guard:
+            value = self.requests.get(UUID(str(request_id)))
+            if value is None or value["session_id"] != UUID(str(session_id)):
+                return None
+            return dict(value, committed_version=value.get("committed_version"), updated_at="now")
+
+    def save_turn(self, state, *, expected_version, user_text, assistant_text, trace_steps, request_id=None):
         with self.guard:
             actual = self.states[state.session_id].version
             if actual != expected_version:
@@ -57,6 +81,8 @@ class MemoryStore:
                 {"id": str(uuid4()), "role": "assistant", "text": assistant_text, "created_at": datetime.now(timezone.utc).isoformat()},
             ]
             self.trace[state.session_id] += list(trace_steps)
+            if request_id is not None:
+                self.requests[UUID(str(request_id))].update(status="completed", committed_version=saved.version)
             return saved
 
 
@@ -110,10 +136,10 @@ async def test_session_read_stale_conflict_and_sse(api_client):
     session_id = created.json()["session_id"]
     read = await client.get(f"/api/sessions/{session_id}")
     assert read.json()["state"]["version"] == 0
-    stale = await client.post(f"/api/sessions/{session_id}/messages", json={"text": "x", "expected_version": 1})
+    stale = await client.post(f"/api/sessions/{session_id}/messages", json={"request_id": str(uuid4()), "text": "x", "expected_version": 1})
     assert stale.status_code == 409
     response = await asyncio.wait_for(
-        client.post(f"/api/sessions/{session_id}/messages", json={"text": "x", "expected_version": 0}), timeout=3,
+        client.post(f"/api/sessions/{session_id}/messages", json={"request_id": str(uuid4()), "text": "x", "expected_version": 0}), timeout=3,
     )
     assert "event: step" in response.text and "event: state" in response.text
     assert "event: message" in response.text and 'event: done\ndata: {"ok":true,"version":1}' in response.text
@@ -128,9 +154,9 @@ async def test_command_endpoint_emits_saved_state_and_rejects_stale_version(api_
     client = api_client
     session_id = (await client.post("/api/sessions")).json()["session_id"]
     url = f"/api/sessions/{session_id}/commands"
-    stale = await client.post(url, json={"type": "edit_requirement", "payload": {"key": "origin", "value": "Москва"}, "expected_version": 4})
+    stale = await client.post(url, json={"request_id": str(uuid4()), "type": "edit_requirement", "payload": {"key": "origin", "value": "Москва"}, "expected_version": 4})
     assert stale.status_code == 409
-    response = await client.post(url, json={"type": "edit_requirement", "payload": {"key": "origin", "value": "Москва"}, "expected_version": 0})
+    response = await client.post(url, json={"request_id": str(uuid4()), "type": "edit_requirement", "payload": {"key": "origin", "value": "Москва"}, "expected_version": 0})
     assert response.status_code == 200 and "event: state" in response.text and '"version":1' in response.text
     persisted = (await client.get(f"/api/sessions/{session_id}")).json()["state"]
     assert persisted["version"] == 1
@@ -142,10 +168,42 @@ async def test_parallel_same_version_requests_only_commit_one(api_client):
     client = api_client
     app.state.orchestrator = FakeOrchestrator(delay=0.05)
     session_id = (await client.post("/api/sessions")).json()["session_id"]
-    url, request = f"/api/sessions/{session_id}/messages", {"text": "x", "expected_version": 0}
+    url, request = f"/api/sessions/{session_id}/messages", {"request_id": str(uuid4()), "text": "x", "expected_version": 0}
     a, b = await asyncio.gather(client.post(url, json=request), client.post(url, json=request))
-    assert sorted([a.status_code, b.status_code]) == [200, 409]
+    assert [a.status_code, b.status_code] == [200, 200]
+    assert "event: replay" in a.text or "event: replay" in b.text
     assert app.state.store.get_state(session_id).version == 1
+    assert len(app.state.store.messages[UUID(session_id)]) == 2
+
+
+@pytest.mark.asyncio
+async def test_request_id_duplicate_replays_ack_without_duplicate_messages(api_client):
+    client = api_client
+    session_id = (await client.post("/api/sessions")).json()["session_id"]
+    req = {"request_id": str(uuid4()), "text": "x", "expected_version": 0}
+    url = f"/api/sessions/{session_id}/messages"
+    first = await client.post(url, json=req)
+    replay = await client.post(url, json=req)
+    assert first.status_code == replay.status_code == 200
+    assert "event: replay" in replay.text
+    stored = app.state.store.get_session(session_id)
+    assert stored["state"].version == 1 and len(stored["messages"]) == 2
+    status = await client.get(f"/api/sessions/{session_id}/requests/{req['request_id']}")
+    assert status.json()["status"] == "completed"
+    assert status.json()["committed_version"] == 1 and status.json()["current_version"] == 1
+    assert status.json()["replay_available"] is False
+
+
+@pytest.mark.asyncio
+async def test_request_id_cannot_be_reused_for_different_content(api_client):
+    client = api_client
+    session_id = (await client.post("/api/sessions")).json()["session_id"]
+    req_id = str(uuid4())
+    url = f"/api/sessions/{session_id}/messages"
+    await client.post(url, json={"request_id": req_id, "text": "first", "expected_version": 0})
+    conflict = await client.post(url, json={"request_id": req_id, "text": "different", "expected_version": 0})
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"]["code"] == "request_id_conflict"
     assert len(app.state.store.messages[UUID(session_id)]) == 2
 
 
@@ -173,7 +231,7 @@ async def test_message_persists_extracted_requirements_bundle_and_version(api_cl
     session_id = (await client.post("/api/sessions")).json()["session_id"]
     response = await client.post(
         f"/api/sessions/{session_id}/messages",
-        json={"text": "Из Москвы в Сочи 10–17 ноября, двое взрослых", "expected_version": 0},
+        json={"request_id": str(uuid4()), "text": "Из Москвы в Сочи 10–17 ноября, двое взрослых", "expected_version": 0},
     )
     assert response.status_code == 200 and '"version":1' in response.text
     persisted = (await client.get(f"/api/sessions/{session_id}")).json()["state"]
@@ -188,7 +246,7 @@ async def test_llm_failure_sse_does_not_change_state(api_client):
     client, store = api_client, app.state.store
     app.state.orchestrator = FakeOrchestrator(error=InvalidLLMJSONError("bad"))
     session_id = (await client.post("/api/sessions")).json()["session_id"]
-    response = await client.post(f"/api/sessions/{session_id}/messages", json={"text": "x", "expected_version": 0})
+    response = await client.post(f"/api/sessions/{session_id}/messages", json={"request_id": str(uuid4()), "text": "x", "expected_version": 0})
     assert "event: error" in response.text and 'event: done\ndata: {"ok":false}' in response.text
     assert store.get_state(session_id).version == 0
     assert store.messages[UUID(session_id)] == []
@@ -200,7 +258,7 @@ async def test_timeout_sse_does_not_change_state(api_client):
     client, store = api_client, app.state.store
     app.state.orchestrator = FakeOrchestrator(error=LLMRequestError("timed out"))
     session_id = (await client.post("/api/sessions")).json()["session_id"]
-    response = await client.post(f"/api/sessions/{session_id}/messages", json={"text": "x", "expected_version": 0})
+    response = await client.post(f"/api/sessions/{session_id}/messages", json={"request_id": str(uuid4()), "text": "x", "expected_version": 0})
     assert '"code":"llm_request_failed"' in response.text and '"ok":false' in response.text
     assert store.get_state(session_id).version == 0 and store.messages[UUID(session_id)] == []
 
@@ -210,7 +268,7 @@ async def test_missing_llm_key_is_a_clear_agent_error(api_client):
     app.state.orchestrator = Orchestrator(LLMClient(api_key="", model_fast="test-model"))
     client, store = api_client, app.state.store
     session_id = (await client.post("/api/sessions")).json()["session_id"]
-    response = await client.post(f"/api/sessions/{session_id}/messages", json={"text": "x", "expected_version": 0})
+    response = await client.post(f"/api/sessions/{session_id}/messages", json={"request_id": str(uuid4()), "text": "x", "expected_version": 0})
     assert '"code":"llm_not_configured"' in response.text
     assert 'event: done\ndata: {"ok":false}' in response.text
     assert store.get_state(session_id).version == 0

@@ -42,7 +42,7 @@ class ScenarioExpected(BaseModel):
 
 class Scenario(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    id: str = Field(pattern=r"^s[23]_[0-9]{2}_[a-z0-9_]+$")
+    id: str = Field(pattern=r"^s[234]_[0-9]{2}_[a-z0-9_]+$")
     description: str = Field(min_length=8)
     now: datetime
     timezone: str = Field(min_length=3)

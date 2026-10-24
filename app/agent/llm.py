@@ -16,6 +16,11 @@ log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
+class _AttemptBudget:
+    def __init__(self, remaining: int):
+        self.remaining = remaining
+
+
 class LLMConfigurationError(RuntimeError):
     pass
 
@@ -33,7 +38,7 @@ class LLMClient:
         self, *, base_url: str | None = None, api_key: str | None = None,
         model: str | None = None, model_fast: str | None = None,
         timeout_seconds: float | None = None, http_client: httpx.AsyncClient | None = None,
-        retries: int = 2,
+        retries: int = 2, format_retries: int = 1,
     ):
         self.base_url = (base_url or os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("LLM_API_KEY", "")
@@ -42,6 +47,7 @@ class LLMClient:
         self.timeout_seconds = timeout_seconds or float(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
         self.client = http_client
         self.retries = max(0, min(retries, 3))
+        self.format_retries = max(0, min(format_retries, 1))
 
     def _require_config(self, model: str) -> None:
         if not self.api_key:
@@ -49,13 +55,15 @@ class LLMClient:
         if not model:
             raise LLMConfigurationError("LLM_MODEL is not configured")
 
-    async def _request(self, body: dict[str, Any], model: str) -> dict[str, Any]:
+    async def _request(self, body: dict[str, Any], model: str, budget: _AttemptBudget | None = None) -> dict[str, Any]:
         self._require_config(model)
         own_client = self.client is None
         client = self.client or httpx.AsyncClient(timeout=self.timeout_seconds)
         started = time.monotonic()
+        budget = budget or _AttemptBudget(self.retries + 1)
         try:
-            for attempt in range(self.retries + 1):
+            for attempt in range(min(self.retries + 1, budget.remaining)):
+                budget.remaining -= 1
                 try:
                     response = await client.post(
                         f"{self.base_url}/chat/completions",
@@ -104,19 +112,33 @@ class LLMClient:
         self, messages: list[dict[str, Any]], schema: type[T], *, fast: bool = False,
     ) -> T:
         model = self.model_fast if fast else self.model
-        result = await self._request(
-            {"messages": messages, "temperature": 0, "response_format": {"type": "json_object"}}, model,
-        )
-        content = self._content(result).strip()
-        content = re.sub(r"\A```(?:json)?\s*|\s*```\Z", "", content, flags=re.I)
-        try:
-            parsed = json.loads(content)
-        except json.JSONDecodeError as exc:
-            raise InvalidLLMJSONError(f"LLM returned invalid JSON at character {exc.pos}") from exc
-        try:
-            return schema.model_validate(parsed)
-        except ValidationError as exc:
-            raise InvalidLLMJSONError(f"LLM JSON does not match {schema.__name__}: {exc.errors()[0]['msg']}") from exc
+        budget = _AttemptBudget(self.retries + 1 + self.format_retries)
+        prompt = messages
+        repair_count = 0
+        while budget.remaining > 0:
+            result = await self._request(
+                {"messages": prompt, "temperature": 0, "response_format": {"type": "json_object"}}, model, budget,
+            )
+            content = self._content(result).strip()
+            content = re.sub(r"\A```(?:json)?\s*|\s*```\Z", "", content, flags=re.I)
+            try:
+                parsed = json.loads(content)
+                return schema.model_validate(parsed)
+            except json.JSONDecodeError as exc:
+                error = InvalidLLMJSONError(f"LLM returned invalid JSON at character {exc.pos}")
+            except ValidationError as exc:
+                error = InvalidLLMJSONError(f"LLM JSON does not match {schema.__name__}: {exc.errors()[0]['msg']}")
+            if repair_count >= self.format_retries or budget.remaining <= 0:
+                raise error
+            repair_count += 1
+            prompt = [
+                *messages,
+                {"role": "assistant", "content": content},
+                {"role": "user", "content": "Correct your previous response. It failed validation: "
+                 + str(error) + ". Return only JSON matching this schema: "
+                 + json.dumps(schema.model_json_schema(), ensure_ascii=False)},
+            ]
+        raise InvalidLLMJSONError("LLM JSON attempt budget exhausted")
 
     async def chat_tools(
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]], *, fast: bool = False,

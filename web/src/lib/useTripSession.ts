@@ -132,13 +132,16 @@ export function useTripSession() {
       case 'message':
         setMessages((m) => [...m, { role: e.data.role, text: e.data.text }])
         break
+      case 'replay':
+        if (sessionId) void reload(sessionId)
+        break
       case 'error':
         setError(ERROR_TEXT[e.data.code] ?? e.data.message)
         break
       case 'done':
         break
     }
-  }, [apply])
+  }, [apply, reload, sessionId])
 
   const run = useCallback(async (fn: (signal: AbortSignal) => Promise<void>) => {
     if (!sessionId) return
@@ -165,7 +168,7 @@ export function useTripSession() {
 
   const chat = useCallback(async (text: string, signal: AbortSignal) => {
     setMessages((m) => [...m, { role: 'user', text }])
-    await api.sendMessage(sessionId!, { text, expected_version: versionRef.current }, onEvent, signal)
+    await api.sendMessage(sessionId!, { request_id: crypto.randomUUID(), text, expected_version: versionRef.current }, onEvent, signal)
   }, [sessionId, onEvent])
 
   const send = useCallback((text: string) => run((signal) => chat(text, signal)), [run, chat])
@@ -177,7 +180,7 @@ export function useTripSession() {
   const act = useCallback((type: CommandIn['type'], payload: CommandIn['payload'], asText: string) =>
     run(async (signal) => {
       try {
-        await api.sendCommand(sessionId!, { type, payload, expected_version: versionRef.current }, onEvent, signal)
+        await api.sendCommand(sessionId!, { request_id: crypto.randomUUID(), type, payload, expected_version: versionRef.current }, onEvent, signal)
       } catch (e) {
         if (!unsupported(e)) throw e
         await chat(asText, signal)

@@ -48,6 +48,39 @@ async def test_invalid_json_is_clear_and_finite():
 
 
 @pytest.mark.asyncio
+async def test_json_schema_error_gets_one_bounded_repair_attempt():
+    calls = []
+
+    def responder(request):
+        calls.append(request)
+        content = '{"value":"wrong"}' if len(calls) == 1 else '{"value":9}'
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    transport = httpx.MockTransport(responder)
+    async with httpx.AsyncClient(transport=transport) as client:
+        llm = LLMClient(api_key="test", model="test-model", http_client=client, retries=2)
+        assert (await llm.chat_json([], Result)).value == 9
+    assert len(calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_json_repair_uses_shared_attempt_budget():
+    calls = 0
+
+    def responder(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json={"choices": [{"message": {"content": "bad"}}]})
+
+    transport = httpx.MockTransport(responder)
+    async with httpx.AsyncClient(transport=transport) as client:
+        llm = LLMClient(api_key="test", model="test-model", http_client=client, retries=2)
+        with pytest.raises(InvalidLLMJSONError):
+            await llm.chat_json([], Result)
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_missing_key_does_not_make_network_request():
     llm = LLMClient(api_key="", model="test-model", retries=0)
     with pytest.raises(LLMConfigurationError, match="LLM_API_KEY"):

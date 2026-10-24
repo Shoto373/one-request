@@ -345,10 +345,13 @@ def _old_bundle(state: Any, bundle_id: str | None) -> dict[str, Any] | None:
     return next((b for b in bundles if b.get("id") == selected), bundles[0] if bundles else None)
 
 
-def replan(requirements: dict[str, Any], state: Any, bundle_id: str | None = None) -> dict[str, Any]:
+def replan(requirements: dict[str, Any], state: Any, bundle_id: str | None = None,
+           changes: dict[str, Any] | None = None) -> dict[str, Any]:
     """Rebuild the selected (or given) bundle of ``state`` under the new ``requirements``.
 
     Returns ``{bundle, kept, replaced, price_delta_rub, change, notes, history_entry, alternatives}``.
+    ``changes`` is the complete typed diff from the last successfully selected plan;
+    requirements remains the full current requirement set used for all calculations.
     ``bundle`` keeps the old bundle's id and label. When nothing fits, ``bundle`` is None and
     ``alternatives`` holds confirmed minimal changes (same format as suggest_destinations).
     """
@@ -357,15 +360,16 @@ def replan(requirements: dict[str, Any], state: Any, bundle_id: str | None = Non
     q, problems = query_from_requirements(cat, requirements, state)
     if q is None:
         return {"bundle": None, "kept": [], "replaced": [], "price_delta_rub": None, "change": "",
-                "notes": problems, "history_entry": None, "alternatives": []}
+                "notes": problems, "history_entry": None, "alternatives": [], "input_changes": changes or {}}
     if old is None or not old.get("items"):
         return {"bundle": None, "kept": [], "replaced": [], "price_delta_rub": None, "change": "",
                 "notes": ["Нет выбранного комплекта для пересборки — нужен обычный подбор."],
-                "history_entry": None, "alternatives": []}
+                "history_entry": None, "alternatives": [], "input_changes": changes or {}}
     items = [Offer.model_validate(i) for i in old["items"]]
     result = replan_bundle(cat, items, q, bundle_id=old.get("id", "b1"), label=old.get("label", "пересобран"))
     out = result.to_wire()
     out["alternatives"] = []
+    out["input_changes"] = changes or {}
     if result.bundle is None:
         from app.planning.alternatives import minimal_changes
         from app.planning.suggest import _alternatives

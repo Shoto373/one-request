@@ -157,7 +157,8 @@ def normalize_contextual_changes(parsed: ParsedRequest, text: str, state: TripSt
     """Normalize relative chat edits against the current trip without guessing."""
     normalized = {r.key: r for r in parsed.requirements}
     lower = text.lower().replace("ё", "е")
-    if re.search(r"бюджет\w*\s+(?:меньше|ниже|снизить|уменьшить)|(?:меньше|ниже)\s+бюджет", lower) and not re.search(r"\d", text):
+    if (re.search(r"бюджет\w*\s+(?:меньше|ниже|снизить|уменьшить)|(?:меньше|ниже)\s+бюджет", lower)
+            or re.search(r"\b(?:lower|reduce|decrease)\s+(?:the\s+)?budget\b|\bbudget\s+(?:lower|smaller)\b", lower)) and not re.search(r"\d", text):
         normalized.pop("budget_total_rub", None)
         normalized.pop("budget_per_person_rub", None)
         return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
@@ -166,10 +167,14 @@ def normalize_contextual_changes(parsed: ParsedRequest, text: str, state: TripSt
         )
 
     shift = re.search(r"на\s+(?P<n>\d+|один|одну|два|две|три|четыре)\s+д(?:ень|ня|ней)\s+(?P<dir>позже|раньше)", lower)
+    english_shift = re.search(r"\b(?P<n>\d+|one|two|three|four)\s+days?\s+(?P<dir>later|earlier)\b", lower)
+    if shift is None and english_shift:
+        shift = english_shift
     if shift:
-        word_nums = {"один": 1, "одну": 1, "два": 2, "две": 2, "три": 3, "четыре": 4}
+        word_nums = {"один": 1, "одну": 1, "два": 2, "две": 2, "три": 3, "четыре": 4,
+                     "one": 1, "two": 2, "three": 3, "four": 4}
         days = int(shift.group("n")) if shift.group("n").isdigit() else word_nums[shift.group("n")]
-        offset = days if shift.group("dir") == "позже" else -days
+        offset = days if shift.group("dir") in {"позже", "later"} else -days
         current = next((r for r in state.requirements if r.key == "dates" and r.value is not None), None)
         if current and isinstance(current.value, dict):
             try:
@@ -190,10 +195,13 @@ def normalize_contextual_changes(parsed: ParsedRequest, text: str, state: TripSt
             )
 
     pet_match = re.search(r"с\s+(?:нами\s+)?(?:собак\w*|п[её]с\w*|кош\w*|кот\w*)", lower)
+    english_pet = re.search(r"\bwith\s+(?:a\s+)?(?P<kind>dog|cat)\b", lower)
+    if pet_match is None and english_pet:
+        pet_match = english_pet
     existing_pets = next((r for r in state.requirements if r.key == "pets" and r.value not in (None, False, "", [])), None)
     weight = next((r for r in state.requirements if r.key == "pet_weight_kg" and r.value not in (None, "")), None)
     if pet_match and existing_pets is None:
-        kind = "cat" if re.search(r"кош|кот", pet_match.group(0)) else "dog"
+        kind = "cat" if re.search(r"кош|кот|\bcat\b", pet_match.group(0)) else "dog"
         if "pets" not in normalized:
             normalized["pets"] = Requirement(key="pets", value={"kind": kind}, kind="hard", source="user_text", quote=text[pet_match.start():pet_match.end()])
         if "pet_weight_kg" not in normalized and not weight:

@@ -22,6 +22,10 @@ class VersionConflict(Exception):
         super().__init__(f"expected_version {expected} is stale; current version is {actual}")
 
 
+class RequestIdConflict(Exception):
+    pass
+
+
 class StateStore:
     """Only the agent should call save_turn; readers may use get_state/get_session."""
 
@@ -64,6 +68,44 @@ class StateStore:
             item["created_at"] = item["created_at"].isoformat()
         return {"state": state, "messages": messages}
 
+    def begin_request(self, request_id: UUID | str, session_id: UUID | str, fingerprint: str) -> dict[str, Any]:
+        """Reserve a mutation id or return its durable previous result."""
+        with self.connect() as conn:
+            inserted = conn.execute(
+                "INSERT INTO session_requests(request_id,session_id,fingerprint,status) "
+                "VALUES (%s,%s,%s,'processing') ON CONFLICT(request_id) DO NOTHING RETURNING request_id",
+                (str(request_id), str(session_id), fingerprint),
+            ).fetchone()
+            if inserted:
+                return {"status": "new"}
+            row = conn.execute(
+                "SELECT session_id,fingerprint,status,committed_version,error FROM session_requests "
+                "WHERE request_id=%s FOR UPDATE", (str(request_id),),
+            ).fetchone()
+        if str(row["session_id"]) != str(session_id) or row["fingerprint"] != fingerprint:
+            raise RequestIdConflict("request_id is already bound to different request content")
+        return {"status": row["status"], "committed_version": row["committed_version"], "error": row["error"]}
+
+    def fail_request(self, request_id: UUID | str, error: dict[str, Any]) -> None:
+        with self.connect() as conn:
+            conn.execute(
+                "UPDATE session_requests SET status='failed', error=%s, updated_at=now() "
+                "WHERE request_id=%s AND status='processing'",
+                (Jsonb(error), str(request_id)),
+            )
+
+    def get_request(self, session_id: UUID | str, request_id: UUID | str) -> dict[str, Any] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT status,committed_version,error,updated_at FROM session_requests "
+                "WHERE session_id=%s AND request_id=%s", (str(session_id), str(request_id)),
+            ).fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        result["updated_at"] = result["updated_at"].isoformat()
+        return result
+
     def save_turn(
         self,
         state: TripState,
@@ -72,6 +114,7 @@ class StateStore:
         user_text: str,
         assistant_text: str,
         trace_steps: list[dict[str, Any]],
+        request_id: UUID | str | None = None,
     ) -> TripState:
         """Atomically compare version and persist state, messages and trace."""
         new_version = expected_version + 1
@@ -100,6 +143,12 @@ class StateStore:
                         Jsonb(step.get("output")) if step.get("output") is not None else None,
                         step.get("status", "ok"),
                     ),
+                )
+            if request_id is not None:
+                conn.execute(
+                    "UPDATE session_requests SET status='completed', committed_version=%s, error=NULL, updated_at=now() "
+                    "WHERE request_id=%s AND session_id=%s AND status='processing'",
+                    (new_version, str(request_id), str(state.session_id)),
                 )
         return state_to_save
 
