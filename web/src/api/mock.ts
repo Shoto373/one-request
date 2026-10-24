@@ -6,7 +6,7 @@
  */
 import type {
   Bundle, Cart, CartIn, ChatMessage, CheckoutIn, CommandIn, DestinationOption, MessageIn, Offer, Order, ProposedChange,
-  Requirement, RequestStatus, SessionCreated, SessionView, StreamEvent, TraceStep, TripState,
+  Reminder, Requirement, RequestStatus, SessionCreated, SessionView, StreamEvent, TraceStep, TripState,
 } from './types'
 import type { Api } from './client'
 import { ApiError } from './errors'
@@ -461,5 +461,35 @@ export const mockApi: Api = {
   },
   async getOrder(id) {
     return orders.get(id) ?? err(404, 'order_not_found', 'Заказ не найден')
+  },
+  // после покупки: упрощённо, только чтобы страница заказа рисовалась без бэкенда
+  async getAftercare(id) {
+    const o = orders.get(id) ?? err(404, 'order_not_found', 'Заказ не найден')
+    const b = o.snapshot.bundle
+    const now = Date.now()
+    return {
+      order_id: id, bundle: b, total_rub: b.total_rub,
+      reminders: b.items.filter((x) => x.times).map((x) => ({
+        at: x.times!.start, kind: x.kind === 'hotel' ? 'checkin' : x.kind === 'transfer' ? 'transfer' : 'departure',
+        text: x.title ?? x.item_id, offer_id: x.offer_id, past: Date.parse(x.times!.start) < now,
+      })) as Reminder[],
+      cancellation: { items: b.items.map((x) => ({ offer_id: x.offer_id, kind: x.kind, title: x.title ?? x.item_id, total_rub: x.total_rub,
+        status: 'penalty' as const, penalty_rub: x.cancel_policy?.penalty_rub ?? 0, free_until: x.cancel_policy?.free_until ?? null })),
+        penalty_total_rub: b.items.reduce((s, x) => s + (x.cancel_policy?.penalty_rub ?? 0), 0) },
+      early_checkin: { hotel: 'Отель', available: true, from: '10:00', price_rub: 2500, guaranteed: false, standard_checkin: '14:00', arrival_at: null, source_refs: [] },
+      changes: [],
+    }
+  },
+  async quoteDateShift(id, days) {
+    const o = orders.get(id) ?? err(404, 'order_not_found', 'Заказ не найден')
+    return { order_id: id, days, feasible: true, old_dates: { start: '2026-11-10', end: '2026-11-17' },
+      new_dates: { start: '2026-11-12', end: '2026-11-19' }, kept: [], replaced: o.snapshot.bundle.items.map((x) => ({ offer_id: x.offer_id, title: x.title ?? '' })),
+      added: [], penalties: [], price_delta_rub: 1200, penalty_total_rub: 0, to_pay_rub: 1200, old_total_rub: o.total_rub, new_total_rub: o.total_rub + 1200 }
+  },
+  async confirmDateShift(id) {
+    return { change_id: uid(), kind: 'date_shift', status: 'confirmed', quote: { order_id: id }, created_at: new Date().toISOString(), replay: false }
+  },
+  async requestEarlyCheckin(id) {
+    return { change_id: uid(), kind: 'early_checkin', status: 'confirmed', quote: { order_id: id, status_text: 'запрошен' }, created_at: new Date().toISOString(), replay: false }
   },
 }

@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, ApiError } from '../api/client'
 import { OfferRow, SyntheticBadge } from '../components/BundleCard'
+import Aftercare from '../components/Aftercare'
 import Icon from '../components/Icon'
 import { PageError, PageLoading } from '../components/PageState'
 import { rub, when } from '../lib/format'
@@ -30,7 +31,7 @@ export default function OrderPage() {
   const b = order.snapshot.bundle
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-8">
+      <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-8">
         <div className="guru-gradient relative overflow-hidden rounded-3xl p-6 text-white">
           <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-lime/80 blur-2xl" aria-hidden />
           <div className="relative">
@@ -58,6 +59,8 @@ export default function OrderPage() {
             ))}
           </ol>
         </section>
+
+        <Aftercare orderId={order.order_id} />
 
         <p className="text-xs text-ink-muted">
           Состав и цены зафиксированы в момент оплаты и больше не меняются. Плательщик: {order.payer.name}, {order.payer.email}.

@@ -1,6 +1,6 @@
 import type {
   ApiErrorDetail, Cart, CartIn, CheckoutIn, CommandIn, MessageIn, Order, SessionCreated, SessionView, StreamEvent,
-  TraceView, RequestStatus, AppStatus,
+  TraceView, RequestStatus, AppStatus, Aftercare, DateShiftQuote, OrderChange,
 } from './types'
 import { ApiError } from './errors'
 import { mockApi } from './mock'
@@ -90,6 +90,13 @@ const realApi = {
   checkout: (cartId: string, body: CheckoutIn) =>
     json<Order>(`/api/cart/${cartId}/checkout`, { method: 'POST', body: JSON.stringify(body) }),
   getOrder: (id: string) => json<Order>(`/api/orders/${id}`),
+  getAftercare: (id: string) => json<Aftercare>(`/api/orders/${id}/aftercare`),
+  quoteDateShift: (id: string, days: number) =>
+    json<DateShiftQuote>(`/api/orders/${id}/date-shift/quote`, { method: 'POST', body: JSON.stringify({ days }) }),
+  confirmDateShift: (id: string, days: number, idempotency_key: string) =>
+    json<OrderChange & { replay: boolean }>(`/api/orders/${id}/date-shift`, { method: 'POST', body: JSON.stringify({ days, idempotency_key }) }),
+  requestEarlyCheckin: (id: string, idempotency_key: string) =>
+    json<OrderChange & { replay: boolean }>(`/api/orders/${id}/early-checkin`, { method: 'POST', body: JSON.stringify({ idempotency_key }) }),
 }
 
 export type Api = typeof realApi

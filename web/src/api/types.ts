@@ -290,6 +290,79 @@ export interface Order {
   replay?: boolean
 }
 
+// ---------- после покупки (app/cart/aftercare.py) ----------
+
+export interface Reminder {
+  at: string
+  kind: 'checkin_online' | 'departure' | 'transfer' | 'checkin' | 'checkout' | 'free_cancel_deadline'
+  text: string
+  offer_id: string
+  past: boolean
+}
+
+export interface CancelTerms {
+  status: 'free' | 'penalty' | 'nonrefundable'
+  penalty_rub: number
+  free_until: string | null
+}
+
+export interface EarlyCheckinOption {
+  hotel: string
+  available: boolean
+  from: string | null
+  price_rub: number
+  guaranteed: boolean
+  standard_checkin: string
+  luggage_storage?: boolean
+  arrival_at: string | null
+  source_refs: string[]
+}
+
+export interface OrderChange {
+  change_id: string
+  kind: 'date_shift' | 'early_checkin'
+  status: string
+  quote: Record<string, any>
+  created_at: string
+}
+
+export interface Aftercare {
+  order_id: string
+  bundle: Bundle
+  total_rub: number
+  reminders: Reminder[]
+  cancellation: { items: ({ offer_id: string; kind: OfferKind; title: string; total_rub: number } & CancelTerms)[]; penalty_total_rub: number }
+  early_checkin: EarlyCheckinOption | null
+  changes: OrderChange[]
+}
+
+export interface ShiftItem {
+  offer_id: string
+  title: string
+  kind?: OfferKind
+  same_item?: boolean
+  total_rub?: number
+}
+
+export interface DateShiftQuote {
+  order_id: string
+  days: number
+  feasible: boolean
+  old_dates: { start: string; end: string }
+  new_dates: { start: string; end: string }
+  notes?: string[]
+  change?: string
+  kept?: ShiftItem[]
+  replaced?: ShiftItem[]
+  added?: ShiftItem[]
+  penalties?: (ShiftItem & CancelTerms)[]
+  old_total_rub?: number
+  new_total_rub?: number
+  price_delta_rub?: number
+  penalty_total_rub?: number
+  to_pay_rub?: number
+}
+
 /** GET /api/status — что работает прямо сейчас */
 export interface AppStatus {
   llm: { configured: boolean; provider_host?: string | null; model?: string }
