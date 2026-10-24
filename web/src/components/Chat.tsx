@@ -1,26 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ChatMessage, OpenQuestion, TraceStep } from '../api/types'
+import type { OpenQuestion, TraceStep } from '../api/types'
+import type { UiMessage } from '../lib/useTripSession'
 import Icon from './Icon'
 import { AgentAvatar } from './Logo'
 import { STEP_LABEL } from './TracePanel'
 
+/** разные по типу запросы: размытый, точный, с животным, невыполнимый, на английском */
 const EXAMPLES = [
   { emoji: '🌊', text: 'Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов' },
   { emoji: '🚆', text: 'Из Москвы в Сочи 10–17 ноября, двое взрослых' },
+  { emoji: '🐕', text: 'На выходные из Москвы с собакой 12 кг, куда угодно, до 40 000' },
   { emoji: '🏙️', text: 'Неделя в Дубае на троих за 30 000' },
+  { emoji: '🌍', text: 'Somewhere warm in December for two, budget 150k RUB' },
 ]
 
 interface Props {
-  messages: ChatMessage[]
+  messages: UiMessage[]
   steps: TraceStep[]
   questions: OpenQuestion[]
   busy: boolean
   disabled: boolean
+  /** сессия ещё создаётся/восстанавливается */
+  connecting?: boolean
   onSend: (text: string) => void
   onAnswer: (q: OpenQuestion, value: string) => void
+  /** отправить не дошедшее сообщение ещё раз */
+  onRetry: (text: string) => void
 }
 
-export default function Chat({ messages, steps, questions, busy, disabled, onSend, onAnswer }: Props) {
+export default function Chat({ messages, steps, questions, busy, disabled, connecting, onSend, onAnswer, onRetry }: Props) {
   const [text, setText] = useState('')
   const bottom = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
@@ -40,15 +48,23 @@ export default function Chat({ messages, steps, questions, busy, disabled, onSen
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
         {messages.length === 0 ? (
-          <Welcome disabled={disabled} onPick={submit} />
+          <Welcome disabled={disabled} connecting={!!connecting} onPick={submit} />
         ) : (
           <div className="space-y-4">
             {messages.map((m, i) =>
               m.role === 'user' ? (
-                <div key={i} className="flex justify-end">
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-md bg-brand px-4 py-2.5 text-[15px] leading-snug text-white">
+                <div key={i} className="flex flex-col items-end gap-1">
+                  <div className={`max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-md px-4 py-2.5 text-[15px] leading-snug text-white ${m.failed ? 'bg-brand/50' : 'bg-brand'}`}>
                     {m.text}
                   </div>
+                  {m.failed && !busy && (
+                    <div className="flex items-center gap-1.5 text-xs text-bad">
+                      <Icon name="alert" className="h-3.5 w-3.5" /> не отправлено ·
+                      <button onClick={() => onRetry(m.text)} disabled={disabled} className="font-semibold underline-offset-2 hover:underline">
+                        повторить
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div key={i} className="flex items-end gap-2.5">
@@ -114,7 +130,7 @@ export default function Chat({ messages, steps, questions, busy, disabled, onSen
               }
             }}
             rows={1}
-            placeholder={questions.length ? 'Ответьте или уточните…' : 'Куда, когда, кто едет, что важно…'}
+            placeholder={connecting ? 'Подключаюсь к агенту…' : busy ? 'Агент отвечает…' : questions.length ? 'Ответьте или уточните…' : 'Куда, когда, кто едет, что важно…'}
             className="max-h-36 min-h-[40px] min-w-0 flex-1 resize-none bg-transparent py-2 text-[15px] outline-none placeholder:text-ink-muted"
             disabled={disabled}
           />
@@ -132,7 +148,7 @@ export default function Chat({ messages, steps, questions, busy, disabled, onSen
   )
 }
 
-function Welcome({ disabled, onPick }: { disabled: boolean; onPick: (t: string) => void }) {
+function Welcome({ disabled, connecting, onPick }: { disabled: boolean; connecting: boolean; onPick: (t: string) => void }) {
   return (
     <div className="flex h-full flex-col justify-end gap-5 pb-2">
       <div className="guru-gradient relative overflow-hidden rounded-3xl p-6 text-white">
@@ -152,7 +168,15 @@ function Welcome({ disabled, onPick }: { disabled: boolean; onPick: (t: string) 
         </div>
       </div>
       <div>
-        <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">Попробуйте</div>
+        <div className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          {connecting ? (
+            <>
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand border-t-transparent" /> Подключаюсь к агенту…
+            </>
+          ) : (
+            'Попробуйте'
+          )}
+        </div>
         <div className="flex flex-col gap-2">
           {EXAMPLES.map((e) => (
             <button

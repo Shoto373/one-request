@@ -67,9 +67,15 @@ export default function TripCanvas(p: Props) {
         <Stepper stage={s?.stage} />
 
         {empty ? (
-          <EmptyCanvas />
+          p.busy ? <LoadingCanvas /> : <EmptyCanvas />
         ) : (
           <>
+            {p.busy && !p.checkoutBusyId && (
+              <div role="status" className="sticky top-0 z-10 flex items-center gap-2.5 rounded-2xl bg-ink px-4 py-2.5 text-sm font-medium text-white shadow-lift">
+                <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Агент обновляет план — варианты ниже могут измениться
+              </div>
+            )}
             <Requirements
               requirements={s?.requirements ?? []}
               busy={p.busy}
@@ -82,6 +88,7 @@ export default function TripCanvas(p: Props) {
               <NoOptions changes={s?.proposed_changes ?? []} busy={p.busy} onApply={p.onApplyChange} />
             )}
 
+            <div className={`space-y-5 transition-opacity ${p.busy && !p.checkoutBusyId ? 'pointer-events-none opacity-50' : ''}`} aria-busy={p.busy}>
             {!!s?.destinations.length && <Destinations items={s.destinations} busy={p.busy} onSelect={p.onSelectDestination} />}
 
             {p.diff && !!s?.bundles.length && <ReplanDiff diff={p.diff} onClose={p.onCloseDiff} />}
@@ -104,13 +111,60 @@ export default function TripCanvas(p: Props) {
                 </div>
                 <div className="grid gap-4 xl:grid-cols-2">
                   {bundles.map((b) => (
-                    <BundleCard key={b.id} bundle={b} selected={b.id === selectedId} checkoutBusy={p.checkoutBusyId === b.id} onCheckout={() => p.onCheckout(b.id)} />
+                    <BundleCard
+                      key={b.id}
+                      bundle={b}
+                      selected={b.id === selectedId}
+                      checkoutBusy={p.checkoutBusyId === b.id}
+                      disabled={p.busy || (!!p.checkoutBusyId && p.checkoutBusyId !== b.id)}
+                      onCheckout={() => p.onCheckout(b.id)}
+                    />
                   ))}
                 </div>
               </section>
             )}
+            </div>
           </>
         )}
+      </div>
+    </div>
+  )
+}
+
+/** первый ход: агент разбирает запрос и ищет варианты — показываем каркас будущего холста */
+function LoadingCanvas() {
+  return (
+    <div className="space-y-4" role="status" aria-label="Агент подбирает варианты">
+      <div className="flex items-center gap-2.5 text-sm font-medium text-ink-grey">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+        Агент разбирает запрос и подбирает варианты…
+      </div>
+      <div className="card animate-pulse p-4">
+        <div className="h-4 w-40 rounded bg-black/[.07]" />
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[24, 32, 28, 20].map((w) => (
+            <div key={w} className="h-7 rounded-full bg-black/[.06]" style={{ width: `${w * 4}px` }} />
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="card animate-pulse space-y-3 p-4">
+            <div className="flex justify-between">
+              <div className="h-5 w-24 rounded-full bg-black/[.07]" />
+              <div className="h-6 w-28 rounded bg-black/[.07]" />
+            </div>
+            {[0, 1, 2].map((j) => (
+              <div key={j} className="flex gap-3">
+                <div className="h-9 w-9 rounded-xl bg-black/[.06]" />
+                <div className="flex-1 space-y-1.5 pt-1">
+                  <div className="h-3.5 w-3/4 rounded bg-black/[.06]" />
+                  <div className="h-3 w-1/2 rounded bg-black/[.05]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import Chat from '../components/Chat'
@@ -21,12 +21,13 @@ export default function TripPage() {
     try {
       // Persist the user's explicit choice through the agent before asking it
       // to validate readiness. The cart API still checks this version again.
-      await s.act('select_bundle', { bundle_id: bundleId }, `Выбираю комплект ${bundleId}`)
+      // act сам показывает ошибку (и перечитывает план на 409) — здесь просто останавливаемся
+      if (!(await s.act('select_bundle', { bundle_id: bundleId }, `Выбираю комплект ${bundleId}`))) return
       let current = (await api.getSession(s.sessionId)).state
       if (current.selected_bundle_id !== bundleId || current.stage !== 'assemble') {
         throw new Error('Не удалось зафиксировать выбранный комплект. Обновите план и повторите действие.')
       }
-      await s.act('request_checkout', {}, 'Проверь выбранный комплект перед оформлением')
+      if (!(await s.act('request_checkout', {}, 'Проверь выбранный комплект перед оформлением'))) return
       current = (await api.getSession(s.sessionId)).state
       if (current.stage !== 'checkout') {
         const blockers = current.bundles.find((b) => b.id === bundleId)?.checks.filter((c) => c.status === 'block').map((c) => c.text) ?? []
@@ -35,20 +36,42 @@ export default function TripPage() {
       const cart = await api.createCart({ session_id: s.sessionId, version: current.version, bundle_id: bundleId })
       navigate(`/checkout/${cart.cart_id}`)
     } catch (e) {
-      s.setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Не удалось оформить')
+      if (e instanceof ApiError && e.status === 409) {
+        // план ушёл вперёд между проверкой и корзиной — показываем актуальный, корзину не создаём
+        await s.refresh()
+        s.setError('Пока шла проверка, план изменился. Посмотрите актуальную версию и оформите ещё раз.')
+      } else {
+        s.setError(e instanceof ApiError ? e.message : e instanceof TypeError ? 'Нет связи с сервером — попробуйте ещё раз.' : e instanceof Error ? e.message : 'Не удалось оформить')
+      }
     } finally {
       setCheckoutBusy(null)
     }
   }
 
   const found = (s.state?.bundles.length ?? 0) + (s.state?.destinations.length ?? 0)
+  // мобильный: вариантов стало больше, чем пользователь видел на вкладке «Поездка» — подсказываем перейти
+  const [seen, setSeen] = useState(0)
+  useEffect(() => {
+    if (tab === 'trip') setSeen(found)
+  }, [tab, found])
+  const openTrip = () => setTab('trip')
 
   return (
     <div className="flex h-full flex-col">
-      {s.error && (
-        <div className="flex items-center gap-3 border-b border-bad/20 bg-bad-bg px-4 py-2.5 text-sm text-bad">
-          <Icon name="alert" className="h-4 w-4 shrink-0" />
-          <span className="flex-1">{s.error}</span>
+      {s.notice && (
+        <div
+          role={s.notice.tone === 'error' ? 'alert' : 'status'}
+          className={`flex items-center gap-3 border-b px-4 py-2.5 text-sm ${
+            s.notice.tone === 'error' ? 'border-bad/20 bg-bad-bg text-bad' : 'border-brand/15 bg-brand-light text-brand'
+          }`}
+        >
+          <Icon name={s.notice.tone === 'error' ? 'alert' : 'refresh'} className="h-4 w-4 shrink-0" />
+          <span className="flex-1">{s.notice.text}</span>
+          {s.notice.retry && (
+            <button onClick={s.retry} disabled={s.busy} className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold shadow-card hover:shadow-lift">
+              Повторить
+            </button>
+          )}
           <button onClick={() => s.setError(null)} className="rounded-full p-1 hover:bg-black/5" aria-label="Закрыть">
             <Icon name="x" className="h-4 w-4" />
           </button>
@@ -82,14 +105,25 @@ export default function TripPage() {
               </button>
             </div>
           </div>
-          <div className="min-h-0 flex-1">
+          <div className="relative min-h-0 flex-1">
+            {tab === 'chat' && !s.busy && found > seen && (
+              <button
+                onClick={openTrip}
+                className="absolute inset-x-4 bottom-[76px] z-10 flex items-center justify-center gap-2 rounded-2xl bg-ink py-3 text-sm font-semibold text-white shadow-lift md:hidden"
+              >
+                {s.state?.bundles.length ? 'Смотреть комплекты' : 'Смотреть направления'} · {found}
+                <Icon name="chevron" className="h-4 w-4" />
+              </button>
+            )}
             <Chat
               messages={s.messages}
               steps={s.steps}
               questions={s.state?.open_questions ?? []}
               busy={s.busy}
               disabled={!s.sessionId}
+              connecting={s.connecting}
               onSend={s.send}
+              onRetry={s.send}
               onAnswer={(_q, v) => s.send(v)}
             />
           </div>

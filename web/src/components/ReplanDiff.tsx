@@ -21,7 +21,7 @@ function Delta({ value }: { value: number }) {
 }
 
 /** «Пересобрал план»: что сохранено, что заменено и почему, на сколько изменилась цена */
-export default function ReplanDiff({ diff, onClose }: { diff: PlanDiff; onClose: () => void }) {
+export default function ReplanDiff({ diff, onClose }: { diff: PlanDiff; onClose?: () => void }) {
   const delta = diff.priceAfter - diff.priceBefore
   return (
     <section className="card overflow-hidden ring-1 ring-brand/20">
@@ -46,9 +46,11 @@ export default function ReplanDiff({ diff, onClose }: { diff: PlanDiff; onClose:
             <Delta value={delta} />
           </div>
         </div>
-        <button onClick={onClose} className="rounded-full p-1 text-ink-muted hover:bg-black/5" aria-label="Скрыть">
-          <Icon name="x" className="h-4 w-4" />
-        </button>
+        {onClose && (
+          <button onClick={onClose} className="rounded-full p-1 text-ink-muted hover:bg-black/5" aria-label="Скрыть">
+            <Icon name="x" className="h-4 w-4" />
+          </button>
+        )}
       </header>
 
       <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto]">
