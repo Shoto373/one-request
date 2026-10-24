@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Метрики агента</title>
+<style>
+  :root {
+    --brand: #0d41d2; --brand-light: #eaf2ff; --ink: #2d3137; --muted: #868686; --line: #e5e5e5;
+    --canvas: #f4f4f4; --card: #ffffff; --ok: #53af24; --ok-bg: #e5f3de; --warn: #e77d00; --warn-bg: #fff8e6;
+    --bad: #ce2121; --bad-bg: #fae9e9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --brand: #7ea2ff; --brand-light: #1c2540; --ink: #e8e9eb; --muted: #9a9ca0; --line: #2d3036;
+      --canvas: #14161a; --card: #1c1f24; --ok: #7fd457; --ok-bg: #1e2c18; --warn: #f2a24a; --warn-bg: #2e2416;
+      --bad: #ff6b6b; --bad-bg: #321a1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--ink);
+         font: 15px/1.45 "Onest Variable", Helvetica, Arial, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 26px; margin: 0; }
+  a { color: var(--brand); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 20px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .tile .label { color: var(--muted); font-size: 13px; }
+  .tile .value { font-size: 30px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile .hint { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  h2 { font-size: 18px; margin: 28px 0 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 10px; border-top: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; border-top: 0; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .passed { background: var(--ok-bg); color: var(--ok); }
+  .failed { background: var(--bad-bg); color: var(--bad); }
+  .skipped { background: var(--brand-light); color: var(--brand); }
+  .blocked { background: var(--warn-bg); color: var(--warn); }
+  .checks { display: flex; flex-wrap: wrap; gap: 4px; }
+  .note { background: var(--brand-light); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+  .scroll { overflow-x: auto; }
+  #error { display: none; background: var(--bad-bg); color: var(--bad); border-radius: 12px; padding: 12px 14px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Метрики агента</h1>
+    <span class="muted"><a href="/">← к поездке</a> · <a href="/api/metrics">JSON</a></span>
+  </header>
+  <p class="note" id="definition">Загружаю…</p>
+  <div id="error"></div>
+
+  <h2>Планировщик на фиксированных сценариях</h2>
+  <p class="muted">Без LLM: ожидаемые требования сценария идут в настоящий подбор, затем независимые проверки снимка заказа (не через validate_plan). <span id="computed"></span></p>
+  <div class="grid" id="planner-tiles"></div>
+
+  <h2>Агент целиком</h2>
+  <p class="muted">Последний прогон скриптового пользователя (eval.runner): уточнения и время до первой рекомендации.</p>
+  <div class="grid" id="agent-tiles"></div>
+
+  <h2>Сценарии</h2>
+  <div class="card scroll"><table>
+    <thead><tr><th>Сценарий</th><th>Итог</th><th>Комплекты / изменения</th><th>Проверки</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+</main>
+<script>
+const pct = (x) => x == null ? "—" : Math.round(x * 100) + "%";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const STATUS = {passed: "выполнено", failed: "провал", skipped: "нужен агент", blocked: "не проверено"};
+const tile = (label, value, hint = "") =>
+  `<div class="card tile"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="hint">${esc(hint)}</div></div>`;
+
+async function load() {
+  try {
+    const r = await fetch("/api/metrics");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const m = await r.json();
+    document.getElementById("definition").textContent = m.definition;
+    const p = m.planner;
+    document.getElementById("computed").textContent = "Посчитано: " + new Date(p.computed_at).toLocaleString("ru-RU") + ".";
+    document.getElementById("planner-tiles").innerHTML = [
+      tile("Условия успеха выполнены", pct(p.success_rate), `${p.passed} из ${p.scenarios_evaluated} сценариев`),
+      tile("Ошибки состыковок", p.connection_errors, "даты, стойка, обратная дорога, старые позиции"),
+      tile("Независимых проверок", p.checks_run, `провалено: ${Object.values(p.check_failures).reduce((a, b) => a + b, 0)}`),
+      tile("Сценариев всего", p.scenarios_total, `${p.scenarios_need_agent} требуют агента с LLM`),
+    ].join("");
+    const a = m.agent;
+    document.getElementById("agent-tiles").innerHTML = a.available ? [
+      tile("Условия успеха выполнены", pct(a.success_rate), `${a.passed} из ${a.passed + a.failed}, не проверено: ${a.blocked}`),
+      tile("Уточнений в среднем", a.avg_clarifying_questions ?? "—", "вопросов на сценарий"),
+      tile("До первой рекомендации", a.avg_time_to_first_recommendation_ms == null ? "—" :
+           (a.avg_time_to_first_recommendation_ms / 1000).toFixed(1) + " с", "в среднем"),
+      tile("Ошибки состыковок", a.connection_errors, `прогон ${a.mode}, ${new Date(a.created_at).toLocaleString("ru-RU")}`),
+    ].join("") : `<div class="card">Отчёта ещё нет. Запустите: <code>${esc(a.how_to)}</code></div>`;
+    document.getElementById("rows").innerHTML = p.scenarios.map((s) => {
+      const what = s.bundles.length ? s.bundles.map((b) => `${esc(b[1])}: ${b[2].toLocaleString("ru-RU")} ₽`).join("<br>")
+        : s.proposed_changes.length ? s.proposed_changes.map(esc).join("<br>") : "—";
+      const checks = s.checks.map((c) => `<span class="badge ${c.status}" title="${esc(STATUS[c.status])}">${esc(c.name)}</span>`).join("");
+      return `<tr><td>${esc(s.id)}${s.reason ? `<div class="muted">${esc(s.reason)}</div>` : ""}</td>
+        <td><span class="badge ${s.status}">${esc(STATUS[s.status])}</span></td><td>${what}</td>
+        <td><div class="checks">${checks || '<span class="muted">—</span>'}</div></td></tr>`;
+    }).join("");
+  } catch (e) {
+    const box = document.getElementById("error");
+    box.style.display = "block";
+    box.textContent = "Не удалось загрузить метрики: " + e.message;
+  }
+}
+load();
+</script>
+</body>
+</html>

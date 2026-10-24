@@ -289,6 +289,11 @@ from app.cart.router import router as cart_router  # noqa: E402
 
 app.include_router(cart_router)
 
+# ---- трек A: метрики по фиксированным сценариям (до SPA-фолбэка, чтобы /metrics не ушёл в index.html) ----
+from app.metrics.router import router as metrics_router  # noqa: E402
+
+app.include_router(metrics_router)
+
 WEB_DIR = Path(os.getenv("WEB_DIR", Path(__file__).resolve().parents[1] / "web" / "dist"))
 if (WEB_DIR / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="assets")
