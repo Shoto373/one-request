@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps reset test eval-deterministic eval-e2e web-dev web-mock
+.PHONY: up down build logs ps reset test eval-deterministic eval-e2e rehearsal web-dev web-mock
 
 up:            ## собрать и поднять
 	@test -f .env || cp .env.example .env
@@ -29,6 +29,9 @@ eval-deterministic: ## фиксированный eval с инжектирова
 
 eval-e2e:       ## сквозной eval на отдельном API/БД и настроенном реальном LLM
 	python -m eval.runner --mode e2e --base-url "$${EVAL_BASE_URL:-http://localhost:8080}"
+
+rehearsal:      ## репетиция защиты: «чужие» запросы eval/rehearsal.txt по запущенному API
+	python -m eval.rehearsal --base-url "$${EVAL_BASE_URL:-http://localhost:8080}"
 
 web-dev:       ## фронт с hot-reload на :5173, API → :8080
 	cd web && npm install && npm run dev
