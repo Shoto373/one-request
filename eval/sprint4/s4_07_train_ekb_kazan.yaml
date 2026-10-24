@@ -1,0 +1,19 @@
+id: s4_07_train_ekb_kazan
+description: Поездом из Екатеринбурга в Казань; в комплекте только поезда и трансферы с вокзала.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Asia/Yekaterinburg
+request: Из Екатеринбурга в Казань поездом 13–16 ноября 2026, один взрослый.
+actions:
+  - {type: command, command: select_bundle, payload: {bundle_id: b1}}
+  - {type: command, command: request_checkout}
+  - {type: command, command: pay, payload: {payer: {name: Тест Тестов, email: test@example.com}}}
+expected:
+  final_stage: checkout
+  requirements:
+    - {key: origin, kind: hard, value: Екатеринбург}
+    - {key: destination, kind: hard, value: Казань}
+    - {key: dates, kind: hard, value: {start: '2026-11-13', end: '2026-11-16'}}
+    - {key: adults, kind: hard, value: 1}
+    - {key: transport, kind: hard, value: train}
+  checks: [transport_kind_respected, party_in_every_offer, dates_match_requirements, prices_recomputed_from_catalog, order_snapshot_frozen]
+fixtures: {track_a: {select: b1}}

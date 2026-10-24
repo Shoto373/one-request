@@ -40,3 +40,6 @@ pipeline/.cache/
 .DS_Store
 Thumbs.db
 *.log
+
+# --- eval reports (generated) ---
+eval/reports/

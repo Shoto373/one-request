@@ -1,0 +1,22 @@
+id: s4_04_sochi_with_dog
+description: Поездка с собакой 8 кг; животное должны принимать перевозчик, отель и оба трансфера.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Сочи 10–17 ноября 2026, двое взрослых и собака 8 кг.
+actions:
+  - {type: command, command: select_bundle, payload: {bundle_id: b1}}
+  - {type: command, command: request_checkout}
+expected:
+  final_stage: checkout
+  requirements:
+    - {key: destination, kind: hard, value: Сочи}
+    - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-17'}}
+    - {key: adults, kind: hard, value: 2}
+    - {key: pets, kind: hard, value: {kind: dog}}
+    - {key: pet_weight_kg, kind: hard, value: 8}
+  checks: [pet_allowed_everywhere, party_in_every_offer, snapshot_total_matches_items, dates_match_requirements]
+fixtures:
+  track_a:
+    select: b1
+    requirements:
+      - {key: origin, kind: hard, value: Москва}

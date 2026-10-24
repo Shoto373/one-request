@@ -1,0 +1,18 @@
+id: s4_01_sochi_purchase
+description: Конкретная поездка Москва→Сочи до оплаты; снимок заказа проверяется независимо от планировщика.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Сочи 10–17 ноября 2026, двое взрослых.
+actions:
+  - {type: command, command: select_bundle, payload: {bundle_id: b1}}
+  - {type: command, command: request_checkout}
+  - {type: command, command: pay, payload: {payer: {name: Тест Тестов, email: test@example.com}}}
+expected:
+  final_stage: checkout
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: destination, kind: hard, value: Сочи}
+    - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-17'}}
+    - {key: adults, kind: hard, value: 2}
+  checks: [snapshot_total_matches_items, offers_exist_in_catalog, prices_recomputed_from_catalog, party_in_every_offer, dates_match_requirements, return_transfer_in_time, night_arrival_has_reception, order_snapshot_frozen]
+fixtures: {track_a: {select: b1}}

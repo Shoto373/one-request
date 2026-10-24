@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 from app.catalog.models import Offer
 from app.catalog.store import Catalog, get_catalog
 from app.planning.models import CHECK_KIND_RU, Bundle, Check, Claim, bundle_to_wire, rub
-from app.planning.query import TripQuery, query_from_requirements
+from app.planning.query import MEAL_RANK, TripQuery, query_from_requirements
 from app.planning.scoring import (
     FLEX_WEIGHT,
     cancel_loss,
@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 
 TOP_TRANSPORT = 12
 TOP_HOTELS = 15
+WISH_HOTELS = 6
 
 
 @dataclass
@@ -91,6 +92,17 @@ def _tradeoffs(items: list[Offer]) -> list[Claim]:
             out.append(Claim(text=f"{o.variant['title']}: пересадка, в пути {o.variant['duration_min'] // 60} ч.",
                              refs=ref))
     return out
+
+
+def hotel_fits(cat: Catalog, o: Offer, q: TripQuery) -> bool:
+    """Stars and meal: a hard requirement filters hotels, a soft one only ranks (see scoring)."""
+    return not q.lodging_hard or meets_wish(cat, o, q)
+
+
+def meets_wish(cat: Catalog, o: Offer, q: TripQuery) -> bool:
+    if q.min_stars and (cat.hotels[o.item_id].stars or 0) < q.min_stars:
+        return False
+    return not q.meal or MEAL_RANK.get(o.variant.get("meal", "RO"), 0) >= MEAL_RANK[q.meal]
 
 
 def fits_limits(o: Offer, q: TripQuery) -> bool:
@@ -191,10 +203,13 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
         checkins = sorted({arrive.date(), (arrive + timedelta(minutes=EXIT_MIN[hub_class(out)] + 120)).date()})
         for checkin in checkins:
             if checkin not in hotels_by_checkin:
-                hotels_by_checkin[checkin] = (
-                    search_hotels(cat, q.dest_city, checkin, q.return_date, q.party)[:TOP_HOTELS]
-                    if checkin < q.return_date else []
-                )
+                found = search_hotels(cat, q.dest_city, checkin, q.return_date, q.party) if checkin < q.return_date else []
+                found = [h for h in found if hotel_fits(cat, h, q)]
+                pool = found[:TOP_HOTELS]
+                if variants > 1 and (q.min_stars or q.meal):
+                    # Soft hotel wishes: the cheapest matching hotels compete for «удобнее» too.
+                    pool += [h for h in found[TOP_HOTELS:] if meets_wish(cat, h, q)][:WISH_HOTELS]
+                hotels_by_checkin[checkin] = pool
         hotels = [h for c in checkins for h in hotels_by_checkin[c]]
         for hotel in hotels:
             for back in backs:
@@ -212,11 +227,18 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
                 cand = _Candidate(total, items, checks)
                 tops["cheap"].push(total, cand)
                 if variants > 1:
-                    tops["comfort"].push(total + comfort_penalty(cat, items, checks, q.party), cand)
+                    tops["comfort"].push(total + comfort_penalty(cat, items, checks, q.party, q), cand)
                     tops["flex"].push(total + FLEX_WEIGHT * cancel_loss(items), cand)
     if not any(hotels_by_checkin.values()):
+        extra = []
+        if q.party.pets:
+            extra.append("с животным")
+        if q.lodging_hard and q.min_stars:
+            extra.append(f"от {q.min_stars}★")
+        if q.lodging_hard and q.meal:
+            extra.append(f"с питанием не хуже {q.meal}")
         notes.append(f"Нет свободных отелей ({cat.cities[q.dest_city].name}) на эти даты под этот состав"
-                     + (" с животным." if q.party.pets else "."))
+                     + (f" ({', '.join(extra)})." if extra else "."))
     cheapest = tops["cheap"].first_not_in(set())
     if cheapest is None:
         if blocks:
@@ -231,7 +253,7 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
     if variants > 1:
         comfortable = tops["comfort"].first_not_in(taken)
         if comfortable is not None:
-            label = comfort_label(q.party, q.max_stops == 0)
+            label = comfort_label(q.party, q.max_stops == 0, q)
             bundles.append(_bundle("b2", label, comfortable, comfort_phrase(cat, comfortable.items, cheapest.items)))
             taken.add(comfortable.key)
         flexible = tops["flex"].first_not_in(taken)

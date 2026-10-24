@@ -1,0 +1,17 @@
+id: s4_10_cheap_but_five_stars
+description: Противоречие «подешевле, но строго 5 звёзд»; жёсткие звёзды не ослабляются, дешевле — среди 5★.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Стамбул 10–14 ноября 2026, двое взрослых, подешевле, но отель строго 5 звёзд.
+actions: []
+expected:
+  final_stage: compare
+  requirements:
+    - {key: origin, kind: hard, value: Москва}
+    - {key: destination, kind: hard, value: Стамбул}
+    - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-14'}}
+    - {key: adults, kind: hard, value: 2}
+    - {key: lodging_stars, kind: hard, value: 5}
+    - {key: budget_preference, kind: soft, value: low_cost}
+  checks: [lodging_wish_respected, party_in_every_offer, prices_recomputed_from_catalog, snapshot_total_matches_items]
+fixtures: {track_a: {select: b1}}

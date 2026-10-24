@@ -1,0 +1,16 @@
+id: s4_03_night_arrival_ekb_antalya
+description: Прямой ночной рейс Екатеринбург→Анталья прилетает на следующий день; заезд и стойка проверяются по местному времени.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Asia/Yekaterinburg
+request: Из Екатеринбурга в Анталью 10–15 ноября 2026, двое взрослых, только прямые рейсы.
+actions: []
+expected:
+  final_stage: compare
+  requirements:
+    - {key: origin, kind: hard, value: Екатеринбург}
+    - {key: destination, kind: hard, value: Анталья}
+    - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-15'}}
+    - {key: adults, kind: hard, value: 2}
+    - {key: max_stops, kind: hard, value: 0}
+  checks: [snapshot_total_matches_items, party_in_every_offer, night_arrival_has_reception, return_transfer_in_time, prices_recomputed_from_catalog]
+fixtures: {track_a: {select: b1}}

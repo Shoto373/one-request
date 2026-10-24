@@ -1,0 +1,19 @@
+id: s4_05_dubai_with_dog_impossible
+description: В ОАЭ животное пассажиром не провезти; честный отказ и подтверждённые изменения без выдуманных комплектов.
+now: '2026-10-24T12:00:00+03:00'
+timezone: Europe/Moscow
+request: Из Москвы в Дубай 10–17 ноября 2026, двое взрослых с собакой.
+actions: []
+expected:
+  final_stage: select
+  requirements:
+    - {key: destination, kind: hard, value: Дубай}
+    - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-17'}}
+    - {key: adults, kind: hard, value: 2}
+    - {key: pets, kind: hard, value: {kind: dog}}
+  checks: [honest_no_bundle, alternatives_confirmed_by_A, zero_fabricated_bundles]
+fixtures:
+  track_a:
+    expect: no_bundle
+    requirements:
+      - {key: origin, kind: hard, value: Москва}
