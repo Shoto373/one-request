@@ -21,6 +21,11 @@ function when(iso: string) {
   return `${p.date}, ${p.time}`
 }
 
+/** 2026-11-12 → «12 нояб.» */
+function day(iso?: string) {
+  return iso ? new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : ''
+}
+
 export default function Aftercare({ orderId }: { orderId: string }) {
   const qc = useQueryClient()
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['aftercare', orderId], queryFn: () => api.getAftercare(orderId) })
@@ -51,7 +56,7 @@ export default function Aftercare({ orderId }: { orderId: string }) {
               <div className="flex-1">
                 {c.kind === 'date_shift' ? (
                   <>
-                    <b>Даты изменены</b> на {c.quote.new_dates?.start} — {c.quote.new_dates?.end}.{' '}
+                    <b>Даты изменены</b> на {day(c.quote.new_dates?.start)} — {day(c.quote.new_dates?.end)}.{' '}
                     {c.quote.to_pay_rub > 0 ? `Доплачено ${rub(c.quote.to_pay_rub)}` : c.quote.to_pay_rub < 0 ? `К возврату ${rub(-c.quote.to_pay_rub)}` : 'Без доплаты'}
                     {c.quote.penalty_total_rub > 0 && <span className="text-ink-muted"> (из них штрафы за отмену {rub(c.quote.penalty_total_rub)})</span>}
                   </>
@@ -113,7 +118,7 @@ function Timeline({ reminders }: { reminders: Reminder[] }) {
         {reminders.map((r, i) => (
           <li key={r.at + r.kind + i} className={`flex gap-3 text-sm ${r.past ? 'opacity-40' : ''}`}>
             <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${r === next ? 'bg-brand text-white' : r.kind === 'free_cancel_deadline' ? 'bg-warn-bg text-warn' : 'bg-brand-light text-brand'}`}>
-              <Icon name={REMINDER_ICON[r.kind]} className="h-4 w-4" />
+              <Icon name={r.kind === 'departure' && r.offer_kind === 'train' ? 'train' : REMINDER_ICON[r.kind]} className="h-4 w-4" />
             </span>
             <span className="min-w-0">
               <span className="block text-xs text-ink-muted">{when(r.at)}{r === next && ' · следующее'}</span>
@@ -183,13 +188,13 @@ function DateShift({ orderId, onDone }: { orderId: string; onDone: () => void })
       {error && <div className="mt-3 rounded-xl bg-bad-bg p-3 text-sm text-bad">{error}</div>}
       {quote && !quote.feasible && (
         <div className="mt-3 rounded-xl bg-warn-bg p-3 text-sm text-[#8a4b00]">
-          На {quote.new_dates.start} — {quote.new_dates.end} поездка не собирается. {quote.notes?.join(' ')}
+          На {day(quote.new_dates.start)} — {day(quote.new_dates.end)} поездка не собирается. {quote.notes?.join(' ')}
         </div>
       )}
       {quote?.feasible && (
         <div className="mt-3 space-y-2 rounded-2xl bg-canvas p-3 text-sm">
           <div className="font-medium">
-            {quote.new_dates.start} — {quote.new_dates.end}
+            Новые даты: {day(quote.new_dates.start)} — {day(quote.new_dates.end)}
           </div>
           {!!quote.kept?.length && (
             <div><span className="text-ok">Сохранится:</span> {quote.kept.map((x) => x.title).join('; ')}</div>

@@ -9,6 +9,9 @@ import { rub, when } from '../lib/format'
 
 export default function OrderPage() {
   const { id = '' } = useParams()
+  // те же данные, что у блока «После покупки»: если даты меняли, наверху — исходный состав, и это подписано
+  const { data: after } = useQuery({ queryKey: ['aftercare', id], queryFn: () => api.getAftercare(id) })
+  const changed = !!after?.changes.some((c) => c.kind === 'date_shift')
   const { data: order, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['order', id],
     queryFn: () => api.getOrder(id),
@@ -50,6 +53,7 @@ export default function OrderPage() {
             <span className="flex items-center gap-1.5">
               <span className="rounded-full bg-brand-light px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-brand">{b.label}</span>
               {b.items.some((o) => o.synthetic) && <SyntheticBadge />}
+              {changed && <span className="rounded-full bg-warn-bg px-2.5 py-1 text-[11px] font-semibold text-[#8a4b00]">исходный состав · даты изменены ниже</span>}
             </span>
             <span className="price text-2xl">{rub(order.total_rub)}</span>
           </header>

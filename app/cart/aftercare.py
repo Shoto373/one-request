@@ -80,8 +80,10 @@ def reminders(bundle: dict, now: datetime) -> list[dict]:
         if free_until and free_until > now:
             out.append({"at": free_until.isoformat(), "kind": "free_cancel_deadline",
                         "text": f"Последний день бесплатной отмены: {_title(o)}", "offer_id": o["offer_id"]})
+    kinds = {o["offer_id"]: o["kind"] for o in bundle["items"]}
     for r in out:
         r["past"] = _dt(r["at"]) <= now
+        r["offer_kind"] = kinds.get(r["offer_id"])
     return sorted(out, key=lambda r: r["at"])
 
 

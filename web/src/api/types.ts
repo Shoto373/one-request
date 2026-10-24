@@ -297,6 +297,7 @@ export interface Reminder {
   kind: 'checkin_online' | 'departure' | 'transfer' | 'checkin' | 'checkout' | 'free_cancel_deadline'
   text: string
   offer_id: string
+  offer_kind?: OfferKind
   past: boolean
 }
 
