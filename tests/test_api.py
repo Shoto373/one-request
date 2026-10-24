@@ -308,11 +308,16 @@ async def test_timeout_sse_does_not_change_state(api_client):
 
 
 @pytest.mark.asyncio
-async def test_missing_llm_key_is_a_clear_agent_error(api_client):
+async def test_missing_llm_key_falls_back_to_rule_parser(api_client):
+    """Без ключа LLM ход не падает: запрос разбирают правила, в трейсе это видно."""
     app.state.orchestrator = Orchestrator(LLMClient(api_key="", model_fast="test-model"))
     client, store = api_client, app.state.store
     session_id = (await client.post("/api/sessions")).json()["session_id"]
-    response = await client.post(f"/api/sessions/{session_id}/messages", json={"request_id": str(uuid4()), "text": "x", "expected_version": 0})
-    assert '"code":"llm_not_configured"' in response.text
-    assert 'event: done\ndata: {"ok":false}' in response.text
-    assert store.get_state(session_id).version == 0
+    response = await client.post(f"/api/sessions/{session_id}/messages", json={
+        "request_id": str(uuid4()), "text": "Хочу в Сочи с ребёнком", "expected_version": 0})
+    assert "llm_not_configured" not in response.text
+    assert '"name":"parse_request_rules"' in response.text
+    assert '"ok":true' in response.text
+    state = store.get_state(session_id)
+    assert state.version == 1
+    assert {r.key for r in state.requirements} >= {"destination", "children_count"}

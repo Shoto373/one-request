@@ -5,6 +5,7 @@ import Icon from './Icon'
 /** Человеческие подписи шагов агента; неизвестные показываем по имени инструмента */
 export const STEP_LABEL: Record<string, string> = {
   parse_request: 'Разбираю запрос',
+  parse_request_rules: 'Разбираю запрос правилами (без LLM)',
   parse_answer: 'Разбираю ответ',
   next_questions: 'Решаю, что уточнить',
   get_climate: 'Смотрю погоду',

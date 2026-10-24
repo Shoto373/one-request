@@ -335,6 +335,9 @@ function checkVersion(s: MockSession, expected: number) {
 }
 
 export const mockApi: Api = {
+  async getStatus() {
+    return { llm: { configured: false }, database: true, agent_mode: 'llm', message: null }
+  },
   async createSession(): Promise<SessionCreated> {
     const id = uid()
     sessions.set(id, { state: emptyState(id), messages: [], trace: [], opts: { ...BASE } })

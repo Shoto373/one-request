@@ -117,7 +117,9 @@ def test_status_endpoint_without_key(monkeypatch) -> None:
     with TestClient(app) as client:
         assert client.get("/health").json() == {"status": "ok"}
         status = client.get("/api/status").json()
-    assert status["llm"]["configured"] is False and status["message"] == NO_KEY_MESSAGE
+    # без ключа агент работает на правилах, а не отвечает ошибкой
+    assert status["llm"]["configured"] is False and status["agent_mode"] == "rules"
+    assert "офлайн-режиме" in status["message"]
 
 
 def test_status_never_returns_the_key(monkeypatch) -> None:

@@ -54,6 +54,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Trip Agent", version="0.1.0", lifespan=lifespan)
 
 
+OFFLINE_MESSAGE = ("LLM не настроен — агент работает в офлайн-режиме: запрос разбирают правила, подбор, проверки и оплата "
+                   "работают как обычно. Для свободного диалога впишите LLM_API_KEY в .env.")
+
+
 @app.get("/api/status")
 async def status(request: Request) -> dict[str, Any]:
     """What works right now: lets the UI warn before the first message (no secrets returned)."""
@@ -61,7 +65,9 @@ async def status(request: Request) -> dict[str, Any]:
     return {
         "llm": llm,
         "database": request.app.state.store is not None,
-        "message": None if llm["configured"] else NO_KEY_MESSAGE,
+        # без LLM агент не выключается: запрос разбирают правила (app/agent/rule_parser.py)
+        "agent_mode": "llm" if llm["configured"] else "rules",
+        "message": None if llm["configured"] else OFFLINE_MESSAGE,
     }
 
 

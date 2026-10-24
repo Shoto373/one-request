@@ -1,6 +1,6 @@
 import type {
   ApiErrorDetail, Cart, CartIn, CheckoutIn, CommandIn, MessageIn, Order, SessionCreated, SessionView, StreamEvent,
-  TraceView, RequestStatus,
+  TraceView, RequestStatus, AppStatus,
 } from './types'
 import { ApiError } from './errors'
 import { mockApi } from './mock'
@@ -76,6 +76,7 @@ async function stream(path: string, body: unknown, onEvent: (e: StreamEvent) => 
 }
 
 const realApi = {
+  getStatus: () => json<AppStatus>('/api/status'),
   createSession: () => json<SessionCreated>('/api/sessions', { method: 'POST', body: '{}' }),
   getSession: (id: string) => json<SessionView>(`/api/sessions/${id}`),
   getTrace: (id: string) => json<TraceView>(`/api/sessions/${id}/trace`),

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import logging
 import re
 from datetime import date, datetime, time
 from functools import wraps
@@ -16,14 +17,17 @@ from app.agent.destination_search import (
     SuggestionResult, suggest_destinations as track_a_suggest_destinations,
 )
 from app.agent.explain import _numbers, explain_bundle_claims, explain_destination, resolve_evidence
-from app.agent.llm import LLMClient
+from app.agent.llm import InvalidLLMJSONError, LLMClient, LLMConfigurationError, LLMRequestError
 from app.agent.requirements import (
     ParsedRequest, REQUIREMENT_KEYS, merge_requirement_changes, missing_concrete_inputs, next_questions,
     normalize_contextual_changes, validate_extraction,
 )
 from app.agent.replanning import track_a_replan, track_a_validate_bundle
+from app.agent.rule_parser import rule_parse
 from app.state.models import Bundle as StateBundle
 from app.state.models import Check, Claim, HistoryEntry, OpenQuestion, PendingReplan, Requirement, TripState
+
+log = logging.getLogger(__name__)
 
 # Re-export kept for the sprint 1 import contract and existing tests.
 __all__ = ["Orchestrator", "ParsedRequest", "CatalogIntegrationUnavailable", "OrchestrationLimitError"]
@@ -138,10 +142,17 @@ Apply the same typed rules to English. For an open question, a short English ans
 "two days later" is relative to current dates. "with a dog" records pet presence but never invents its weight.
 "lower budget" without an amount must remain unknown and ask for a numeric limit. Never silently relax a hard condition.
 Never produce offer ids, prices, feasibility, weather, visa, or search results. No reasoning text."""
-        parsed = await self.llm.chat_json(
-            [{"role": "system", "content": system}, {"role": "user", "content": text}],
-            ParsedRequest, fast=True,
-        )
+        self.last_parser = "llm"
+        try:
+            parsed = await self.llm.chat_json(
+                [{"role": "system", "content": system}, {"role": "user", "content": text}],
+                ParsedRequest, fast=True,
+            )
+        except (LLMConfigurationError, LLMRequestError, InvalidLLMJSONError) as exc:
+            # No key, provider down or rate-limited: the rule parser keeps the whole path to checkout working.
+            log.warning("parse_request falls back to rules: %s", type(exc).__name__)
+            self.last_parser = "rules"
+            parsed = rule_parse(text, state, self.local_now())
         return validate_extraction(parsed, text)
 
     def _year_resolve(self, requirements: list[Requirement], suppressed: list[str] | tuple[str, ...] = ()) -> list[Requirement]:
@@ -682,10 +693,11 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         before = state
         parsed = await self.parse_request(text, state)
         parsed, contextual_question = normalize_contextual_changes(parsed, text, state)
+        rules = getattr(self, "last_parser", "llm") == "rules"
         trace: list[dict[str, Any]] = [{
-            "step_type": "llm", "name": "parse_request",
+            "step_type": "tool" if rules else "llm", "name": "parse_request_rules" if rules else "parse_request",
             "input": {"text": text, "open_question_keys": [q.key for q in state.open_questions]},
-            "output": parsed.model_dump(mode="json"), "status": "ok",
+            "output": parsed.model_dump(mode="json"), "status": "fallback" if rules else "ok",
         }]
         accepted, ambiguous = self._match_alternative(text, state.proposed_changes, parsed)
         if ambiguous:

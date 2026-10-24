@@ -290,6 +290,15 @@ export interface Order {
   replay?: boolean
 }
 
+/** GET /api/status — что работает прямо сейчас */
+export interface AppStatus {
+  llm: { configured: boolean; provider_host?: string | null; model?: string }
+  database: boolean
+  /** rules — LLM не настроен, запрос разбирают правила; всё остальное работает */
+  agent_mode: 'llm' | 'rules'
+  message: string | null
+}
+
 /** Ошибки API: {detail: {code, message, ...}} */
 export interface ApiErrorDetail {
   code: string

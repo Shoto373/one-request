@@ -86,9 +86,10 @@ async def test_empty_catalog_result_is_honest():
 
 
 @pytest.mark.asyncio
-async def test_llm_error_does_not_return_candidate_state():
+async def test_llm_error_falls_back_to_rules_without_mutating_input():
     orchestrator = Orchestrator(FakeLLM(error=InvalidLLMJSONError("bad json")))
     initial = TripState(session_id=uuid4())
-    with pytest.raises(InvalidLLMJSONError):
-        await orchestrator.prepare_turn(initial, "request")
+    candidate, _reply, trace = await orchestrator.prepare_turn(initial, "Хочу в Сочи")
+    assert trace[0]["name"] == "parse_request_rules"
+    assert any(r.key == "destination" for r in candidate.requirements)
     assert initial.version == 0 and not initial.requirements
