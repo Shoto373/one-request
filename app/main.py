@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from typing import Any, Awaitable, Callable
 from uuid import UUID
@@ -12,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from app.agent.llm import InvalidLLMJSONError, LLMClient, LLMConfigurationError, LLMRequestError
+from app.agent.llm import NO_KEY_MESSAGE, InvalidLLMJSONError, LLMClient, LLMConfigurationError, LLMRequestError
 from app.agent.orchestrator import (
     CatalogIntegrationUnavailable, InvalidAgentCommand, OrchestrationLimitError, Orchestrator,
 )
@@ -20,7 +21,9 @@ from app.db import apply_migrations, load_seed
 from app.state.models import TripState
 from app.state.store import RequestIdConflict, SessionNotFound, StateStore, VersionConflict
 
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+# Logs go to stdout (docker compose logs app); credentials are never logged.
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), stream=sys.stdout,
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger(__name__)
 
 
@@ -37,12 +40,29 @@ async def lifespan(app: FastAPI):
     else:
         log.warning("DATABASE_URL is not configured; health is available, session endpoints are disabled")
     app.state.llm = LLMClient()
+    llm_status = app.state.llm.describe()
+    if llm_status["configured"]:
+        log.info("llm configured host=%s model=%s fast=%s", llm_status["provider_host"], llm_status["model"],
+                 llm_status["model_fast"])
+    else:
+        log.warning("llm not configured: UI opens, chat answers llm_not_configured until LLM_API_KEY/LLM_MODEL are set")
     app.state.orchestrator = Orchestrator(app.state.llm)
     app.state.session_locks = {}
     yield
 
 
 app = FastAPI(title="Trip Agent", version="0.1.0", lifespan=lifespan)
+
+
+@app.get("/api/status")
+async def status(request: Request) -> dict[str, Any]:
+    """What works right now: lets the UI warn before the first message (no secrets returned)."""
+    llm = request.app.state.llm.describe()
+    return {
+        "llm": llm,
+        "database": request.app.state.store is not None,
+        "message": None if llm["configured"] else NO_KEY_MESSAGE,
+    }
 
 
 class CreateSessionResponse(BaseModel):
@@ -288,6 +308,11 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 from app.cart.router import router as cart_router  # noqa: E402
 
 app.include_router(cart_router)
+
+# ---- трек A: метрики по фиксированным сценариям (до SPA-фолбэка, чтобы /metrics не ушёл в index.html) ----
+from app.metrics.router import router as metrics_router  # noqa: E402
+
+app.include_router(metrics_router)
 
 WEB_DIR = Path(os.getenv("WEB_DIR", Path(__file__).resolve().parents[1] / "web" / "dist"))
 if (WEB_DIR / "assets").is_dir():

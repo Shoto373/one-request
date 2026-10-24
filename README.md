@@ -41,10 +41,10 @@ docker compose up --build
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `app` / `app` / `trip` | Инициализация Postgres |
 | `LOG_LEVEL` | `INFO` | Уровень логов (stdout, `docker compose logs app`) |
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | Любой OpenAI-совместимый API |
-| `LLM_API_KEY` | пусто | Ключ LLM. Без него UI работает, агент отвечает ошибкой `llm_not_configured` |
+| `LLM_API_KEY` | пусто | Ключ LLM. Без него UI работает, а чат отвечает понятным `llm_not_configured`; для локальной Ollama не нужен |
 | `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | Основная и быстрая модели |
 | `LLM_TIMEOUT_SECONDS` | `30` | Таймаут одного запроса к LLM |
-| `DEMO_MODE` | `false` | Только для локальной разработки |
+| `LLM_JSON_MODE` | `auto` | `auto` — JSON-режим, если провайдер поддерживает (иначе отключается сам); `off` — не отправлять `response_format` |
 
 ## Сидирование
 
@@ -62,7 +62,8 @@ docker compose up --build
 - `/` — чат с агентом и «холст поездки»: требования, направления, сравнение комплектов, таймлайн с проверками
 - `/checkout/:cartId` — оформление (имитация оплаты)
 - `/orders/:id` — заказ: неизменяемый снимок состава и цен
-- `/health` — `200`, `{"status":"ok"}`
+- `/metrics` — страница метрик по фиксированным сценариям, `/api/metrics` — то же в JSON
+- `/health` — `200`, `{"status":"ok"}`; `/api/status` — настроен ли LLM
 - `/api/*` — REST и SSE, контракт описан ниже, в разделе [Для разработчиков](#для-разработчиков)
 
 Учётных записей нет. Сессия поездки создаётся автоматически и хранится в браузере, кнопка «Заново» начинает новую. На оплате подойдут любые имя и email: деньги не списываются.
@@ -76,7 +77,7 @@ docker compose up --build
 5. Корзина → имитация оплаты → заказ-снимок. Повторное нажатие «Оплатить» второго заказа не создаёт.
 6. Невозможный запрос («Неделя в Дубае на троих за 30 000»): честный ответ и два минимальных изменения, а не выдуманная покупка.
 7. Поездом: «Из Москвы в Казань на выходные поездом».
-8. Метрики по фиксированным сценариям: `make eval-e2e`, см. [Метрики](#метрики).
+8. Метрики по фиксированным сценариям: страница `/metrics`, см. [Метрики](#метрики).
 
 Что ещё проверено: запрос на английском, «куда угодно», противоречия («дёшево, но 5 звёзд»), направления вне каталога («таких данных нет, ближайшее — …»), правки одного и того же плана из двух вкладок (409 и перечитывание), обрыв связи посреди ответа агента.
 
@@ -103,7 +104,10 @@ docker compose up --build
 
 Фиксированные сценарии лежат в `eval/scenarios`, `eval/sprint3` и `eval/sprint4`. В каждом есть запрос, скриптовые ответы пользователя (это не LLM, которая со всем соглашается) и условия успеха. Проверяются бюджет, состав гостей в номере и цене, даты, животное во всех позициях, отсутствие позиций со старыми датами после пересборки, а для невозможных запросов — честный отказ.
 
+Страница `http://localhost:8080/metrics` (и JSON `GET /api/metrics`) прогоняет сценарии через настоящий подбор без LLM и показывает результат независимых проверок. Первый вызов считается несколько секунд.
+
 ```bash
+make eval        # та же регрессия в тестовом образе
 make eval-e2e    # по запущенному API с реальным LLM, отчёт в eval/reports/
 ```
 
@@ -204,7 +208,13 @@ Run the fixed scenarios with `python -m eval.runner --mode deterministic` or aga
 
 ### LLM
 
-Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and optionally `LLM_TIMEOUT_SECONDS`. `chat`, `chat_json`, and `chat_tools` are asynchronous; transient timeouts/network/408/429/5xx responses have at most two retries. `chat_json` allows one bounded format/schema correction attempt within a shared four-request maximum. Logs include model, duration and provider-reported usage only; credentials are never logged. Manual smoke check: `python -m app.agent.smoke`.
+Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and optionally `LLM_TIMEOUT_SECONDS`. `chat`, `chat_json`, and `chat_tools` are asynchronous; transient timeouts/network/408/429/5xx responses have at most two retries. `chat_json` allows one bounded format/schema correction attempt within a shared four-request maximum. Logs go to stdout and include model, duration and provider-reported usage only; credentials are never logged.
+
+Провайдеры. Клиент сам сглаживает различия OpenAI-совместимых API: если провайдер отвергает `response_format` (Ollama, часть прокси) или `temperature` (reasoning-модели), запрос повторяется без параметра, и это запоминается; `content` из списка частей, `<think>…</think>`, ```-ограждения и текст вокруг JSON разбираются; `LLM_BASE_URL` можно вставить с хвостом `/chat/completions`; локальному серверу (localhost, `host.docker.internal`, `ollama`) ключ не нужен. Один и тот же ход агента проверен на трёх профилях провайдеров (строгий OpenAI-подобный, Ollama-подобный, reasoning) в `tests/test_llm_providers.py`.
+
+Проверка конкретного провайдера: `python -m app.agent.smoke` (или с переменными, например `LLM_BASE_URL=https://openrouter.ai/api/v1 LLM_API_KEY=... LLM_MODEL=... python -m app.agent.smoke`) — обычный ответ, JSON по схеме и найденные возможности; код выхода 0 только при успехе.
+
+Режим без ключа: UI и `/health` работают, `GET /api/status` → `{"llm": {"configured": false, ...}, "message": "Агенту не задан ключ LLM: …"}`, а сообщение в чате возвращает SSE-ошибку `llm_not_configured` с тем же текстом.
 
 ### Tests
 

@@ -142,13 +142,22 @@ class HTTPRuntime:
         self._raise(response)
         cart = response.json()
         payer = payload.get("payer") or {"name": "Eval User", "email": "eval@example.com"}
-        response = await self.client.post(f"/api/cart/{cart['cart_id']}/checkout",
-                                          json={"payer": payer, "idempotency_key": f"eval-{uuid4()}"})
+        key = f"eval-{uuid4()}"
+        url = f"/api/cart/{cart['cart_id']}/checkout"
+        response = await self.client.post(url, json={"payer": payer, "idempotency_key": key})
         self._raise(response)
         self.order_id = response.json()["order_id"]
+        # «Двойное нажатие „Оплатить“»: the same key and a fresh key must both return the same order.
+        repeats = []
+        for repeat_key in (key, f"eval-{uuid4()}"):
+            again = await self.client.post(url, json={"payer": payer, "idempotency_key": repeat_key})
+            repeats.append({"status": again.status_code, **(again.json() if not again.is_error else {})})
         response = await self.client.get(f"/api/orders/{self.order_id}")
         self._raise(response)
         self.order = response.json()
+        self.order["eval_double_pay"] = {"first_order_id": self.order_id,
+                                         "repeat_order_ids": [r.get("order_id") for r in repeats],
+                                         "repeat_replay": [r.get("replay") for r in repeats]}
         return self.order
 
     async def get_trace(self):
