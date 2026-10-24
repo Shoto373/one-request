@@ -1,0 +1,6 @@
+apiVersion: 1
+providers:
+  - name: odin
+    folder: О!дин запрос
+    type: file
+    options: {path: /var/lib/grafana/dashboards}

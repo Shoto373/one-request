@@ -1,0 +1,11 @@
+[Unit]
+Description=О!дин запрос: CI/CD (тесты, сборка, выкатка main)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=egor
+WorkingDirectory=/home/egor/odin
+ExecStart=/home/egor/odin/deploy/cd.sh
+TimeoutStartSec=1800
