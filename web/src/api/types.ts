@@ -183,6 +183,15 @@ export interface SessionView {
   messages: ChatMessage[]
 }
 
+export interface RequestStatus {
+  request_id: string
+  status: 'not_found' | 'processing' | 'completed' | 'failed'
+  committed_version?: number | null
+  current_version: number
+  error?: { code: string; message: string } | null
+  replay_available: false
+}
+
 /** Шаг трейса — реальные входы/выходы инструментов, не «мысли» модели */
 export interface TraceStep {
   step_type: 'llm' | 'tool' | 'state' | string
@@ -210,16 +219,19 @@ export type StreamEvent =
   | { event: 'step'; data: TraceStep }
   | { event: 'state'; data: { state: TripState } }
   | { event: 'message'; data: { role: 'assistant'; text: string } }
+  | { event: 'replay'; data: { request_id: string; committed_version?: number; current_version: number; reload: true } }
   | { event: 'error'; data: { code: string; message: string; current_version?: number } }
   | { event: 'done'; data: { ok: boolean; version?: number } }
 
 export interface MessageIn {
+  request_id: string
   text: string
   expected_version: number
 }
 
 /** POST /api/sessions/{id}/commands — список и payload как в CommandRequest (app/main.py) */
 export interface CommandIn {
+  request_id: string
   type:
     | 'edit_requirement' // {key, value, kind?: hard|soft, label?}
     | 'remove_requirement' // {key}

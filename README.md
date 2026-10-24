@@ -70,8 +70,9 @@ make web-mock  # фронт на моках, бэкенд не нужен
 - `GET /health` → `{"status":"ok"}`
 - `POST /api/sessions` → `{"session_id":"<uuid>","version":0}`
 - `GET /api/sessions/{id}` → `{"state": TripState, "messages": [...]}`
-- `POST /api/sessions/{id}/messages` JSON: `{"text":"Из Москвы в Сочи 10–17 ноября, двое взрослых","expected_version":0}`. Response content type is `text/event-stream`.
-- `POST /api/sessions/{id}/commands` JSON: `{"type":"accept_alternative","payload":{"alternative_id":"<confirmed-id>"},"expected_version":1}`. Supported types: `edit_requirement` (`key,value,kind?`), `remove_requirement` / `remove_assumption` (`key`), `select_destination` (`destination_id`), `accept_alternative` (`alternative_id`), `select_bundle` (`bundle_id`), `request_checkout` (empty payload). IDs must exist in the current state.
+- `POST /api/sessions/{id}/messages` JSON: `{"request_id":"<uuid>","text":"Из Москвы в Сочи 10–17 ноября, двое взрослых","expected_version":0}`. Response content type is `text/event-stream`.
+- `POST /api/sessions/{id}/commands` JSON: `{"request_id":"<uuid>","type":"accept_alternative","payload":{"alternative_id":"<confirmed-id>"},"expected_version":1}`. Supported types: `edit_requirement` (`key,value,kind?`), `remove_requirement` / `remove_assumption` (`key`), `select_destination` (`destination_id`), `accept_alternative` (`alternative_id`), `select_bundle` (`bundle_id`), `request_checkout` (empty payload). IDs must exist in the current state.
+- `GET /api/sessions/{id}/requests/{request_id}` → request status, committed version and current version. It never replays old state or SSE.
 - `GET /api/sessions/{id}/trace` → `{"session_id":"...","steps":[...]}`
 
 SSE payloads are JSON, UTF-8, separated by a blank line:
@@ -82,6 +83,8 @@ event: step\ndata: {"step_type":"llm","name":"parse_request","input":{...},"outp
 event: state\ndata: {"state":{"session_id":"...","version":1,"stage":"select",...}}
 
 event: message\ndata: {"role":"assistant","text":"..."}
+
+event: replay\ndata: {"request_id":"...","committed_version":2,"current_version":3,"reload":true}
 
 event: done\ndata: {"ok":true,"version":1}
 ```
@@ -94,9 +97,9 @@ The frontend uses POST, so consume with `fetch`, not `EventSource`:
 const response = await fetch(`/api/sessions/${sessionId}/messages`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ text: "Из Москвы в Сочи 10–17 ноября, двое взрослых", expected_version: 0 })
+  body: JSON.stringify({ request_id: crypto.randomUUID(), text: "Из Москвы в Сочи 10–17 ноября, двое взрослых", expected_version: 0 })
 });
-if (response.status === 409) { /* reload GET /api/sessions/{id} */ }
+if (response.status === 409) { /* reload GET /api/sessions/{id}; do not resend over the new version */ }
 const reader = response.body.getReader();
 const decoder = new TextDecoder();
 while (true) {
@@ -113,17 +116,19 @@ BASE_URL=http://localhost:8080
 SESSION_ID=$(curl -fsS -X POST "$BASE_URL/api/sessions" | python3.12 -c 'import json,sys; print(json.load(sys.stdin)["session_id"])')
 curl -N -X POST "$BASE_URL/api/sessions/$SESSION_ID/messages" \
   -H 'Content-Type: application/json' \
-  -d '{"text":"Из Москвы в Сочи 10–17 ноября, двое взрослых","expected_version":0}'
+  -d '{"request_id":"11111111-1111-4111-8111-111111111111","text":"Из Москвы в Сочи 10–17 ноября, двое взрослых","expected_version":0}'
 curl -fsS "$BASE_URL/api/sessions/$SESSION_ID"
 ```
 
-The last call returns the persisted state and messages. Track A's real `build_bundles`, `suggest_destinations`, and confirmed minimal changes are integrated. Rebuilds require A's `app.planning.replan.replan(state, change)` tool; it is not present in this checkout, so a changed active plan remains unavailable for checkout until that integration is added. Climate refs such as `climate:AYT:11.sea_temp` resolve to `{value,label,unit,kind,source,source_refs}` in the destination `sources` map for UI tooltips. Monthly climate values are statistics, not forecasts.
+The last call returns the persisted state and messages. Track A's `build_bundles`, destination suggestions and `replan(requirements, state, bundle_id, changes)` are wired through B adapters. The replan input contains the whole current requirement set, original selected bundle and accumulated diff since it was selected. Climate refs such as `climate:AYT:11.sea_temp` resolve to `{value,label,unit,kind,source,source_refs}` in the destination `sources` map for UI tooltips. Monthly climate values are statistics, not forecasts.
 
-SSE `step` payloads use `{step_type,name,input,output,status}`, `state` uses `{state: TripState}`, `message` uses `{role,text}`, and `done` uses `{ok,version?}`. Commands use the same SSE event schema. `TripState.open_questions` items have `{key,question,why,options}`; removed assumptions appear in `suppressed_assumptions` so the UI can remove them without the next turn restoring them. The eight YAML scenarios are checked with `python -m eval.schema`; there is no full eval runner yet.
+SSE `step` payloads use `{step_type,name,input,output,status}`, `state` uses `{state: TripState}`, `message` uses `{role,text}`, `replay` indicates a completed request whose current state must be fetched, and `done` uses `{ok,version?}`. Commands use the same SSE event schema. `TripState.open_questions` items have `{key,question,why,options}`; removed assumptions appear in `suppressed_assumptions` so the UI can remove them without the next turn restoring them. Mutations require `request_id`: the same ID and body is applied once; reusing it with different content is rejected. An in-flight duplicate gets HTTP 409 `request_in_progress`; a completed retry gets an SSE `replay` acknowledgment, never a stale state replay. For either 409, GET the session and ask the user before retrying an edit against a newer version. On an SSE disconnect the accepted request continues to commit; retry once with the same ID or poll the request-status endpoint. SSE replay is not implemented.
+
+Run the fixed scenarios with `python -m eval.runner --mode deterministic` or against an isolated running API with `python -m eval.runner --mode e2e --base-url http://localhost:8080`. The deterministic mode requires `EVAL_RUNTIME_FACTORY=module:factory`; its factory returns an isolated engine with a stub LLM and declares substitutions on `engine.substitutions`. The E2E mode uses the real running server, its configured LLM and A tools. Both modes use the same YAML actions as the scripted user and write JSON reports under `eval/reports/` by default.
 
 ## LLM
 
-Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and optionally `LLM_TIMEOUT_SECONDS`. `chat`, `chat_json`, and `chat_tools` are asynchronous; transient timeouts/network/408/429/5xx responses have at most two retries. Invalid JSON/schema responses fail clearly without a repair loop. Logs include model, duration and provider-reported usage only; credentials are never logged. Manual smoke check: `python -m app.agent.smoke`.
+Configure `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_FAST`, and optionally `LLM_TIMEOUT_SECONDS`. `chat`, `chat_json`, and `chat_tools` are asynchronous; transient timeouts/network/408/429/5xx responses have at most two retries. `chat_json` allows one bounded format/schema correction attempt within a shared four-request maximum. Logs include model, duration and provider-reported usage only; credentials are never logged. Manual smoke check: `python -m app.agent.smoke`.
 
 ## Tests
 
@@ -136,5 +141,6 @@ Unit tests use mocked LLM responses and in-memory test stores. PostgreSQL integr
 ## Integration handoff
 
 - **A:** implement `app.planning.suggest.suggest_destinations(requirements: dict, state: TripState) -> {destinations, alternatives, notes, required_inputs}`. A candidate has `feasible: true` only after A verifies it. Each alternative needs a stable `id`, `label`, `confirmed: true`, exact `changes`, refs and resolvable `evidence` (`ref,value,label,kind,source,source_refs`); B does not calculate alternatives. Assumptions are excluded from filter inputs; A may read them from state for ranking only.
-- **A / B replan contract:** provide `app.planning.replan.replan(state: TripState, change: {upserts: Requirement[], remove_keys: string[]}) -> {bundles, kept, replaced, reasons, price_delta_rub, selected_bundle_id?, notes?}`. `state` contains the new requirements and the selected old bundle as the explicitly stale source (`pending_replan.status = stale_source`). Each returned bundle must contain current dated Offers, total and A validation checks. Every `kept`/`replaced` entry must distinguish `object:<kind>:<item_id>` from `offer:<offer_id>` and carry a reason either inline or in `reasons`; B retains these IDs and per-item reasons. `price_delta_rub` is relative to the source bundle and must equal the resulting bundle total minus the old total. Return `bundles: []` when no feasible plan exists. B verifies totals/delta and stores the old bundle only in history after a successful tool result. B does not search or calculate replacements.
+- **A / B replan contract:** `app.planning.replan.replan(requirements, state, bundle_id, changes)` returns A's single `bundle` (or `None`), `kept`, `replaced`, `notes`, `price_delta_rub`, `alternatives`, and echoed `input_changes`. `requirements` is the full current set; `state` carries the original selected bundle; `changes` is the accumulated typed diff from the requirements at selection time. B adapts the result to the agent state shape and verifies bundle totals and price delta; A remains responsible for search, checks and price calculations. Keep/replacement entries need offer IDs and a reason so B can distinguish a retained catalog object from a repriced offer.
+- **C request recovery:** send one `request_id` UUID per user mutation and reuse it only for byte-equivalent retries. On HTTP 409 `version_conflict`, reload `GET /api/sessions/{id}` and get user confirmation before applying their edit to the new version. On `request_in_progress`, poll `GET /requests/{request_id}`; on `completed`, reload session and trace. The endpoint does not replay prior SSE. A changed request body needs a fresh ID. An accepted request continues after client disconnect and commits atomically with messages/state/trace.
 - **C:** consume `open_questions`, `advantages`, `tradeoffs`, `risks` and history; send commands through POST and parse SSE from `fetch`. For explicit agent stages, send `select_bundle` with `{bundle_id}` then `request_checkout` with `{}` and the latest `expected_version`; create the cart with `{session_id, version, bundle_id}` only after a non-blocking validation result. The cart and checkout endpoints independently enforce current version, offer availability/prices and blocking checks. Checkout remains C-owned. Keep one app worker because per-session serialization locks are process-local.

@@ -1,6 +1,6 @@
 import type {
   ApiErrorDetail, Cart, CartIn, CheckoutIn, CommandIn, MessageIn, Order, SessionCreated, SessionView, StreamEvent,
-  TraceView,
+  TraceView, RequestStatus,
 } from './types'
 import { ApiError } from './errors'
 import { mockApi } from './mock'
@@ -32,36 +32,45 @@ async function json<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 /** POST, ответ — поток Server-Sent Events. EventSource не умеет POST, поэтому читаем руками. */
 async function stream(path: string, body: unknown, onEvent: (e: StreamEvent) => void, signal?: AbortSignal) {
-  const res = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-    body: JSON.stringify(body),
-    signal,
-  })
-  if (!res.ok || !res.body) throw await toError(res)
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+        body: JSON.stringify(body),
+        signal,
+      })
+      if (!res.ok || !res.body) throw await toError(res)
 
-  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
-  let buf = ''
-  for (;;) {
-    const { value, done } = await reader.read()
-    if (done) break
-    buf += value.replace(/\r\n/g, '\n')
-    let sep: number
-    while ((sep = buf.indexOf('\n\n')) >= 0) {
-      const chunk = buf.slice(0, sep)
-      buf = buf.slice(sep + 2)
-      let event = 'message'
-      const data: string[] = []
-      for (const line of chunk.split('\n')) {
-        if (line.startsWith('event:')) event = line.slice(6).trim()
-        else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+      let buf = ''
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buf += value.replace(/\r\n/g, '\n')
+        let sep: number
+        while ((sep = buf.indexOf('\n\n')) >= 0) {
+          const chunk = buf.slice(0, sep)
+          buf = buf.slice(sep + 2)
+          let event = 'message'
+          const data: string[] = []
+          for (const line of chunk.split('\n')) {
+            if (line.startsWith('event:')) event = line.slice(6).trim()
+            else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
+          }
+          if (!data.length) continue
+          try {
+            onEvent({ event, data: JSON.parse(data.join('\n')) } as StreamEvent)
+          } catch {
+            console.warn('[sse] не JSON:', data.join('\n'))
+          }
+        }
       }
-      if (!data.length) continue
-      try {
-        onEvent({ event, data: JSON.parse(data.join('\n')) } as StreamEvent)
-      } catch {
-        console.warn('[sse] не JSON:', data.join('\n'))
-      }
+      return
+    } catch (e) {
+      const networkFailure = e instanceof TypeError || (e instanceof DOMException && e.name === 'NetworkError')
+      if (attempt === 0 && networkFailure && !signal?.aborted) continue
+      throw e
     }
   }
 }
@@ -70,6 +79,7 @@ const realApi = {
   createSession: () => json<SessionCreated>('/api/sessions', { method: 'POST', body: '{}' }),
   getSession: (id: string) => json<SessionView>(`/api/sessions/${id}`),
   getTrace: (id: string) => json<TraceView>(`/api/sessions/${id}/trace`),
+  getRequestStatus: (id: string, requestId: string) => json<RequestStatus>(`/api/sessions/${id}/requests/${requestId}`),
   sendMessage: (id: string, body: MessageIn, onEvent: (e: StreamEvent) => void, signal?: AbortSignal) =>
     stream(`/api/sessions/${id}/messages`, body, onEvent, signal),
   sendCommand: (id: string, body: CommandIn, onEvent: (e: StreamEvent) => void, signal?: AbortSignal) =>

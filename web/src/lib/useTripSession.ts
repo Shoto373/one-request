@@ -16,6 +16,8 @@ const ERROR_TEXT: Record<string, string> = {
   a_tool_unavailable: 'Инструмент расчёта поездки недоступен — попробуйте ещё раз.',
   agent_step_limit: 'Агент не уложился в лимит шагов — уточните запрос.',
   invalid_command: 'Это действие сейчас недоступно — план мог измениться.',
+  request_id_conflict: 'Повтор запроса не совпал с исходным. Обновите состояние и отправьте новое действие.',
+  request_in_progress: 'Запрос ещё выполняется.',
   agent_error: 'Агент не смог обработать запрос.',
   database_unavailable: 'База данных недоступна.',
   version_conflict: 'План успел измениться — показываю актуальную версию. Проверьте и повторите действие.',
@@ -225,6 +227,11 @@ export function useTripSession() {
           case 'message':
             setMessages((m) => [...m, { role: e.data.role, text: e.data.text }])
             break
+          case 'replay':
+            // The backend confirms this request_id was already accepted. SSE replay is
+            // not available, so reload the authoritative session snapshot.
+            void reload(id)
+            break
           case 'error':
             r.failure = new TurnError(e.data.code, e.data.message)
             break
@@ -265,9 +272,25 @@ export function useTripSession() {
       return true
     } catch (e) {
       if (!isAbort(e)) {
+        if (e instanceof ApiError && e.status === 409 && e.detail.code === 'request_in_progress' && typeof e.detail.request_id === 'string') {
+          const requestId = e.detail.request_id
+          let status: Awaited<ReturnType<typeof api.getRequestStatus>> | null = null
+          for (let attempt = 0; attempt < 12; attempt++) {
+            status = await api.getRequestStatus(sessionId, requestId).catch(() => null)
+            if (!status || status.status === 'not_found' || status.status === 'completed' || status.status === 'failed') break
+            await new Promise((resolve) => window.setTimeout(resolve, 250))
+          }
+          await reload(sessionId).catch(() => undefined)
+          if (status?.status === 'failed') fail(ERROR_TEXT[status.error?.code ?? ''] ?? status.error?.message ?? 'Запрос завершился ошибкой. Состояние обновлено.')
+          else if (status?.status === 'completed') fail('Запрос уже выполнен — состояние обновлено. Проверьте актуальный план.')
+          else fail('Запрос ещё выполняется или его статус недоступен. Состояние перечитано; проверьте результат перед повтором.')
+        } else {
         // конфликт команды: план уже перечитан — повторять ту же команду вслепую не предлагаем
-        if (isConflict(e)) fail(describe(e))
-        else fail(describe(e), () => run(op))
+          if (isConflict(e)) {
+            await reload(sessionId).catch(() => undefined)
+            fail(describe(e))
+          } else fail(describe(e), () => run(op))
+        }
       }
       return false
     } finally {
@@ -275,16 +298,16 @@ export function useTripSession() {
       setBusy(false)
       loadTrace(sessionId)
     }
-  }, [sessionId, loadTrace, fail])
+  }, [sessionId, loadTrace, reload, fail])
 
   /** сообщение в чат; не дошло — помечаем «не отправлено», «Повторить» отправит его снова */
-  const chat = useCallback(async (text: string, signal: AbortSignal) => {
+  const chat = useCallback(async (text: string, requestId: string, signal: AbortSignal) => {
     try {
       await turn((version, onEvent, sig) => {
         // после reload лента уже с сервера — добавляем своё сообщение заново
         setMessages((m) => [...m.filter((x) => !x.failed), { role: 'user', text }])
-        return api.sendMessage(sessionId!, { text, expected_version: version }, onEvent, sig)
-      }, signal, true)
+        return api.sendMessage(sessionId!, { request_id: requestId, text, expected_version: version }, onEvent, sig)
+      }, signal, false)
     } catch (e) {
       setMessages((m) => {
         const i = m.map((x) => x.role === 'user' && x.text === text).lastIndexOf(true)
@@ -294,22 +317,27 @@ export function useTripSession() {
     }
   }, [sessionId, turn])
 
-  const send = useCallback((text: string) => run((signal) => chat(text, signal)), [run, chat])
+  const send = useCallback((text: string) => {
+    const requestId = crypto.randomUUID()
+    return run((signal) => chat(text, requestId, signal))
+  }, [run, chat])
 
   /**
    * Действие из интерфейса (выбор направления, быстрый ответ, правка требования).
    * Сначала команда агенту; если бэкенд её ещё не знает — то же самое словами в чат.
    */
-  const act = useCallback((type: CommandIn['type'], payload: CommandIn['payload'], asText: string) =>
-    run(async (signal) => {
+  const act = useCallback((type: CommandIn['type'], payload: CommandIn['payload'], asText: string) => {
+    const requestId = crypto.randomUUID()
+    return run(async (signal) => {
       try {
         await turn((version, onEvent, sig) =>
-          api.sendCommand(sessionId!, { type, payload, expected_version: version }, onEvent, sig), signal, false)
+          api.sendCommand(sessionId!, { request_id: requestId, type, payload, expected_version: version }, onEvent, sig), signal, false)
       } catch (e) {
         if (!unsupported(e)) throw e
-        await chat(asText, signal)
+        await chat(asText, crypto.randomUUID(), signal)
       }
-    }), [run, turn, sessionId, chat])
+    })
+  }, [run, turn, sessionId, chat])
 
   return {
     sessionId, state, messages, steps, trace, busy, notice, diff,

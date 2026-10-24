@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.agent.orchestrator import track_a_build_bundles
+from app.agent.replanning import track_a_replan
 from app.catalog.store import get_catalog
 from app.planning.build import build_bundles, explain_no_bundles
 from app.planning.query import parse_budget, parse_children, query_from_requirements, resolve_city
@@ -110,3 +111,45 @@ def test_checkout_revalidation_without_state_uses_capacity() -> None:
     bundle = build_bundles(requirements=SOCHI, state=_state(SOCHI))[0]
     checks = validate_bundle(bundle, None)
     assert not [c for c in checks if c["status"] == "block"]
+
+
+def test_real_track_a_replan_receives_accumulated_dates_pet_and_weight_and_returns_current_offers():
+    old_requirements = {
+        "origin": "Москва", "destination": "AYT",
+        "dates": {"start": "2026-11-12", "end": "2026-11-19"},
+        "adults": 2, "children_ages": [5],
+    }
+    initial = _state(old_requirements)
+    raw = build_bundles(requirements=old_requirements, state=initial)
+    assert raw, "fixed A catalog fixture should produce the old selected bundle"
+    old_bundle = StateBundle.model_validate(raw[0])
+    initial.bundles, initial.selected_bundle_id = [old_bundle], old_bundle.id
+    initial.requirements.extend([
+        Requirement(key="dates", value={"start": "2026-11-14", "end": "2026-11-21"}, kind="hard", source="user_edit"),
+        Requirement(key="pets", value={"kind": "dog"}, kind="hard", source="user_edit"),
+        Requirement(key="pet_weight_kg", value=8, kind="hard", source="user_edit"),
+    ])
+    # Remove old duplicated dates entry while preserving the rest of the selected-state context.
+    dedup = {}
+    for requirement in initial.requirements:
+        dedup[requirement.key] = requirement
+    initial.requirements = list(dedup.values())
+    accumulated = {"upserts": [
+        {"key": "dates", "value": {"start": "2026-11-14", "end": "2026-11-21"}, "kind": "hard"},
+        {"key": "pets", "value": {"kind": "dog"}, "kind": "hard"},
+        {"key": "pet_weight_kg", "value": 8, "kind": "hard"},
+    ], "remove_keys": []}
+
+    import asyncio
+    result = asyncio.run(track_a_replan(initial, accumulated))
+    assert result["input_changes"] == accumulated
+    assert result["selected_bundle_id"] == old_bundle.id
+    assert result["bundles"], result["notes"]
+    new_bundle = StateBundle.model_validate(result["bundles"][0])
+    assert new_bundle.total_rub == sum(item.total_rub for item in new_bundle.items)
+    assert result["price_delta_rub"] == new_bundle.total_rub - old_bundle.total_rub
+    assert all(item.times is None or item.times.start.date().isoformat() >= "2026-11-14" for item in new_bundle.items)
+    hotel = next(item for item in new_bundle.items if item.kind == "hotel")
+    assert hotel.times.start.date().isoformat() == "2026-11-14"
+    assert hotel.times.end.date().isoformat() == "2026-11-21"
+    assert any(check.kind == "pets" and check.status == "ok" for check in new_bundle.checks)

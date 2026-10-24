@@ -5,6 +5,7 @@ import importlib
 import inspect
 import re
 from datetime import date, datetime, time
+from functools import wraps
 from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
 
@@ -38,6 +39,18 @@ class OrchestrationLimitError(RuntimeError):
 
 class InvalidAgentCommand(ValueError):
     pass
+
+
+def bounded_turn_llm(method):
+    """Apply a single HTTP-attempt budget across parser and explanation calls."""
+    @wraps(method)
+    async def wrapped(self, *args, **kwargs):
+        scope = getattr(self.llm, "request_budget", None)
+        if scope is None:
+            return await method(self, *args, **kwargs)
+        with scope():
+            return await method(self, *args, **kwargs)
+    return wrapped
 
 
 # Backward-compatible name used by the sprint 1 API error mapper.
@@ -117,6 +130,11 @@ does not create an exact hour limit. Distinguish month + duration from exact dat
 invent weight. Relative date changes are deltas from current dates. If a pet is added, ask its weight before search. An answer
 to pet_weight_kg maps to that key. “Бюджет меньше” without an amount is unknown and requires clarification. User corrections
 replace old values by the same key. Use remove_keys only for a clearly requested removal.
+Apply the same typed rules to English. For an open question, a short English answer maps only to its key
+("Moscow" -> origin, "two adults" -> adults, "8 kg" -> pet_weight_kg, "November 12 to 19" -> dates).
+"Anywhere"/"anywhere warm" is not a destination; leave destination unknown and ask only for missing search inputs.
+"two days later" is relative to current dates. "with a dog" records pet presence but never invents its weight.
+"lower budget" without an amount must remain unknown and ask for a numeric limit. Never silently relax a hard condition.
 Never produce offer ids, prices, feasibility, weather, visa, or search results. No reasoning text."""
         parsed = await self.llm.chat_json(
             [{"role": "system", "content": system}, {"role": "user", "content": text}],
@@ -350,6 +368,14 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                     reasons.append(str(message))
             else:
                 reasons.append(str(reason))
+        raw_alternatives = result.get("alternatives") or []
+        alternatives = []
+        for raw in raw_alternatives:
+            try:
+                alternatives.append(ConfirmedAlternative.model_validate(raw))
+            except Exception:
+                continue
+        validated_alternatives = await self._validated_alternatives(alternatives)
         state.history.append(HistoryEntry(
             version=state.version + 1, change=pending.change or ", ".join(r["key"] for r in diff.get("upserts", [])),
             kept=kept, replaced=replaced, price_delta_rub=delta, reasons=reasons, item_reasons=item_reasons,
@@ -357,6 +383,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             resulting_bundle_id=selected.id if selected else None,
         ))
         state.bundles, state.selected_bundle_id = bundles, None
+        state.proposed_changes = validated_alternatives if not bundles else []
         state.pending_replan, state.open_questions = None, []
         blocking = any(any(c.status == "block" for c in b.checks) for b in bundles)
         state.stage = "assemble" if blocking else ("compare" if len(bundles) > 1 else "select" if bundles else "inspire")
@@ -365,7 +392,8 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                                         "reasons": reasons, "price_delta_rub": delta}, "status": "ok"})
         if not bundles:
             notes = " ".join(str(x) for x in result.get("notes", [])).strip()
-            return state, (notes + " " if notes else "") + "После изменения подходящих комплектов нет. Прежний комплект сохранён только в истории и недоступен для оформления."
+            choices = " Доступные подтверждённые изменения показаны ниже." if validated_alternatives else ""
+            return state, (notes + " " if notes else "") + "После изменения подходящих комплектов нет. Прежний комплект сохранён только в истории и недоступен для оформления." + choices
         if blocking:
             blocks = [c.text for b in bundles for c in b.checks if c.status == "block"]
             return state, "Пересборка вернула блокирующие проверки: " + "; ".join(blocks) + ". Исправьте условия и пересоберите план."
@@ -467,7 +495,11 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
 
     async def _validated_alternatives(self, raw_alternatives: list[ConfirmedAlternative]) -> list[dict[str, Any]]:
         accepted = []
-        for raw in raw_alternatives[:2]:
+        for value in raw_alternatives[:2]:
+            try:
+                raw = value if isinstance(value, ConfirmedAlternative) else ConfirmedAlternative.model_validate(value)
+            except Exception:
+                continue
             data = raw.model_dump(mode="json")
             facts, sources = self._source_facts(data)
             valid_refs = set(sources)
@@ -643,6 +675,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         })
         return candidate
 
+    @bounded_turn_llm
     async def prepare_turn(self, state: TripState, text: str) -> tuple[TripState, str, list[dict[str, Any]]]:
         before = state
         parsed = await self.parse_request(text, state)
@@ -680,6 +713,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         trace.append(self._state_diff(before, candidate))
         return candidate, reply, trace
 
+    @bounded_turn_llm
     async def prepare_command(self, state: TripState, command_type: str, payload: dict[str, Any]) -> tuple[TripState, str, list[dict[str, Any]]]:
         before = state
         trace: list[dict[str, Any]] = []
