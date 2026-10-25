@@ -126,7 +126,7 @@ Assumption keys the user removed; do not restore them: {suppressed}
 Product route scope: {"Live provider mode supports only Moscow ↔ Sochi. This is a product limit, not a user quote; never ask for the origin again when absent." if tutu_live_enabled() else "No fixed provider route scope."}
 
 Supported keys and value formats: origin and destination (city name as written), dates ({{start,end}} ISO dates when
-explicit), travel_month (1..12), duration_nights (int), date_flex_days (int), adults (int), children_count (int),
+explicit), travel_start_date (one explicit departure date, ISO), travel_month (1..12), duration_nights (int), date_flex_days (int), adults (int), children_count (int),
 children_ages (list of ints), pets ({{"kind":"dog|cat|other"}}), pet_weight_kg (number), budget_total_rub (int),
 budget_per_person_rub (int), budget_scope (trip|person), transport (flight|train|either), max_stops (int),
 travel_time_preference (short), max_duration_min (int minutes), trip_style (short text, e.g. "тёплое море"),
@@ -137,7 +137,7 @@ Rules: hard = explicitly required/strict; soft = explicit preference or qualitat
 inference only (source agent, quote null); unknown = value null. Every hard/soft user_text quote must be an exact substring
 of this latest message. Return only changed/answered requirements, never repeat unchanged known fields. An answer to an open
 question maps to that question's key: "Москва" -> origin when asked origin, "5 лет" -> children_ages, "собака" -> pets when asked animal kind, "10 кг" -> pet_weight_kg, "двое" -> adults only
-when that question is open, "с 10 по 17" is incomplete unless month is known. Do not infer adult count or child age from "с ребёнком".
+when that question is open, "с 10 по 17" is incomplete unless month is known. A single date like "12 декабря" is only the departure date: keep it and ask for return date or duration. Do not infer adult count or child age from "с ребёнком".
 Qualitative "недорого" is soft budget_preference, never a numeric limit. "Строго до N" is hard. Ask/mark budget_scope unknown
 unless the user says whether the amount is for the whole trip or per person. "Без долгих перелётов" is a soft preference and
 does not create an exact hour limit. Distinguish month + duration from exact dates. State pet presence only if said; do not
@@ -161,6 +161,26 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             log.warning("parse_request falls back to rules: %s", type(exc).__name__)
             self.last_parser = "rules"
             parsed = rule_parse(text, state, self.local_now())
+        # A valid but empty model response is still an extraction miss. Supplement
+        # date fields from deterministic parsing so short date answers are retained.
+        rule_parsed = rule_parse(text, state, self.local_now())
+        rule_date_keys = {"dates", "travel_start_date", "travel_month", "duration_nights"}
+        existing = {r.key: r for r in parsed.requirements}
+        supplemented = False
+        for item in rule_parsed.requirements:
+            if item.key == "travel_start_date" and "dates" in existing and "dates" not in {
+                r.key for r in rule_parsed.requirements
+            }:
+                # Models sometimes label a single calendar day as a full date range.
+                # Replace that incomplete value with an explicit departure-date field.
+                existing.pop("dates", None)
+            if item.key in rule_date_keys and item.key not in existing:
+                existing[item.key] = item
+                supplemented = True
+        if supplemented:
+            parsed = ParsedRequest(requirements=list(existing.values()), remove_keys=parsed.remove_keys)
+            if self.last_parser == "llm":
+                self.last_parser = "llm+rules"
         return validate_extraction(parsed, text)
 
     def _year_resolve(self, requirements: list[Requirement], suppressed: list[str] | tuple[str, ...] = ()) -> list[Requirement]:
@@ -181,6 +201,26 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         context_month = None
         if context_month_req:
             context_month = month_names.get(str(context_month_req.value).lower(), context_month_req.value if isinstance(context_month_req.value, int) else None)
+        single_date_req = by_key.get("travel_start_date")
+        if single_date_req and single_date_req.value and "dates" not in by_key:
+            try:
+                start = date.fromisoformat(str(single_date_req.value))
+                duration_req = by_key.get("duration_nights")
+                duration = int(duration_req.value) if duration_req and duration_req.value is not None else 0
+                if duration > 0:
+                    end = date.fromordinal(start.toordinal() + duration)
+                    by_key["dates"] = Requirement(
+                        key="dates", value={"start": start.isoformat(), "end": end.isoformat()},
+                        kind=single_date_req.kind if single_date_req.kind in {"hard", "soft"} else "hard",
+                        source=single_date_req.source, quote=single_date_req.quote,
+                    )
+                if "travel_year" not in suppressed and "travel_year" not in by_key:
+                    by_key["travel_year"] = Requirement(
+                        key="travel_year", value=start.year, kind="assumption", source="calendar_resolution", quote=None,
+                        label=f"Предполагаемый год: {start.year}",
+                    )
+            except (TypeError, ValueError):
+                pass
         start_day = end_day = month = None
         if pattern:
             start_day, end_day = int(pattern.group("start")), int(pattern.group("end"))
@@ -312,7 +352,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             "open_questions": [],
         })
         changed = set(parsed.remove_keys) | {r.key for r in parsed.requirements}
-        if changed & {"origin", "destination", "dates", "travel_month", "duration_nights", "date_flex_days", "adults", "children_count", "children_ages", "pets", "pet_weight_kg", "budget_total_rub", "budget_per_person_rub", "budget_scope", "transport", "max_stops", "max_duration_min"}:
+        if changed & {"origin", "destination", "dates", "travel_start_date", "travel_month", "duration_nights", "date_flex_days", "adults", "children_count", "children_ages", "pets", "pet_weight_kg", "budget_total_rub", "budget_per_person_rub", "budget_scope", "transport", "max_stops", "max_duration_min"}:
             selected = next((b for b in state.bundles if b.id == state.selected_bundle_id), None)
             pending = (state.pending_replan.model_copy(deep=True) if state.pending_replan else
                        PendingReplan(source_bundle=selected, previous_requirements=state.requirements) if selected else None)
@@ -748,7 +788,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         before = state
         parsed = await self.parse_request(text, state)
         parsed, contextual_question = normalize_contextual_changes(parsed, text, state)
-        rules = getattr(self, "last_parser", "llm") == "rules"
+        rules = getattr(self, "last_parser", "llm") != "llm"
         trace: list[dict[str, Any]] = [{
             "step_type": "tool" if rules else "llm", "name": "parse_request_rules" if rules else "parse_request",
             "input": {"text": text, "open_question_keys": [q.key for q in state.open_questions]},

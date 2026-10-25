@@ -11,7 +11,7 @@ from app.state.models import OpenQuestion, Requirement, TripState
 
 
 REQUIREMENT_KEYS = {
-    "origin", "destination", "dates", "travel_month", "duration_nights", "date_flex_days",
+    "origin", "destination", "dates", "travel_start_date", "travel_month", "duration_nights", "date_flex_days",
     "adults", "children_count", "children_ages", "pets", "pet_weight_kg", "budget_total_rub",
     "budget_per_person_rub", "budget_scope", "budget_preference", "transport", "max_stops", "travel_time_preference",
     "max_duration_min", "trip_style", "lodging_stars", "meal_preference", "room_preference",
@@ -22,6 +22,7 @@ ALIASES = {
     "origin_city": "origin", "departure_city": "origin", "from": "origin",
     "destination_city": "destination", "dest": "destination", "to": "destination",
     "date_range": "dates", "trip_dates": "dates", "date_flexibility": "date_flex_days",
+    "departure_date": "travel_start_date", "start_date": "travel_start_date",
     "nights": "duration_nights", "duration": "duration_nights", "adults_count": "adults",
     "children": "children_ages", "kids": "children_ages", "child_age": "children_ages",
     "budget_rub": "budget_total_rub", "budget": "budget_total_rub", "max_budget": "budget_total_rub",
@@ -32,7 +33,7 @@ QUESTION_TEXT = {
     "origin": ("Откуда вы отправляетесь?", "Город отправления определяет доступный транспорт.", ["Москва", "Санкт-Петербург", "Екатеринбург"]),
     "destination": ("Куда хотите поехать?", "Направление нужно, чтобы собрать конкретный комплект.", []),
     "dates": ("На какие даты или в каком месяце планировать поездку?", "Окно поездки нужно для проверки доступности.", []),
-    "duration_nights": ("Сколько ночей планировать?", "Длительность нужна для оценки полной стоимости.", ["3 ночи", "7 ночей", "10 ночей"]),
+    "duration_nights": ("На сколько ночей планировать поездку или какого числа возвращаться?", "Нужна дата окончания поездки для поиска билетов и отеля.", ["3 ночи", "7 ночей", "10 ночей"]),
     "adults": ("Сколько взрослых едет?", "Число взрослых влияет на цену и размещение.", ["1", "2", "3"]),
     "children_ages": ("Сколько лет каждому ребёнку?", "Возраст влияет на тарифы и вместимость.", []),
     "children_count": ("Сколько детей едет и сколько лет каждому?", "Число и возраст детей нужны для тарифа и размещения.", []),
@@ -244,6 +245,7 @@ def next_questions(
     present = {r.key for r in reqs if r.kind != "unknown" and r.value not in (None, "")}
     keys = list(required_inputs or ("origin", "travel_window", "adults"))
     has_dates = _has_exact_dates(reqs)
+    has_start_date = _present(reqs, "travel_start_date") is not None
     has_month = "travel_month" in present
     has_duration = "duration_nights" in present
     children_count = _present(reqs, "children_count")
@@ -260,12 +262,14 @@ def next_questions(
     for need in keys:
         if need == "travel_window":
             if not has_dates:
-                if not has_month:
+                if has_start_date and not has_duration:
+                    add("duration_nights")
+                elif not has_start_date and not has_month:
                     add("dates")
                 elif not has_duration:
                     add("duration_nights")
         elif need == "dates" and not has_dates:
-            add("dates")
+            add("duration_nights" if has_start_date else "dates")
         elif need in QUESTION_TEXT and need not in present:
             add(need)
     if "children_ages" in present and child_ages is None and children_count:
