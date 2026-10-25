@@ -30,6 +30,9 @@ interface Props {
 
 export default function Chat({ messages, steps, questions, busy, disabled, connecting, onSend, onAnswer, onRetry }: Props) {
   const [text, setText] = useState('')
+  // Free text is submitted through the shared composer, so only show the active
+  // question. The next one arrives after the agent has processed this answer.
+  const activeQuestions = questions.slice(0, 1)
   const bottom = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
 
@@ -78,9 +81,9 @@ export default function Chat({ messages, steps, questions, busy, disabled, conne
 
             {busy && <Thinking steps={steps} />}
 
-            {!busy && questions.length > 0 && (
+            {!busy && activeQuestions.length > 0 && (
               <div className="ml-[42px] space-y-3">
-                {questions.map((q) => (
+                {activeQuestions.map((q) => (
                   <div key={q.key} className="rounded-2xl border border-brand/15 bg-brand-light/70 p-3.5">
                     <div className="text-sm font-semibold text-ink">{q.question}</div>
                     <div className="mt-0.5 text-xs text-ink-grey">{q.why}</div>

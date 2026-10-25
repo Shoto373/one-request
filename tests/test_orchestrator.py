@@ -57,7 +57,7 @@ async def test_full_request_calls_builder_and_saves_explicit_year_assumption():
 
 
 @pytest.mark.asyncio
-async def test_insufficient_request_asks_at_most_two_and_does_not_search():
+async def test_insufficient_request_asks_one_question_and_does_not_search():
     called = False
 
     def builder(*_):
@@ -68,7 +68,7 @@ async def test_insufficient_request_asks_at_most_two_and_does_not_search():
     parsed = ParsedRequest(requirements=[Requirement(key="destination", value="Сочи", kind="hard", source="user_text", quote="Сочи")])
     orchestrator = Orchestrator(FakeLLM(parsed), bundle_builder=builder)
     state, reply, trace = await orchestrator.prepare_turn(TripState(session_id=uuid4()), "В Сочи")
-    assert len(state.open_questions) == 2
+    assert len(state.open_questions) == 1
     assert not called
     assert "Откуда" in reply
     assert [step["name"] for step in trace] == ["parse_request", "state_diff"]
@@ -112,10 +112,11 @@ async def test_single_date_answer_is_kept_and_followup_asks_duration_not_same_da
     assert next(r for r in after_date.requirements if r.key == "travel_year").value == 2026
     assert "На какие даты" not in reply
     assert "сколько ночей" in reply.lower() or "какого числа возвращаться" in reply.lower()
-    assert {q.key for q in after_date.open_questions} == {"duration_nights", "adults"}
+    assert [q.key for q in after_date.open_questions] == ["duration_nights"]
 
     after_duration, _, _ = await Orchestrator(FakeLLM(ParsedRequest()), today=lambda: date(2026, 10, 25)).prepare_turn(
         after_date, "на неделю",
     )
     dates = next(r.value for r in after_duration.requirements if r.key == "dates")
     assert dates == {"start": "2026-12-12", "end": "2026-12-19"}
+    assert [q.key for q in after_duration.open_questions] == ["adults"]
