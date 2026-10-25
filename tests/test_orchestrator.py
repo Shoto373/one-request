@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from app.agent.llm import InvalidLLMJSONError, LLMClient
-from app.agent.orchestrator import Orchestrator, ParsedRequest
+from app.agent.orchestrator import InvalidAgentCommand, Orchestrator, ParsedRequest
 from app.catalog.models import Offer
 from app.state.models import Bundle, OpenQuestion, Requirement, TripState
 
@@ -37,6 +37,42 @@ def bundle():
 
 
 @pytest.mark.asyncio
+async def test_product_destination_scope_rejects_text_and_ui_commands():
+    calls = []
+    def builder(requirements, _state):
+        calls.append(requirements)
+        return [bundle()]
+
+    text = "Из Казани в Дубай 10–17 ноября, двое взрослых"
+    extracted = ParsedRequest(requirements=[
+        Requirement(key="origin", value="Казань", kind="hard", source="user_text", quote="Из Казани"),
+        Requirement(key="destination", value="Дубай", kind="hard", source="user_text", quote="в Дубай"),
+        Requirement(key="dates", value={"start": "2026-11-10", "end": "2026-11-17"}, kind="hard", source="user_text", quote="10–17 ноября"),
+        Requirement(key="adults", value=2, kind="hard", source="user_text", quote="двое взрослых"),
+    ])
+    orchestrator = Orchestrator(FakeLLM(extracted), bundle_builder=builder)
+    text_state, text_reply, _ = await orchestrator.prepare_turn(TripState(session_id=uuid4()), text)
+    assert "только" in text_reply.lower() and not calls
+    assert text_state.stage == "clarify" and text_state.open_questions[0].key == "destination"
+
+    old_state = TripState(session_id=uuid4(), requirements=[
+        Requirement(key="origin", value="Казань", kind="hard", source="user_text", quote="Из Казани"),
+        Requirement(key="destination", value="AER", kind="hard", source="product_scope", label="Сочи"),
+    ], bundles=[bundle()], selected_bundle_id="bundle-1", stage="select")
+    edited, edit_reply, _ = await orchestrator.prepare_command(
+        old_state, "edit_requirement", {"key": "destination", "value": "DXB", "kind": "hard"})
+    assert "только" in edit_reply.lower() and edited.stage == "clarify"
+    assert edited.open_questions[0].key == "destination" and edited.bundles == []
+    refused, _, _ = await orchestrator.prepare_command(edited, "select_bundle", {"bundle_id": "bundle-1"})
+    assert refused.bundles == [] and refused.selected_bundle_id is None
+    assert not calls
+
+    injected_choice = old_state.model_copy(update={"destinations": [{"id": "DXB", "name": "Дубай", "feasible": True}]})
+    with pytest.raises(InvalidAgentCommand, match="outside configured product coverage"):
+        await orchestrator.prepare_command(injected_choice, "select_destination", {"destination_id": "DXB"})
+
+
+@pytest.mark.asyncio
 async def test_full_request_calls_builder_and_saves_explicit_year_assumption():
     calls = []
 
@@ -57,7 +93,7 @@ async def test_full_request_calls_builder_and_saves_explicit_year_assumption():
 
 
 @pytest.mark.asyncio
-async def test_insufficient_request_asks_at_most_two_and_does_not_search():
+async def test_insufficient_request_asks_one_question_and_does_not_search():
     called = False
 
     def builder(*_):
@@ -68,7 +104,7 @@ async def test_insufficient_request_asks_at_most_two_and_does_not_search():
     parsed = ParsedRequest(requirements=[Requirement(key="destination", value="Сочи", kind="hard", source="user_text", quote="Сочи")])
     orchestrator = Orchestrator(FakeLLM(parsed), bundle_builder=builder)
     state, reply, trace = await orchestrator.prepare_turn(TripState(session_id=uuid4()), "В Сочи")
-    assert len(state.open_questions) == 2
+    assert len(state.open_questions) == 1
     assert not called
     assert "Откуда" in reply
     assert [step["name"] for step in trace] == ["parse_request", "state_diff"]
@@ -96,7 +132,7 @@ async def test_llm_error_falls_back_to_rules_without_mutating_input():
 
 
 @pytest.mark.asyncio
-async def test_single_date_answer_is_kept_and_followup_asks_duration_not_same_date_again():
+async def test_single_date_answer_is_kept_and_missing_origin_is_asked_without_assuming_moscow():
     state = TripState(
         session_id=uuid4(),
         requirements=[Requirement(key="origin", value="MOW", kind="assumption", source="product_scope"),
@@ -104,18 +140,25 @@ async def test_single_date_answer_is_kept_and_followup_asks_duration_not_same_da
         open_questions=[OpenQuestion(key="dates", question="На какие даты?", why="Нужен период."),
                         OpenQuestion(key="adults", question="Сколько взрослых?", why="Нужен состав.")],
     )
-    orchestrator = Orchestrator(FakeLLM(ParsedRequest()), today=lambda: date(2026, 10, 25))
+    orchestrator = Orchestrator(FakeLLM(error=InvalidLLMJSONError("use deterministic fallback")), today=lambda: date(2026, 10, 25))
     after_date, reply, _ = await orchestrator.prepare_turn(state, "12 декабря")
 
     start = next(r for r in after_date.requirements if r.key == "travel_start_date")
     assert start.value == "2026-12-12"
     assert next(r for r in after_date.requirements if r.key == "travel_year").value == 2026
     assert "На какие даты" not in reply
-    assert "сколько ночей" in reply.lower() or "какого числа возвращаться" in reply.lower()
-    assert {q.key for q in after_date.open_questions} == {"duration_nights", "adults"}
+    assert "откуда" in reply.lower()
+    assert not any(r.key == "origin" and r.source == "product_scope" for r in after_date.requirements)
+    assert [q.key for q in after_date.open_questions] == ["origin"]
 
-    after_duration, _, _ = await Orchestrator(FakeLLM(ParsedRequest()), today=lambda: date(2026, 10, 25)).prepare_turn(
-        after_date, "на неделю",
+    after_origin, _, _ = await Orchestrator(FakeLLM(error=InvalidLLMJSONError("use deterministic fallback")), today=lambda: date(2026, 10, 25)).prepare_turn(
+        after_date, "Казань",
+    )
+    assert next(r.value for r in after_origin.requirements if r.key == "origin") == "Казань"
+    assert [q.key for q in after_origin.open_questions] == ["duration_nights"]
+
+    after_duration, _, _ = await Orchestrator(FakeLLM(error=InvalidLLMJSONError("use deterministic fallback")), today=lambda: date(2026, 10, 25)).prepare_turn(
+        after_origin, "на неделю",
     )
     dates = next(r.value for r in after_duration.requirements if r.key == "dates")
     assert dates == {"start": "2026-12-12", "end": "2026-12-19"}

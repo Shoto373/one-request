@@ -51,6 +51,19 @@ def test_short_answer_maps_to_open_question():
     assert parsed("Питер", state)["origin"].value == "Санкт-Петербург"
 
 
+def test_origin_city_is_not_limited_to_demo_city_list():
+    request = parsed("Из Казани в Сочи на неделю, двое взрослых")
+    assert request["origin"].value == "Казань"
+    state = TripState(session_id=uuid4(), open_questions=[OpenQuestion(key="origin", question="Из какого города?", why="")])
+    clarified = parsed("Самары, Самарская область", state)
+    assert clarified["origin"].value == "Самары, Самарская область"
+
+
+def test_missing_origin_is_not_inferred_as_moscow():
+    request = parsed("В Сочи на неделю, двое взрослых")
+    assert "origin" not in request
+
+
 @pytest.mark.asyncio
 async def test_offline_turn_reaches_bundles():
     """Без ключа весь путь до комплектов работает на настоящем подборе трека A."""

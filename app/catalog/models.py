@@ -438,6 +438,10 @@ class Offer(Model):
     offer_id: str
     kind: Literal["hotel", "flight", "train", "transfer"]
     item_id: str
+    origin_city: str | None = None
+    destination_city: str | None = None
+    origin_provider_id: str | None = None
+    destination_provider_id: str | None = None
     title: str | None = None
     variant: dict[str, Any] = Field(default_factory=dict)
     capacity: Capacity | None = None

@@ -19,6 +19,7 @@ from typing import Any, Callable
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
+from app.product_scope import destination_supported
 
 
 class CartError(Exception):
@@ -64,6 +65,10 @@ def _load_session(conn: psycopg.Connection, session_id: str) -> tuple[dict, int]
 
 
 def _check_bundle(bundle: dict, state: dict) -> list[dict]:
+    destination = next((r.get("value") for r in state.get("requirements", [])
+                        if r.get("key") == "destination" and r.get("value") not in (None, "")), None)
+    if destination is not None and not destination_supported(destination):
+        raise CartError(422, "destination_not_covered", "Это направление не входит в текущее покрытие прототипа")
     items = bundle.get("items") or []
     if not items:
         raise CartError(422, "empty_bundle", "В комплекте нет позиций")

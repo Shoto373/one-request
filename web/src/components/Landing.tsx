@@ -4,46 +4,15 @@ import { api } from '../api/client'
 import { profileId } from '../lib/profile'
 import Icon, { type IconName } from './Icon'
 
-/** что агент помнит — короткими словами для приветствия */
-function memoryWords(prefs: Record<string, unknown>): string[] {
-  const out: string[] = []
-  if (prefs.origin) out.push(`вылет из ${prefs.origin}`)
-  if (prefs.adults) out.push(`${prefs.adults} взр.`)
-  if (Array.isArray(prefs.children_ages) && prefs.children_ages.length) out.push(`дети ${prefs.children_ages.join(', ')} лет`)
-  else if (prefs.children_count) out.push('с ребёнком')
-  if (prefs.pets) out.push((prefs.pets as { kind?: string }).kind === 'dog' ? 'с собакой' : 'с питомцем')
-  if (prefs.meal_preference === 'all_inclusive') out.push('всё включено')
-  if (prefs.transport === 'train') out.push('поездом')
-  if (prefs.budget_preference) out.push('подешевле')
-  return out
-}
-
-/** Стартовый экран в стиле ostrovok.ru: салатовый герой, большая строка запроса, карточки сценариев. */
-
-const MODES: { icon: IconName; label: string; hint: string }[] = [
-  { icon: 'sparkle', label: 'Поездка целиком', hint: 'Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов' },
-  { icon: 'train', label: 'Поездом', hint: 'Из Москвы в Казань на выходные поездом, двое взрослых' },
-  { icon: 'plane', label: 'Точный маршрут', hint: 'Из Москвы в Сочи 10–17 ноября, двое взрослых' },
-]
-
-const EXAMPLES: { tag: string; title: string; text: string; tint: string; emoji: string }[] = [
-  { tag: 'не знаю, куда', title: 'К тёплому морю с ребёнком', emoji: '🌊', tint: 'from-[#0a4fec] to-[#4225f2]',
-    text: 'Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов' },
-  { tag: 'с питомцем', title: 'Сочи с собакой', emoji: '🐕', tint: 'from-[#53af24] to-[#2f8a0e]',
-    text: 'Из Москвы в Сочи 10–17 ноября, двое взрослых и собака 8 кг' },
-  { tag: 'поездом', title: 'Казань на выходные', emoji: '🚆', tint: 'from-[#e77d00] to-[#c75400]',
-    text: 'Из Москвы в Казань на выходные поездом, двое взрослых' },
-  { tag: 'честный отказ', title: 'Дубай за 30 000 на троих', emoji: '🏙️', tint: 'from-[#ce2121] to-[#9b1111]',
-    text: 'Неделя в Дубае на троих за 30 000' },
-  { tag: 'english', title: 'Istanbul for two', emoji: '🌍', tint: 'from-[#2d3137] to-[#464a4f]',
-    text: 'Trip from Saint Petersburg to Istanbul, November 10-14, two adults' },
+const SCENARIOS = [
+  { title: 'Выдохнуть у моря', subtitle: 'Спокойная поездка вдвоём', image: '/sochi-coast.png', query: 'на неделю, двое взрослых' },
+  { title: 'На море с ребёнком', subtitle: 'Удобная дорога и время вместе', image: '/sochi-family.png', query: 'на неделю, двое взрослых и ребёнок 5 лет' },
+  { title: 'Взять друга с собой', subtitle: 'Проверим условия для питомца', image: '/sochi-dog.png', query: 'на неделю, двое взрослых и собака' },
 ]
 
 const FEATURES: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'sparkle', title: 'Поймёт с полуслова', text: 'Отделит ваши требования от своих догадок и спросит только то, без чего нельзя.' },
-  { icon: 'sun', title: 'Подскажет, куда', text: 'Погода, цена поездки целиком, время в пути и виза — по каждому направлению.' },
-  { icon: 'shield', title: 'Проверит стыковки', text: 'Ночной прилёт и стойка отеля, трансфер, животное у перевозчика — до оплаты.' },
-  { icon: 'refresh', title: 'Пересоберёт, а не начнёт заново', text: '«На два дня позже, с собакой» — покажет, что сохранил, что заменил и почему.' },
+  { icon: 'refresh', title: 'Пересоберёт поездку', text: 'Измените даты или состав — агент заново проверит предложения и объяснит, что поменялось.' },
+  { icon: 'shield', title: 'Покажет ограничения', text: 'Неизвестные условия и неподтверждённые стыковки будут отмечены до имитации оформления.' },
 ]
 
 interface Props {
@@ -56,161 +25,137 @@ export default function Landing({ disabled, connecting, onSend }: Props) {
   const qc = useQueryClient()
   const pid = profileId()
   const { data: profile } = useQuery({ queryKey: ['profile', pid], queryFn: () => api.getProfile(pid!), enabled: !!pid, retry: false })
+  const { data: appStatus } = useQuery({ queryKey: ['status'], queryFn: api.getStatus, staleTime: 60_000 })
+  const destination = appStatus?.product_coverage?.fixed_destination?.name ?? 'Сочи'
   const remembered = profile ? memoryWords(profile.prefs) : []
+  const [text, setText] = useState('')
   const forget = async () => {
     if (!pid) return
     await api.forgetProfile(pid).catch(() => undefined)
     qc.invalidateQueries({ queryKey: ['profile', pid] })
   }
-  const [text, setText] = useState('')
-  const [mode, setMode] = useState(0)
-  const submit = (t: string) => {
-    const v = t.trim()
-    if (!v || disabled) return
-    onSend(v)
+  const submit = (value: string) => {
+    const query = value.trim()
+    if (!query || disabled) return
+    onSend(query)
   }
+  const submitHero = () => submit(text.trim() || `Хочу поехать в ${destination}`)
 
   return (
-    <div className="h-full overflow-y-auto">
-      {/* герой */}
-      <section className="bg-lime px-4 pb-16 pt-8 md:px-8 md:pb-24 md:pt-12">
-        <div className="mx-auto max-w-6xl">
-          <h1 className="font-display text-[30px] font-bold leading-[1.08] tracking-tight text-ink md:text-[52px]">
-            Скажите, куда хотите.
-            <br />
-            Остальное устроит агент!
+    <div className="flex h-full flex-col overflow-y-auto bg-white">
+      <section className="shrink-0 bg-lime px-4 pb-10 pt-5 md:px-8 md:pb-14 md:pt-8">
+        <div className="mx-auto max-w-[1120px]">
+          <div className="text-[11px] font-bold tracking-[.18em] text-ink">ВАШ ГОРОД <span className="px-1">→</span> {destination.toLocaleUpperCase('ru-RU')}</div>
+          <h1 className="mt-5 max-w-[880px] font-display text-[34px] font-bold leading-[1.1] tracking-tight text-ink sm:text-[44px] md:mt-6 md:text-[56px]">
+            В {destination} — из вашего города
           </h1>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {MODES.map((m, i) => (
-              <button
-                key={m.label}
-                onClick={() => setMode(i)}
-                className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
-                  i === mode ? 'bg-white text-brand shadow-card' : 'bg-white/45 text-ink hover:bg-white/70'
-                }`}
-              >
-                <Icon name={m.icon} className="h-4 w-4" /> {m.label}
-              </button>
-            ))}
-          </div>
-
-          <form
-            className="mt-3 flex flex-col gap-2 md:flex-row"
-            onSubmit={(e) => {
-              e.preventDefault()
-              submit(text || MODES[mode].hint)
-            }}
-          >
-            <label className="flex min-w-0 flex-1 flex-col rounded-2xl bg-white px-4 py-2.5 shadow-card focus-within:ring-2 focus-within:ring-brand">
-              <span className="text-[11px] text-ink-muted">Опишите поездку своими словами</span>
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={MODES[mode].hint}
-                disabled={disabled}
-                className="min-w-0 bg-transparent py-0.5 text-[16px] text-ink outline-none placeholder:text-ink-muted"
-              />
+          <form className="mt-5 flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); submitHero() }}>
+            <label className="flex min-h-[64px] min-w-0 flex-1 flex-col justify-center rounded-2xl bg-white px-4 py-2 shadow-card">
+              <span className="text-[11px] text-ink-muted">Расскажите о поездке</span>
+              <input value={text} onChange={(e) => setText(e.target.value)} disabled={disabled}
+                placeholder={`Из Екатеринбурга в ${destination} на неделю, двое взрослых, до 100 тысяч рублей`}
+                className="w-full bg-transparent text-base text-ink outline-none placeholder:text-ink-muted/90 md:text-[17px]" />
             </label>
-            <button
-              type="submit"
-              disabled={disabled}
-              className="flex h-[60px] items-center justify-center gap-2 rounded-2xl bg-brand px-10 text-[16px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
-            >
-              {connecting ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Подключаюсь
-                </>
-              ) : (
-                'Спланировать'
-              )}
+            <button type="submit" disabled={disabled} className="btn-primary h-14 shrink-0 px-8 text-base sm:h-16">
+              {connecting ? 'Подключаюсь…' : 'Собрать поездку →'}
             </button>
           </form>
-          <p className="mt-3 text-sm text-ink/70">
-            Дорога туда и обратно, трансферы и отель — подберёт, сравнит, проверит и соберёт в один заказ.
-          </p>
-          {remembered.length > 0 && (
-            <div className="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-white/60 px-4 py-2.5 text-sm text-ink">
-              <Icon name="clock" className="h-4 w-4 text-brand" />
-              <span>
-                <b>С возвращением!</b> Помню по прошлой поездке: {remembered.join(', ')} — учту как догадки, их можно убрать.
-              </span>
-              <button onClick={forget} className="font-semibold text-brand underline-offset-2 hover:underline">
-                Забыть
-              </button>
-            </div>
-          )}
+          <p className="mt-3 max-w-[850px] text-sm leading-relaxed text-ink-grey md:text-[15px]">Расскажите, откуда и когда хотите поехать. Агент найдёт варианты дороги и проживания.</p>
         </div>
       </section>
 
-      {/* белый лист поверх героя, как на ostrovok.ru */}
-      <div className="relative -mt-8 rounded-t-[32px] bg-white px-4 pb-12 pt-8 md:-mt-10 md:rounded-t-[40px] md:px-8 md:pt-12">
-        <div className="mx-auto max-w-6xl space-y-12">
-          <section>
-            <h2 className="font-display text-[22px] font-bold tracking-tight md:text-[30px]">С чего начать</h2>
-            <p className="mt-1 text-ink-grey">Нажмите на сценарий — агент начнёт работу сразу</p>
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {EXAMPLES.map((e) => (
-                <button
-                  key={e.title}
-                  onClick={() => submit(e.text)}
-                  disabled={disabled}
-                  className="group flex flex-col overflow-hidden rounded-2xl bg-canvas text-left transition hover:-translate-y-0.5 hover:shadow-lift disabled:opacity-60"
-                >
-                  <span className={`relative flex h-20 items-end bg-gradient-to-br p-3 sm:h-28 ${e.tint}`}>
-                    <span className="absolute right-3 top-2 text-[36px] sm:text-[44px] leading-none drop-shadow">{e.emoji}</span>
-                    <span className="rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold text-ink">{e.tag}</span>
-                  </span>
-                  <span className="flex flex-1 flex-col gap-1 p-3.5">
-                    <span className="font-semibold leading-snug">{e.title}</span>
-                    <span className="text-[13px] leading-snug text-ink-muted">«{e.text}»</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 pb-8 pt-8 md:px-8 md:pt-10">
+        <div className="text-[11px] font-bold tracking-[.18em] text-brand">ВАШ ГОРОД <span className="px-1 text-brand/50">→</span> {destination.toLocaleUpperCase('ru-RU')}</div>
+        <h2 className="mt-2 font-display text-[31px] font-bold leading-[1.1] tracking-tight text-ink md:text-[48px]">Поездка в {destination} начинается с вашей идеи.</h2>
+        <p className="mt-2 text-base text-ink-grey md:text-[19px]">Выберите настроение поездки — детали обсудим с агентом.</p>
 
-          <section className="grid gap-3 lg:grid-cols-[1fr_1fr_380px]">
-            <div className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
-              {FEATURES.map((f) => (
-                <div key={f.title} className="rounded-2xl bg-canvas p-5">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-brand shadow-card">
-                    <Icon name={f.icon} className="h-5 w-5" />
-                  </span>
-                  <div className="mt-3 font-semibold">{f.title}</div>
-                  <div className="mt-1 text-sm text-ink-grey">{f.text}</div>
-                </div>
-              ))}
-            </div>
-            <div className="guru-gradient relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 text-white">
-              <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" aria-hidden />
-              <div className="relative">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium">
-                  <Icon name="shield" className="h-3.5 w-3.5" /> без выдуманных цифр
-                </span>
-                <div className="mt-4 font-display text-[22px] font-bold leading-tight">
-                  Каждую цену считает инструмент, каждую стыковку — проверяет валидатор
-                </div>
-                <p className="mt-3 text-sm text-white/80">
-                  Нейросеть только объясняет. Перед оплатой план перепроверяется ещё раз, двойной клик не создаст второй заказ.
-                </p>
-              </div>
-              <button
-                onClick={() => submit(EXAMPLES[0].text)}
-                disabled={disabled}
-                className="relative mt-6 rounded-2xl bg-white py-3 text-sm font-semibold text-brand transition hover:bg-brand-light disabled:opacity-60"
-              >
-                Попробовать
-              </button>
-            </div>
-          </section>
-
-          <p className="text-xs text-ink-muted">
-            Прототип для хакатона Островка. Города, аэропорты, климат и названия отелей — открытые данные (OpenStreetMap, Open-Meteo,
-            Wikidata); цены, расписания и условия сгенерированы и помечены «демо-данные». Оплата имитируется.
-          </p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {SCENARIOS.map((scenario) => (
+            <button key={scenario.title} onClick={() => submit(`В ${destination} ${scenario.query}`)} disabled={disabled}
+              className="group relative isolate flex h-[238px] overflow-hidden rounded-[20px] text-left text-white shadow-card transition hover:-translate-y-1 hover:shadow-lift disabled:opacity-60 sm:h-[260px] md:h-[292px]">
+              <img src={scenario.image} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+              <span className="absolute inset-0 -z-[1] bg-gradient-to-t from-[#10223f]/85 via-[#10223f]/10 to-transparent" />
+              <span className="absolute inset-x-4 bottom-4 pr-12">
+                <span className="block font-display text-[20px] font-semibold leading-tight md:text-[23px]">{scenario.title}</span>
+                <span className="mt-1 block text-sm text-white/90">{scenario.subtitle}</span>
+              </span>
+              <span className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white text-ink shadow-card transition group-hover:translate-x-0.5">
+                <Icon name="chevron" className="h-5 w-5" />
+              </span>
+            </button>
+          ))}
         </div>
-      </div>
+
+        <section className="mt-8 grid gap-5 md:grid-cols-[.78fr_1.22fr] md:items-center">
+          <div className="py-2">
+            <h3 className="max-w-md font-display text-[29px] font-bold leading-[1.12] tracking-tight md:text-[38px]">Планы меняются.<br />Поездка подстроится.</h3>
+            <p className="mt-3 max-w-md text-base leading-relaxed text-ink-grey">Сдвиньте даты или измените пожелания — агент пересоберёт маршрут и объяснит, что сохранилось, что заменилось и почему.</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+              {FEATURES.map((feature) => (
+                <div key={feature.title} className="flex gap-3 rounded-2xl bg-canvas p-3.5">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-brand shadow-card"><Icon name={feature.icon} className="h-5 w-5" /></span>
+                  <span><span className="block text-sm font-semibold">{feature.title}</span><span className="mt-0.5 block text-xs leading-relaxed text-ink-grey">{feature.text}</span></span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[22px] border border-brand/20 bg-white p-4 shadow-card md:p-5">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold tracking-[.16em] text-brand">ПРИМЕР ПЕРЕСБОРКИ</span>
+              <span className="rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-medium text-brand">без бронирования</span>
+            </div>
+            <div className="mb-4 inline-flex max-w-full rounded-2xl rounded-bl-md bg-brand-light px-3.5 py-2 text-sm text-ink">«Давайте на два дня позже»</div>
+            <div className="space-y-0">
+              <ReplanRow icon="plane" title="Дорога" badge="Новые даты" tone="blue">12–19 ноября <span className="px-1 text-ink-muted">→</span> 14–21 ноября</ReplanRow>
+              <ReplanRow icon="bed" title="Отель" badge="Нужно проверить" tone="green">Заново проверим наличие и цену на новые даты.</ReplanRow>
+              <ReplanRow icon="car" title="Трансфер" badge="Не включён" tone="amber" last>Покажем отдельно, если поиск и подтверждённая цена доступны.</ReplanRow>
+            </div>
+          </div>
+        </section>
+
+        {remembered.length > 0 && <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-brand-light/70 px-4 py-3 text-sm text-ink">
+          <Icon name="clock" className="h-4 w-4 text-brand" /><span><b>С возвращением!</b> Помню по прошлой поездке: {remembered.join(', ')}. Это только догадки, их можно убрать.</span>
+          <button onClick={forget} className="font-semibold text-brand underline-offset-2 hover:underline">Забыть</button>
+        </div>}
+
+        <p className="mt-5 text-[11px] text-ink-muted">Направление отдыха в прототипе — {destination}. Доступность дороги зависит от маршрутов Туту; в демо используются отдельные примеры. Оформление имитируется.</p>
+
+        <section className="mt-7 rounded-2xl bg-[#eaf2ff] p-3 md:flex md:items-center md:gap-4 md:p-4">
+          <h3 className="font-display text-lg font-bold md:shrink-0 md:text-[21px]">А какая поездка нужна вам?</h3>
+          <form className="mt-2 flex flex-1 flex-col gap-2 sm:flex-row md:mt-0" onSubmit={(e) => { e.preventDefault(); submit(text || `Хочу поехать в ${destination}`) }}>
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Расскажите о своих планах…" disabled={disabled}
+              className="h-11 min-w-0 flex-1 rounded-xl border border-black/[.06] bg-white px-4 text-sm outline-none placeholder:text-ink-muted focus:border-brand/40 focus:ring-2 focus:ring-brand/10" />
+            <button type="submit" disabled={disabled} className="btn-primary h-11 shrink-0 px-5 md:px-7">{connecting ? 'Подключаюсь…' : 'Открыть агента'} <Icon name="send" className="h-4 w-4" /></button>
+          </form>
+        </section>
+      </main>
     </div>
   )
+}
+
+function ReplanRow({ icon, title, badge, tone, last, children }: {
+  icon: IconName; title: string; badge: string; tone: 'blue' | 'green' | 'amber'; last?: boolean; children: React.ReactNode
+}) {
+  const badgeStyle = tone === 'blue' ? 'bg-brand-light text-brand' : tone === 'green' ? 'bg-ok-bg text-[#347d17]' : 'bg-warn-bg text-[#9a5900]'
+  return <div className="grid grid-cols-[34px_1fr] gap-x-3">
+    <div className="relative flex justify-center">{!last && <span className="absolute bottom-0 top-8 w-px bg-brand/20" />}<span className="relative z-[1] grid h-8 w-8 place-items-center rounded-full bg-canvas text-brand"><Icon name={icon} className="h-4 w-4" /></span></div>
+    <div className={`min-w-0 pb-3 pt-0.5 ${last ? '' : 'border-b border-black/[.05]'}`}>
+      <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-semibold">{title}</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeStyle}`}>{badge}</span></div>
+      <div className="mt-1 text-xs leading-relaxed text-ink-grey">{children}</div>
+    </div>
+  </div>
+}
+
+function memoryWords(prefs: Record<string, unknown>): string[] {
+  const out: string[] = []
+  if (prefs.origin) out.push(`вылет из ${prefs.origin}`)
+  if (prefs.adults) out.push(`${prefs.adults} взр.`)
+  if (Array.isArray(prefs.children_ages) && prefs.children_ages.length) out.push(`дети ${prefs.children_ages.join(', ')} лет`)
+  else if (prefs.children_count) out.push('с ребёнком')
+  if (prefs.pets) out.push((prefs.pets as { kind?: string }).kind === 'dog' ? 'с собакой' : 'с питомцем')
+  if (prefs.meal_preference === 'all_inclusive') out.push('всё включено')
+  if (prefs.transport === 'train') out.push('поездом')
+  if (prefs.budget_preference) out.push('подешевле')
+  return out
 }

@@ -1,4 +1,4 @@
-"""Bounded live planner for the product's single supported route: Moscow <-> Sochi."""
+"""Bounded live planner for Russian origin cities to the fixed Sochi destination."""
 from __future__ import annotations
 
 import asyncio
@@ -6,6 +6,7 @@ import hashlib
 from contextvars import ContextVar
 from contextlib import contextmanager
 import os
+import re
 from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -16,6 +17,7 @@ from app.planning.query import MEAL_RANK, TripQuery, parse_meal, query_from_requ
 from app.providers.base import ProviderError
 from app.providers.tutu.adapter import hotel_offer, transport_offer
 from app.providers.tutu.client import TutuMCPClient, TutuMCPError
+from app.product_scope import destination_ids, fixed_destination_id
 
 _trace_recorder: ContextVar[Any] = ContextVar("tutu_trace_recorder", default=None)
 _force_demo: ContextVar[bool] = ContextVar("tutu_force_demo", default=False)
@@ -55,7 +57,7 @@ async def _mcp_call(client: TutuMCPClient, tool: str, args: dict[str, Any]):
         rows = result.data.get(key) if key else None
         meta = result.data.get("meta") or {}
         compact_meta = {k: meta.get(k) for k in ("transport", "round_trip", "return_date", "page_size",
-                                                    "total_returned", "total_matched", "has_more") if k in meta}
+                                                    "total_returned", "total_matched", "has_more", "from", "to") if k in meta}
         if isinstance(meta.get("pricing"), dict):
             compact_meta["pricing"] = {k: meta["pricing"].get(k) for k in ("basis", "passengers") if k in meta["pricing"]}
         recorder({"step_type": "tool", "name": tool, "input": args,
@@ -72,22 +74,64 @@ class TutuSearchEmpty(ProviderError):
     pass
 
 
+class TutuPlaceResolutionError(ProviderError):
+    """The provider needs the user to disambiguate or approve another city."""
+
+    def __init__(self, message: str, *, candidate: str | None = None):
+        super().__init__(message)
+        self.candidate = candidate
+
+
+class TutuOriginAmbiguous(TutuPlaceResolutionError):
+    pass
+
+
+class TutuOriginUnavailable(TutuPlaceResolutionError):
+    pass
+
+
+class TutuOriginOutsideRussia(TutuPlaceResolutionError):
+    pass
+
+
 def tutu_live_enabled() -> bool:
     return not _force_demo.get() and os.getenv("TRAVEL_DATA_PROVIDER", "demo").strip().lower() == "tutu"
 
 
 def _mapped_requirements(requirements: dict[str, Any], state: Any) -> dict[str, Any]:
     req = dict(requirements)
-    if not any(req.get(k) for k in ("origin", "origin_city", "from", "departure_city")):
-        req["origin"] = "MOW"
     if not any(req.get(k) for k in ("destination", "dest", "destination_city", "to", "city")):
-        req["destination"] = "AER"
+        req["destination"] = fixed_destination_id()
     cat = get_catalog()
-    origin = resolve_city(cat, req.get("origin") or req.get("origin_city") or req.get("from"))
-    destination = resolve_city(cat, req.get("destination") or req.get("dest") or req.get("to"))
-    if origin != "MOW" or destination != "AER":
-        raise TutuScopeError("В этом прототипе собираем поездки из Москвы в Сочи. Можно продолжить с маршрутом Москва → Сочи.")
+    destination_value = next((req.get(key) for key in ("destination", "dest", "destination_city", "to", "city")
+                              if req.get(key) not in (None, "")), None)
+    destination = resolve_city(cat, destination_value)
+    if destination not in destination_ids():
+        names = ", ".join(cat.cities[city_id].name for city_id in destination_ids())
+        raise TutuScopeError(f"Текущее покрытие прототипа включает только: {names}. Направление без вашего согласия не меняю.")
     return req
+
+
+def _origin_resolution_error(error: Exception, origin_name: str) -> TutuPlaceResolutionError | None:
+    text = getattr(error, "upstream_message", None) or ""
+    low = text.lower()
+    if "could not resolve" in low:
+        if "share this name" in low or "which one" in low:
+            return TutuOriginAmbiguous(
+                f"Туту нашёл несколько городов с названием «{origin_name}». Уточните область или район отправления. {text}"
+            )
+        return TutuOriginAmbiguous(
+            f"Туту не смог определить город отправления «{origin_name}». Уточните написание, область или район."
+        )
+    if "no avia_id" in low or "no rail" in low or "no railway" in low or "no train" in low:
+        match = re.search(r"(?:answers this wording with|suggests)\s+[«\"]([^»\"]+)[»\"]", text, re.I)
+        candidate = match.group(1).strip() if match else None
+        suggestion = (f"Туту предлагает проверить город «{candidate}». " if candidate else "")
+        return TutuOriginUnavailable(
+            f"Туту не подтвердил отправление из «{origin_name}». {suggestion}Город не меняю автоматически; если согласны, укажите его явно.",
+            candidate=candidate,
+        )
+    return None
 
 
 def assert_tutu_scope(requirements: dict[str, Any], state: Any = None) -> None:
@@ -96,12 +140,40 @@ def assert_tutu_scope(requirements: dict[str, Any], state: Any = None) -> None:
 
 def _parse_query(requirements: dict[str, Any], state: Any) -> TripQuery:
     req = _mapped_requirements(requirements, state)
-    query, problems = query_from_requirements(get_catalog(), req, state)
+    query, problems = query_from_requirements(get_catalog(), req, state, allow_external_origin=True)
     if query is None:
         raise TutuSearchEmpty("Для поиска Туту нужны точные даты и состав поездки. " + " ".join(problems))
-    if query.origin_city != "MOW" or query.dest_city != "AER":
-        raise TutuScopeError("В этом прототипе собираем поездки из Москвы в Сочи. Можно продолжить с маршрутом Москва → Сочи.")
     return query
+
+
+def _origin_for_provider(requirements: dict[str, Any]) -> str:
+    value = next((requirements.get(key) for key in ("origin", "origin_city", "from", "departure_city")
+                  if requirements.get(key) not in (None, "")), None)
+    if isinstance(value, dict):
+        value = value.get("city") or value.get("name") or value.get("value") or value.get("id")
+    if not isinstance(value, str) or not value.strip():
+        raise TutuSearchEmpty("Уточните город отправления, чтобы проверить доступность Туту.")
+    raw = value.strip()
+    cat = get_catalog()
+    city_id = resolve_city(cat, raw)
+    if city_id in cat.cities:
+        city = cat.cities[city_id]
+        if city.country_code != "RU":
+            raise TutuOriginOutsideRussia(
+                f"Город отправления «{city.name}» находится вне России. В прототипе можно указать город отправления в России."
+            )
+        return city.name
+    return raw
+
+
+def _explicitly_non_russian(place: Any) -> bool:
+    if not isinstance(place, dict):
+        return False
+    code = str(place.get("country_code") or place.get("country_iso2") or "").upper()
+    if code:
+        return code != "RU"
+    country = str(place.get("country") or "").strip().lower()
+    return bool(country and country not in {"россия", "russia", "российская федерация", "russian federation"})
 
 
 def _party_for_avia(query: TripQuery) -> tuple[int, int, int]:
@@ -169,10 +241,13 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
     """Search only the requested date window; all quantities come from provider results."""
     query = _parse_query(requirements, state)
     catalog = get_catalog()
-    city_tz = catalog.cities["AER"].timezone
+    destination_name = catalog.cities[query.dest_city].name
+    city_tz = catalog.cities[query.dest_city].timezone
+    origin_name = _origin_for_provider(requirements)
     adults, children, infants = _party_for_avia(query)
     hotel_party = {"adults": query.party.adults, "children_ages": list(query.party.children_ages)}
     source_errors: list[str] = []
+    place_errors: list[TutuPlaceResolutionError] = []
     hard_lodging_rejections: list[str] = []
     flight_rows: list[dict[str, Any]] = []
     outbound_rows: list[dict[str, Any]] = []
@@ -182,24 +257,37 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
         tasks: dict[str, Any] = {}
         if "flight" in query.kinds:
             avia_args = {
-                "origin": "Москва", "destination": "Сочи", "departure_date": query.depart_date.isoformat(),
+                "origin": origin_name, "destination": destination_name, "departure_date": query.depart_date.isoformat(),
                 "return_date": query.return_date.isoformat(), "adults": adults, "children": children,
                 "infants": infants, "page": 1, "page_size": 5, "sort": "price_asc", "view": "compact",
             }
+            if query.limits_hard and query.max_stops == 0:
+                avia_args["direct_only"] = True
             tasks["avia"] = _mcp_call(client, "search_avia", avia_args)
         if "train" in query.kinds:
-            out_args = {"origin": "Москва", "destination": "Сочи", "departure_date": query.depart_date.isoformat(),
+            out_args = {"origin": origin_name, "destination": destination_name, "departure_date": query.depart_date.isoformat(),
                         "passengers": query.party.people, "page": 1, "page_size": 5, "sort": "price_asc", "view": "compact"}
-            back_args = {"origin": "Сочи", "destination": "Москва", "departure_date": query.return_date.isoformat(),
+            back_args = {"origin": destination_name, "destination": origin_name, "departure_date": query.return_date.isoformat(),
                          "passengers": query.party.people, "page": 1, "page_size": 5, "sort": "price_asc", "view": "compact"}
+            if query.limits_hard and query.max_stops == 0:
+                out_args["direct_only"] = True
+                back_args["direct_only"] = True
             tasks["rail_out"], tasks["rail_back"] = _mcp_call(client, "search_rail", out_args), _mcp_call(client, "search_rail", back_args)
         keys = list(tasks)
         results = await asyncio.gather(*tasks.values(), return_exceptions=True)
         for key, result in zip(keys, results):
             if isinstance(result, Exception):
-                source_errors.append(f"{key}: техническая ошибка поиска")
+                place_error = _origin_resolution_error(result, origin_name)
+                if place_error:
+                    place_errors.append(place_error)
+                source_errors.append(f"{key}: {getattr(result, 'upstream_message', None) or 'техническая ошибка поиска'}")
                 continue
-            search_facts[key] = {"args": result.args, "fetched_at": result.fetched_at}
+            meta = result.data.get("meta") or {}
+            if any(_explicitly_non_russian(meta.get(side)) for side in ("from", "to")):
+                raise TutuOriginOutsideRussia("Туту определил один из городов маршрута за пределами России. Укажите российский город отправления.")
+            search_facts[key] = {"args": result.args, "fetched_at": result.fetched_at,
+                                 "resolved_from": meta.get("from"),
+                                 "resolved_to": meta.get("to")}
             if key == "avia":
                 flight_rows = _rows(result.data, "offers")
             elif key == "rail_out":
@@ -211,19 +299,25 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
             item for row in flight_rows if not row.get("is_multi_pnr")
             if (item := transport_offer(row, kind="flight", direction="round_trip",
                                          search_args=search_facts["avia"]["args"],
-                                         fetched_at=search_facts["avia"]["fetched_at"])) is not None
+                                         fetched_at=search_facts["avia"]["fetched_at"],
+                                         resolved_places={"from": search_facts["avia"].get("resolved_from"),
+                                                          "to": search_facts["avia"].get("resolved_to")})) is not None
         ]
         outbound = [
             item for row in outbound_rows
             if (item := transport_offer(row, kind="train", direction="outbound",
                                          search_args=search_facts["rail_out"]["args"],
-                                         fetched_at=search_facts["rail_out"]["fetched_at"])) is not None
+                                         fetched_at=search_facts["rail_out"]["fetched_at"],
+                                         resolved_places={"from": search_facts["rail_out"].get("resolved_from"),
+                                                          "to": search_facts["rail_out"].get("resolved_to")})) is not None
         ]
         inbound = [
             item for row in return_rows
             if (item := transport_offer(row, kind="train", direction="return",
                                          search_args=search_facts["rail_back"]["args"],
-                                         fetched_at=search_facts["rail_back"]["fetched_at"])) is not None
+                                         fetched_at=search_facts["rail_back"]["fetched_at"],
+                                         resolved_places={"from": search_facts["rail_back"].get("resolved_from"),
+                                                          "to": search_facts["rail_back"].get("resolved_to")})) is not None
         ]
         if query.limits_hard:
             flights = [item for item in flights if _transport_limit_issue(item, query) is None]
@@ -238,6 +332,8 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
                 duration = int(out.variant.get("duration_min") or 0) + int(back.variant.get("duration_min") or 0)
                 transport_choices.append(("rail", [out, back], duration))
         if not transport_choices:
+            if place_errors:
+                raise place_errors[0]
             failed = "; ".join(source_errors)
             if failed:
                 raise TutuMCPError("Не удалось выполнить live-поиск: " + failed)
@@ -252,7 +348,7 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
         hotel_details_attempted = 0
         for checkin in arrival_dates[:4]:
             hotel_args: dict[str, Any] = {
-                "city_name": "Сочи", "check_in": checkin.isoformat(), "check_out": query.return_date.isoformat(),
+                "city_name": destination_name, "check_in": checkin.isoformat(), "check_out": query.return_date.isoformat(),
                 **hotel_party, "page": 1, "page_size": 5, "view": "compact",
             }
             if query.party.pets:
@@ -261,6 +357,7 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
             response = await _mcp_call(client, "search_hotels", hotel_args)
             search_facts[f"hotel:{checkin.isoformat()}"] = {
                 "args": response.args, "fetched_at": response.fetched_at,
+                "resolved_destination": (response.data.get("meta") or {}).get("resolved_geo"),
             }
             hotel_rows = _rows(response.data, "hotels")
             normalized = []
@@ -276,7 +373,8 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
                 except Exception:
                     hotel_details_errors[f"{checkin.isoformat()}:{hotel_id}"] = "детали условий недоступны"
                 item = hotel_offer(row, search_args=hotel_args, fetched_at=response.fetched_at,
-                                   details=details, city_timezone=city_tz)
+                                   details=details, city_timezone=city_tz,
+                                   resolved_destination=search_facts[f"hotel:{checkin.isoformat()}"]["resolved_destination"])
                 if item is not None:
                     lodging_issues = _hard_lodging_issues(item, query, state)
                     if lodging_issues:

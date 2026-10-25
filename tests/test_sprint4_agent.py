@@ -82,7 +82,7 @@ def test_english_budget_reduction_without_amount_asks_instead_of_guessing():
 
 
 @pytest.mark.asyncio
-async def test_anywhere_is_not_invented_as_destination_and_missing_search_inputs_are_requested():
+async def test_anywhere_keeps_configured_sochi_destination_and_asks_for_origin():
     parsed = ParsedRequest(requirements=[
         Requirement(key="travel_month", value=11, kind="hard", source="user_text", quote="November"),
         Requirement(key="budget_preference", value="low_cost", kind="soft", source="user_text", quote="cheap"),
@@ -96,8 +96,9 @@ async def test_anywhere_is_not_invented_as_destination_and_missing_search_inputs
     result, _, _ = await Orchestrator(FakeLLM(parsed), destination_suggester=suggest).prepare_turn(
         TripState(session_id=uuid4()), "I want to go anywhere warm in November",
     )
-    assert not any(r.key == "destination" for r in result.requirements)
-    assert {q.key for q in result.open_questions} >= {"origin", "adults"}
+    destination = next(r for r in result.requirements if r.key == "destination")
+    assert destination.value == "AER" and destination.source == "product_scope"
+    assert len(result.open_questions) == 1 and result.open_questions[0].key == "origin"
     assert not calls
 
 

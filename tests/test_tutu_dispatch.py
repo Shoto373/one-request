@@ -58,3 +58,42 @@ def test_blocking_live_check_cannot_enter_cart(monkeypatch):
     with pytest.raises(CartError) as error:
         cart_service._check_bundle(bundle, {})
     assert error.value.code == "plan_blocked"
+
+
+def test_live_scope_keeps_origin_city_and_uses_configured_destination():
+    from app.providers.tutu.planner import TutuOriginOutsideRussia, TutuScopeError, _mapped_requirements, _origin_for_provider
+    from app.planning.query import query_from_requirements
+    from app.catalog.store import get_catalog
+
+    mapped = _mapped_requirements({"origin": "Казань"}, None)
+    assert mapped["origin"] == "Казань" and mapped["destination"] == "AER"
+    assert _origin_for_provider(mapped) == "Казань"
+    with pytest.raises(TutuOriginOutsideRussia):
+        _origin_for_provider({"origin": "Стамбул"})
+    with pytest.raises(TutuScopeError):
+        _mapped_requirements({"origin": "Казань", "destination": "Дубай"}, None)
+
+    requirements = {"origin": "Самара", "destination": "AER",
+                    "dates": {"start": "2026-11-25", "end": "2026-12-02"}, "adults": 2}
+    query, problems = query_from_requirements(get_catalog(), requirements, allow_external_origin=True)
+    assert not problems and query is not None and query.origin_city == "Самара"
+
+
+def test_ambiguous_origin_is_turned_into_user_clarification():
+    from app.providers.tutu.planner import _origin_resolution_error, TutuOriginAmbiguous, TutuOriginUnavailable
+
+    ambiguous = type("Upstream", (), {"upstream_message": "could not resolve origin='Самары': 2 places share this name"})()
+    error = _origin_resolution_error(ambiguous, "Самары")
+    assert isinstance(error, TutuOriginAmbiguous)
+    unsupported = type("Upstream", (), {"upstream_message": "origin has no avia_id; answers this wording with «Москва» (MOW)"})()
+    error = _origin_resolution_error(unsupported, "Пушкино")
+    assert isinstance(error, TutuOriginUnavailable) and error.candidate == "Москва"
+
+
+def test_cart_rejects_destination_outside_current_product_coverage():
+    from app.cart.service import CartError
+
+    with pytest.raises(CartError) as error:
+        cart_service._check_bundle({"items": [{"total_rub": 10}], "total_rub": 10},
+                                   {"requirements": [{"key": "destination", "value": "DXB"}]})
+    assert error.value.code == "destination_not_covered"

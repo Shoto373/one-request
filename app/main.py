@@ -20,6 +20,7 @@ from app.agent.orchestrator import (
 )
 from app.db import apply_migrations, load_seed
 from app.state.models import TripState
+from app.product_scope import coverage_payload
 from app.state.store import RequestIdConflict, SessionNotFound, StateStore, VersionConflict
 
 # Logs go to stdout (docker compose logs app); credentials are never logged.
@@ -69,6 +70,7 @@ async def status(request: Request) -> dict[str, Any]:
         # без LLM агент не выключается: запрос разбирают правила (app/agent/rule_parser.py)
         "agent_mode": "llm" if llm["configured"] else "rules",
         "message": None if llm["configured"] else OFFLINE_MESSAGE,
+        "product_coverage": coverage_payload(),
     }
 
 

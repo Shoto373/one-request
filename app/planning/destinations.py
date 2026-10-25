@@ -194,7 +194,7 @@ def destination_query_from_requirements(
 
     origin = resolve_city(cat, _pick(req, "origin", "origin_city", "from", "departure_city")[1])
     if origin is None or "origin" not in cat.cities[origin].roles:
-        problems.append("origin: нужен город отправления (Москва, Санкт-Петербург или Екатеринбург).")
+        problems.append("origin: нужен распознанный город отправления.")
 
     exact = parse_dates(_pick(req, "dates", "date_range", "trip_dates")[1])
     month = exact[0].month if exact else parse_month(_pick(req, "travel_month", "month", "when", "period", "dates")[1])

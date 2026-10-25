@@ -311,19 +311,24 @@ def party_and_budget(req: dict[str, Any], kinds_by_key: dict[str, str]) -> tuple
 
 
 def query_from_requirements(
-    cat: Catalog, requirements: dict[str, Any], state: Any = None
+    cat: Catalog, requirements: dict[str, Any], state: Any = None, *, allow_external_origin: bool = False,
 ) -> tuple[TripQuery | None, list[str]]:
     """Build TripQuery; returns (None, reasons) when a required field cannot be resolved."""
     req, kinds_by_key = merged_requirements(requirements, state)
     problems = []
 
-    origin = resolve_city(cat, _pick(req, "origin", "origin_city", "from", "departure_city")[1])
+    _origin_key, origin_value = _pick(req, "origin", "origin_city", "from", "departure_city")
+    origin = resolve_city(cat, origin_value)
+    if origin is None and allow_external_origin and isinstance(origin_value, str) and origin_value.strip():
+        # Tutu resolves city names with its own location index during the
+        # bounded search call. Keep that city name as the route key until then.
+        origin = origin_value.strip()
     dest_key, dest_value = _pick(req, "destination", "dest", "destination_city", "to", "city")
     dest = resolve_city(cat, dest_value)
     if origin is None:
         problems.append(f"Город отправления не распознан: {req.get('origin')!r}.")
-    elif "origin" not in cat.cities[origin].roles:
-        problems.append(f"Из {cat.cities[origin].name} в каталоге нет отправлений: только Москва, Санкт-Петербург, Екатеринбург.")
+    elif origin in cat.cities and "origin" not in cat.cities[origin].roles and not allow_external_origin:
+        problems.append(f"Из {cat.cities[origin].name} в демо-каталоге нет отправлений.")
     if dest is None:
         problems.append(f"Направление не распознано или его нет в каталоге: {req.get('destination')!r}.")
     elif "destination" not in cat.cities[dest].roles:

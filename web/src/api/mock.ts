@@ -341,7 +341,9 @@ export const mockApi: Api = {
   },
   async forgetProfile() {},
   async getStatus() {
-    return { llm: { configured: false }, database: true, agent_mode: 'llm', message: null }
+    return { llm: { configured: false }, database: true, agent_mode: 'llm', message: null,
+      product_coverage: { destinations: [{ id: 'AER', name: 'Сочи' }], destination_selection_required: false,
+        fixed_destination: { id: 'AER', name: 'Сочи' }, origin_policy: 'user_city_within_provider_coverage', provider_coverage_required: true } }
   },
   async createSession(): Promise<SessionCreated> {
     const id = uid()
