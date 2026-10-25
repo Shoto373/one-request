@@ -6,7 +6,7 @@ import pytest
 from app.agent.llm import InvalidLLMJSONError, LLMClient
 from app.agent.orchestrator import Orchestrator, ParsedRequest
 from app.catalog.models import Offer
-from app.state.models import Bundle, Requirement, TripState
+from app.state.models import Bundle, OpenQuestion, Requirement, TripState
 
 
 class FakeLLM:
@@ -93,3 +93,29 @@ async def test_llm_error_falls_back_to_rules_without_mutating_input():
     assert trace[0]["name"] == "parse_request_rules"
     assert any(r.key == "destination" for r in candidate.requirements)
     assert initial.version == 0 and not initial.requirements
+
+
+@pytest.mark.asyncio
+async def test_single_date_answer_is_kept_and_followup_asks_duration_not_same_date_again():
+    state = TripState(
+        session_id=uuid4(),
+        requirements=[Requirement(key="origin", value="MOW", kind="assumption", source="product_scope"),
+                      Requirement(key="destination", value="AER", kind="assumption", source="product_scope")],
+        open_questions=[OpenQuestion(key="dates", question="На какие даты?", why="Нужен период."),
+                        OpenQuestion(key="adults", question="Сколько взрослых?", why="Нужен состав.")],
+    )
+    orchestrator = Orchestrator(FakeLLM(ParsedRequest()), today=lambda: date(2026, 10, 25))
+    after_date, reply, _ = await orchestrator.prepare_turn(state, "12 декабря")
+
+    start = next(r for r in after_date.requirements if r.key == "travel_start_date")
+    assert start.value == "2026-12-12"
+    assert next(r for r in after_date.requirements if r.key == "travel_year").value == 2026
+    assert "На какие даты" not in reply
+    assert "сколько ночей" in reply.lower() or "какого числа возвращаться" in reply.lower()
+    assert {q.key for q in after_date.open_questions} == {"duration_nights", "adults"}
+
+    after_duration, _, _ = await Orchestrator(FakeLLM(ParsedRequest()), today=lambda: date(2026, 10, 25)).prepare_turn(
+        after_date, "на неделю",
+    )
+    dates = next(r.value for r in after_duration.requirements if r.key == "dates")
+    assert dates == {"start": "2026-12-12", "end": "2026-12-19"}

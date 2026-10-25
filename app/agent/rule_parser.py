@@ -39,6 +39,7 @@ MONTHS = {
 MONTH_WORD = (r"(январ[ья]|феврал[ья]|марта?|апрел[ья]|ма[йя]|июн[ья]|июл[ья]|августа?|сентябр[ья]|октябр[ья]|ноябр[ья]|декабр[ья]"
               r"|january|february|march|april|may|june|july|august|september|october|november|december"
               r"|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)")
+MONTH_WORD_NC = re.sub(r"\((?!\?)", "(?:", MONTH_WORD)
 MONTH_IN = (r"(?:\bв\s+(январе|феврале|марте|апреле|мае|июне|июле|августе|сентябре|октябре|ноябре|декабре)"
             r"|\bin\s+(january|february|march|april|may|june|july|august|september|october|november|december))")
 
@@ -117,14 +118,14 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
                 break
 
     # --- dates ---
-    m = re.search(rf"(?:с\s*)?(\d{{1,2}})\s*(?:[-–—]|по|to|until)\s*(\d{{1,2}})\s+{MONTH_WORD}(?:\s+(20\d\d))?", low)
-    m_en = re.search(rf"{MONTH_WORD}\s+(\d{{1,2}})\s*(?:[-–—]|to|until)\s*(\d{{1,2}})(?:,?\s+(20\d\d))?", low)
+    m = re.search(rf"(?:с\s*)?(?P<d1>\d{{1,2}})\s*(?:[-–—]|по|to|until)\s*(?P<d2>\d{{1,2}})\s+(?P<month>{MONTH_WORD_NC})(?:\s+(?P<year>20\d\d))?", low)
+    m_en = re.search(rf"(?P<month>{MONTH_WORD_NC})\s+(?P<d1>\d{{1,2}})\s*(?:[-–—]|to|until)\s*(?P<d2>\d{{1,2}})(?:,?\s+(?P<year>20\d\d))?", low)
     if m or m_en:
         if m:
-            d1, d2, mon, year = int(m.group(1)), int(m.group(2)), _month(m.group(3)), m.group(4)
+            d1, d2, mon, year = int(m.group("d1")), int(m.group("d2")), _month(m.group("month")), m.group("year")
             span = m.span()
         else:
-            mon, d1, d2, year = _month(m_en.group(1)), int(m_en.group(2)), int(m_en.group(3)), m_en.group(4)
+            mon, d1, d2, year = _month(m_en.group("month")), int(m_en.group("d1")), int(m_en.group("d2")), m_en.group("year")
             span = m_en.span()
         if mon:
             y = int(year) if year else _year_for(mon, d2, now)
@@ -133,6 +134,20 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
                 put(_req("dates", {"start": start.isoformat(), "end": end.isoformat()}, "hard", text[span[0]:span[1]]))
             except ValueError:
                 pass
+    # A single calendar date is a known departure date, not a complete trip window.
+    # Keep it separately so the agent can ask for the return date/duration instead
+    # of repeating the generic date question or inventing a trip length.
+    if "dates" not in reqs:
+        single = re.search(rf"(?<!\d)(?P<day>\d{{1,2}})\s+(?P<month>{MONTH_WORD_NC})(?:\s+(?P<year>20\d{{2}}))?(?!\w)", low)
+        if single:
+            day, mon = int(single.group("day")), _month(single.group("month"))
+            if mon:
+                try:
+                    year = int(single.group("year")) if single.group("year") else _year_for(mon, day, now)
+                    start = date(year, mon, day)
+                    put(_req("travel_start_date", start.isoformat(), "hard", text[single.start():single.end()]))
+                except ValueError:
+                    pass
     if "dates" not in reqs:
         m = re.search(MONTH_IN, low)
         if m:
