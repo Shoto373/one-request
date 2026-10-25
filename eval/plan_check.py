@@ -105,7 +105,11 @@ def check_scenario(scenario: Scenario) -> dict[str, Any]:
 
 def run(dirs: list[Path]) -> dict[str, Any]:
     paths = [p for d in dirs if d.exists() for p in sorted(d.glob("*.yaml"))]
-    results = [check_scenario(load_scenario(p)) for p in paths]
+    # Fixed evals are deterministic offline checks; TRAVEL_DATA_PROVIDER=tutu must not
+    # turn a metrics request into an accidental batch of supplier searches.
+    from app.providers.tutu.planner import demo_planning_context
+    with demo_planning_context():
+        results = [check_scenario(load_scenario(p)) for p in paths]
     return {
         "summary": {s: sum(r["status"] == s for r in results) for s in ("passed", "failed", "skipped")},
         "results": results,

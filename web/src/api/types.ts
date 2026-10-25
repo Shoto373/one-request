@@ -13,9 +13,9 @@ export interface Offer {
   offer_id: string
   kind: OfferKind
   item_id: string
-  /** человекочитаемое название — в бэкенде пока нет (Offer extra=forbid), фронт собирает из variant/item_id */
+  /** человекочитаемое название */
   title?: string
-  variant?: Record<string, string>
+  variant?: Record<string, unknown>
   capacity?: { adults?: number; children?: number; pets?: boolean; luggage?: number }
   quantity: number
   unit_price_rub: number
@@ -30,6 +30,15 @@ export interface Offer {
   /** условия сгенерированы — показываем метку на карточке */
   synthetic: boolean
   source_refs?: string[]
+  provider?: string | null
+  provider_offer_id?: string | null
+  fetched_at?: string | null
+  expires_at?: string | null
+  currency?: string | null
+  data_mode?: 'live' | 'cache' | 'estimated' | 'demo' | null
+  search_params?: Record<string, unknown> | null
+  source_url?: string | null
+  revalidation?: Record<string, unknown> | null
 }
 
 // ---------- требования (п.5) ----------
@@ -84,6 +93,7 @@ export interface Bundle {
   advantages?: Claim[]
   tradeoffs: Claim[]
   risks: Claim[]
+  price_note?: string | null
 }
 
 /**

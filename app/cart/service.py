@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import importlib
+import asyncio
+import inspect
 import os
 import secrets
 from datetime import datetime, timezone
@@ -70,6 +72,8 @@ def _check_bundle(bundle: dict, state: dict) -> list[dict]:
         raise CartError(422, "total_mismatch", "Итог комплекта не сходится с суммой позиций",
                         bundle_total=bundle.get("total_rub"), items_total=total)
     checks = _validator()(bundle, state)
+    if inspect.isawaitable(checks):
+        checks = asyncio.run(checks)
     blocking = [c for c in checks if c.get("status") == "block"]
     if blocking:
         raise CartError(422, "plan_blocked", "В плане есть блокирующие проблемы", checks=blocking)

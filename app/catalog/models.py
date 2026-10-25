@@ -452,6 +452,15 @@ class Offer(Model):
     times: OfferTimes | None = None
     synthetic: bool = True
     source_refs: list[str] = Field(default_factory=list)
+    provider: str = "catalog"
+    provider_offer_id: str | None = None
+    fetched_at: AwareDatetime | None = None
+    expires_at: AwareDatetime | None = None
+    currency: str = "RUB"
+    data_mode: Literal["live", "cache", "estimated", "demo"] = "demo"
+    search_params: dict[str, Any] = Field(default_factory=dict)
+    source_url: str | None = None
+    revalidation: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def _total_matches(self) -> Offer:

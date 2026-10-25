@@ -135,6 +135,7 @@ async def explain_bundle_claims(llm: LLMClient, bundle: Any, requirements: list[
     """
     offer_facts = []
     offer_refs = []
+    check_source = "Tutu MCP provider checks" if any(getattr(offer, "provider", None) == "tutu" for offer in bundle.items) else "Track A validate_plan"
     by_ref: dict[str, EvidenceFact] = {}
     for offer in bundle.items:
         ref = f"offer:{offer.offer_id}"
@@ -151,7 +152,7 @@ async def explain_bundle_claims(llm: LLMClient, bundle: Any, requirements: list[
         ref = f"check:{bundle.id}:{index}"
         fact = EvidenceFact(
             ref=ref, value={"kind": check.kind, "status": check.status, "text": check.text},
-            label=check.kind, kind="plan_check", source="Track A validate_plan",
+            label=check.kind, kind="plan_check", source=check_source,
             source_refs=check.refs or sorted(f"offer:{o.offer_id}" for o in bundle.items),
         )
         by_ref[ref] = fact

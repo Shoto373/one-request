@@ -121,6 +121,7 @@ export default function CheckoutPage() {
               <span className="price text-[30px]">{rub(cart.total_rub)}</span>
             </div>
             <div className="mt-1 text-xs text-ink-muted">за всех путешественников и весь период</div>
+            {b.price_note && <p className="mt-2 rounded-lg bg-warn-bg p-2.5 text-xs text-[#8a4b00]">{b.price_note}</p>}
 
             {cart.status === 'ordered' ? (
               <p className="mt-4 rounded-xl bg-ok-bg p-3 text-sm font-medium text-ok">Эта корзина уже оплачена.</p>
