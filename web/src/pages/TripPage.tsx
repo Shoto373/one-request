@@ -9,9 +9,9 @@ import TripCanvas from '../components/TripCanvas'
 import { reqLabel } from '../lib/format'
 import { useTripSession } from '../lib/useTripSession'
 
-export default function TripPage() {
+export default function TripPage({ freshStart = false }: { freshStart?: boolean }) {
   const navigate = useNavigate()
-  const s = useTripSession()
+  const s = useTripSession(freshStart)
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null)
   const [tab, setTab] = useState<'chat' | 'trip'>('chat')
   const [traceOpen, setTraceOpen] = useState(false)

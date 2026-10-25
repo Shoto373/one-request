@@ -178,7 +178,7 @@ async def test_accepting_confirmed_alternative_applies_exact_change_and_searches
 
 
 @pytest.mark.asyncio
-async def test_dubai_impossible_budget_requires_explicit_accept_then_real_build_succeeds():
+async def test_destination_outside_configured_coverage_is_rejected_even_if_alternative_exists():
     text = "Из Москвы в Дубай 10–17 ноября 2026, трое взрослых, строго 30 000 рублей на всю поездку."
     parsed = ParsedRequest(requirements=[
         req("origin", "Москва", quote="Из Москвы"), req("destination", "Дубай", quote="в Дубай"),
@@ -187,41 +187,17 @@ async def test_dubai_impossible_budget_requires_explicit_accept_then_real_build_
         req("budget_total_rub", 30000, quote="строго 30 000 рублей на всю поездку"),
         req("budget_scope", "trip", quote="на всю поездку"),
     ])
-    accepted_requirements = {
-        "origin": "Москва", "destination": "Дубай",
-        "dates": {"start": "2026-11-10", "end": "2026-11-17"}, "adults": 3,
-        "budget_total_rub": 349500, "budget_scope": "trip",
-    }
-    catalog_state = TripState(session_id=uuid4(), requirements=[
-        Requirement(key=key, value=value, kind="hard", source="user_edit")
-        for key, value in accepted_requirements.items()
-    ])
-    fixture_bundle = track_a_build_bundles(accepted_requirements, catalog_state)[0]
-    minimum_total = fixture_bundle.total_rub
-    source_refs = [f"offer:{offer.offer_id}" for offer in fixture_bundle.items]
+    called = []
 
-    async def fixture_suggestions(*_):
-        return SuggestionResult(alternatives=[{
-            "id": "budget-to-minimum", "label": f"Поднять общий бюджет до {minimum_total:,} ₽", "confirmed": True,
-            "changes": [{"key": "budget_total_rub", "value": minimum_total, "kind": "hard"}],
-            "refs": ["catalog:build:DXB:cheapest_total"],
-            "evidence": [{"ref": "catalog:build:DXB:cheapest_total", "value": minimum_total,
-                          "label": "Минимальная стоимость поездки по каталогу", "kind": "catalog_estimate",
-                          "source": "Каталог и расчёт build_bundles", "source_refs": source_refs, "role": "risk"}],
-        }])
+    async def suggestions(*args):
+        called.append(args)
+        return SuggestionResult(alternatives=[{"id": "budget-change", "label": "Увеличить бюджет"}])
 
-    orch = Orchestrator(
-        FakeLLM([parsed]), bundle_builder=track_a_build_bundles, destination_suggester=fixture_suggestions,
-        now=datetime.fromisoformat("2026-10-23T12:00:00+03:00"),
-    )
+    orch = Orchestrator(FakeLLM([parsed]), destination_suggester=suggestions)
     state, reply, _ = await orch.prepare_turn(TripState(session_id=uuid4()), text)
-    assert not state.bundles and state.proposed_changes[0]["id"] == "budget-to-minimum"
-    assert next(r.value for r in state.requirements if r.key == "budget_total_rub") == 30000
-    assert "Ничего не изменено" in reply
-    state, _, trace = await orch.prepare_command(state, "accept_alternative", {"alternative_id": "budget-to-minimum"})
-    assert next(r.value for r in state.requirements if r.key == "budget_total_rub") == minimum_total
-    assert [(b.id, b.total_rub) for b in state.bundles] == [("b1", minimum_total)]
-    assert any(step["name"] == "build_bundles" for step in trace)
+    assert state.stage == "clarify" and state.open_questions[0].key == "destination"
+    assert "только по направлениям" in reply
+    assert not state.bundles and not state.proposed_changes and not called
 
 
 def test_claim_refs_and_numbers_must_match_resolved_catalog_data():

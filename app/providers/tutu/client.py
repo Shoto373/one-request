@@ -22,10 +22,14 @@ _TRANSIENT = re.compile(r"(?:\b429\b|\b502\b|\b503\b|\b504\b|timeout|temporar|ra
 
 
 class TutuMCPError(ProviderUnavailable):
-    def __init__(self, message: str, *, tool: str | None = None, retryable: bool = False):
+    def __init__(self, message: str, *, tool: str | None = None, retryable: bool = False,
+                 upstream_message: str | None = None):
         super().__init__(message)
         self.tool = tool
         self.retryable = retryable
+        # Sanitized tool text can carry place-resolution candidates needed for
+        # a user clarification. It never contains request headers or secrets.
+        self.upstream_message = (upstream_message or "")[:1000] or None
 
 
 class TutuMCPClient:
@@ -113,7 +117,8 @@ class TutuMCPClient:
                         await asyncio.sleep(0.25)
                         continue
                     raise TutuMCPError(f"Tutu MCP {tool} returned an error", tool=tool,
-                                       retryable=bool(_TRANSIENT.search(message)))
+                                       retryable=bool(_TRANSIENT.search(message)),
+                                       upstream_message=message)
                 data = result.structuredContent
                 if data is None:
                     text = "\n".join(getattr(part, "text", "") for part in result.content)

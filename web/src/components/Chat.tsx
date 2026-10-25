@@ -4,12 +4,14 @@ import type { UiMessage } from '../lib/useTripSession'
 import Icon from './Icon'
 import { AgentAvatar } from './Logo'
 import { STEP_LABEL } from './TracePanel'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../api/client'
 
 /** разные по типу запросы: размытый, точный, с животным, невыполнимый, на английском */
 const EXAMPLES = [
   { emoji: '🌊', text: 'Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов' },
-  { emoji: '🚆', text: 'Из Москвы в Сочи 10–17 ноября, двое взрослых' },
-  { emoji: '🐕', text: 'На выходные из Москвы с собакой 12 кг, куда угодно, до 40 000' },
+  { emoji: '🚆', text: 'Из Москвы в {destination} 10–17 ноября, двое взрослых' },
+  { emoji: '🐕', text: 'В {destination} на выходные с собакой 12 кг, до 40 000' },
   { emoji: '🏙️', text: 'Неделя в Дубае на троих за 30 000' },
   { emoji: '🌍', text: 'Somewhere warm in December for two, budget 150k RUB' },
 ]
@@ -29,6 +31,8 @@ interface Props {
 }
 
 export default function Chat({ messages, steps, questions, busy, disabled, connecting, onSend, onAnswer, onRetry }: Props) {
+  const { data: appStatus } = useQuery({ queryKey: ['status'], queryFn: api.getStatus, staleTime: 60_000 })
+  const destination = appStatus?.product_coverage?.fixed_destination?.name ?? 'Сочи'
   const [text, setText] = useState('')
   // Free text is submitted through the shared composer, so only show the active
   // question. The next one arrives after the agent has processed this answer.
@@ -51,7 +55,7 @@ export default function Chat({ messages, steps, questions, busy, disabled, conne
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
         {messages.length === 0 ? (
-          <Welcome disabled={disabled} connecting={!!connecting} onPick={submit} />
+          <Welcome disabled={disabled} connecting={!!connecting} destination={destination} onPick={submit} />
         ) : (
           <div className="space-y-4">
             {messages.map((m, i) =>
@@ -151,7 +155,7 @@ export default function Chat({ messages, steps, questions, busy, disabled, conne
   )
 }
 
-function Welcome({ disabled, connecting, onPick }: { disabled: boolean; connecting: boolean; onPick: (t: string) => void }) {
+function Welcome({ disabled, connecting, destination, onPick }: { disabled: boolean; connecting: boolean; destination: string; onPick: (t: string) => void }) {
   return (
     <div className="flex h-full flex-col justify-end gap-5 pb-2">
       <div className="guru-gradient relative overflow-hidden rounded-3xl p-6 text-white">
@@ -184,12 +188,12 @@ function Welcome({ disabled, connecting, onPick }: { disabled: boolean; connecti
           {EXAMPLES.map((e) => (
             <button
               key={e.text}
-              onClick={() => onPick(e.text)}
+              onClick={() => onPick(e.text.replace(/\{destination\}/g, destination))}
               disabled={disabled}
               className="group flex items-center gap-3 rounded-2xl border border-black/[.06] bg-white px-3.5 py-3 text-left text-sm shadow-card transition hover:border-brand/40 hover:shadow-lift disabled:opacity-50"
             >
               <span className="text-lg">{e.emoji}</span>
-              <span className="flex-1">{e.text}</span>
+              <span className="flex-1">{e.text.replace(/\{destination\}/g, destination)}</span>
               <Icon name="chevron" className="h-4 w-4 text-ink-muted transition group-hover:translate-x-0.5 group-hover:text-brand" />
             </button>
           ))}

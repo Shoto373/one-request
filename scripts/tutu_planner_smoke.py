@@ -13,6 +13,7 @@ from app.planning.build import build_bundles
 from app.planning.replan import replan
 from app.providers.base import ProviderError
 from app.state.models import Bundle, Requirement, TripState
+from app.product_scope import coverage_payload, fixed_destination_id
 
 
 def requirement(key, value, kind="hard"):
@@ -29,16 +30,18 @@ def result_view(bundle):
                        for c in bundle.get("checks", [])]}
 
 
-async def run(depart: date, return_day: date) -> dict:
+async def run(depart: date, return_day: date, origin: str) -> dict:
+    destination_id = fixed_destination_id()
+    destination_name = coverage_payload()["fixed_destination"]["name"]
     state = TripState(session_id=uuid4(), stage="clarify", requirements=[
-        requirement("origin", "MOW", "assumption"), requirement("destination", "AER", "assumption"),
+        requirement("origin", origin), requirement("destination", destination_id),
         requirement("dates", {"start": depart.isoformat(), "end": return_day.isoformat()}),
         requirement("adults", 2), requirement("children_ages", [5]),
         requirement("budget_total_rub", 150000), requirement("transport", "flight or train", "soft"),
     ])
     report = {"dates": {"departure": depart.isoformat(), "return": return_day.isoformat()},
               "party": {"adults": 2, "children_ages": [5]}, "budget_total_rub": 150000,
-              "route_scope": "Moscow ↔ Sochi", "mode": "live Tutu MCP"}
+              "route": {"origin": origin, "destination": destination_name}, "mode": "live Tutu MCP"}
     try:
         bundles = build_bundles({r.key: r.value for r in state.requirements}, state)
         if inspect.isawaitable(bundles):
@@ -84,13 +87,14 @@ def main() -> None:
     parser.add_argument("--live", action="store_true", help="explicitly allow bounded read-only Tutu calls")
     parser.add_argument("--departure", type=date.fromisoformat)
     parser.add_argument("--return-date", type=date.fromisoformat)
+    parser.add_argument("--origin", required=True, help="Город отправления, который разрешит Туту")
     args = parser.parse_args()
     if not args.live:
         parser.error("pass --live to contact Tutu MCP; ordinary tests never use the provider")
     os.environ["TRAVEL_DATA_PROVIDER"] = "tutu"
     departure = args.departure or (date.today() + timedelta(days=28))
     return_day = args.return_date or (departure + timedelta(days=7))
-    print(json.dumps(asyncio.run(run(departure, return_day)), ensure_ascii=False, indent=2, default=str))
+    print(json.dumps(asyncio.run(run(departure, return_day, args.origin)), ensure_ascii=False, indent=2, default=str))
 
 
 if __name__ == "__main__":

@@ -23,6 +23,19 @@ def test_rail_normalizes_full_party_total_and_preserves_station_segments():
     assert offer.fetched_at is not None
 
 
+def test_transport_offer_keeps_resolved_route_places_as_first_class_fields():
+    row = {"offer_id": "rail-kzn-sochi", "price_party": {"amount": 8000, "currency": "RUB"},
+           "departure_at": "2026-11-22T19:50:00+03:00", "arrival_at": "2026-11-24T04:35:00+03:00"}
+    offer = transport_offer(row, kind="train", direction="outbound",
+                            search_args={"origin": "Казань", "destination": "Сочи"},
+                            resolved_places={"from": {"geo_id": "2656873", "name": "Казань"},
+                                             "to": {"geo_id": "2656918", "name": "Сочи"}},
+                            fetched_at="2026-10-25T12:00:00+00:00")
+    assert offer is not None
+    assert (offer.origin_city, offer.destination_city) == ("Казань", "Сочи")
+    assert (offer.origin_provider_id, offer.destination_provider_id) == ("2656873", "2656918")
+
+
 def test_hotel_price_is_whole_stay_for_children_and_unknown_pet_is_not_allowed():
     row = {"hotel_id": 44, "tutu_offer_id": "rate-1", "name": "Hotel",
            "best_offer": {"price": {"amount": 30600, "currency": "RUB"}, "breakfast_included": True}}

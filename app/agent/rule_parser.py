@@ -11,6 +11,9 @@ import re
 from datetime import date, datetime
 
 from app.agent.requirements import ParsedRequest
+from app.catalog.store import get_catalog
+from app.planning.query import resolve_city
+from app.product_scope import fixed_destination_id
 from app.state.models import Requirement, TripState
 
 # canonical city name -> spellings (lowercase stems/inflections, Russian and English)
@@ -71,6 +74,11 @@ def _find_city(fragment: str) -> str | None:
     for name, spellings in CITIES.items():
         if any(s in f for s in spellings):
             return name
+    # Keep destination parsing aligned with catalog/config additions; the MCP
+    # integration should not need a parser rewrite for a newly covered city.
+    city_id = resolve_city(get_catalog(), fragment)
+    if city_id in get_catalog().cities:
+        return get_catalog().cities[city_id].name
     return None
 
 
@@ -101,9 +109,26 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
         reqs.setdefault(r.key, r)
 
     # --- origin / destination ---
-    m = re.search(r"(?:\bиз|\bот|\bfrom)\s+([\w\-ёЁ.]+(?:\s+[\w\-ёЁ.]+)?)", text, re.I)
-    if m and (city := _find_city(m.group(1))):
-        put(_req("origin", city, "hard", m.group(0)))
+    # Capture a user's city even when it is outside the demo catalog. The live
+    # Tutu search resolves the name and returns its geo id; this parser must not
+    # silently constrain origins to the few cities in the demo fixtures.
+    m = re.search(
+        r"(?:\bиз|\bот|\bfrom)\s+(.+?)(?=\s+(?:в|во|на|к|с|со|to|for|with)\b|[;.!?]|$)",
+        text, re.I,
+    )
+    origin_text = m.group(1).strip(" ,;") if m else None
+    if origin_text is None and "origin" in open_keys:
+        answer = text.strip().strip(".!?;,: ")
+        if re.fullmatch(r"(?:город\s+)?[\wЁёА-Яа-я.,\-]+(?:\s+[\wЁёА-Яа-я.,\-]+){0,5}", answer) and answer.lower() not in {"да", "нет", "yes", "no"}:
+            origin_text = re.sub(r"^город\s+", "", answer, flags=re.I)
+    if origin_text:
+        origin_text = re.sub(r"^город\s+", "", origin_text, flags=re.I).strip()
+        city = _find_city(origin_text) or origin_text
+        put(_req("origin", city, "hard", text[m.start():m.end()] if m else text.strip()))
+    if "destination" in open_keys and re.fullmatch(r"\s*(да|согласен|согласна|ок|okay|yes|верно)[.!]?\s*", text, re.I):
+        destination_id = fixed_destination_id()
+        put(Requirement(key="destination", value=destination_id, kind="hard", source="user_edit", quote=None,
+                        label="Пользователь согласился на доступное направление"))
     for m in re.finditer(r"(?:\bв|\bво|\bна|\bдо|\bto)\s+([\w\-ёЁ.]+(?:\s+[\w\-ёЁ.]+)?)", text, re.I):
         city = _find_city(m.group(1))
         if city and city != (reqs.get("origin").value if "origin" in reqs else None):
@@ -252,7 +277,8 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
     if "children_ages" not in reqs and ages and re.fullmatch(r"[\d\s,иand]+(?:лет|год\w*|years?(?:\s*old)?)\.?", low.strip()):
         put(_req("children_ages", ages, "hard", stripped))
     for key in open_keys[:1]:
-        if key in reqs:
+        existing = next((r for r in state.requirements if r.key == key), None)
+        if key in reqs and not (key == "origin" and existing and existing.source == "product_scope"):
             continue
         if key in ("origin", "destination") and (city := _find_city(stripped)):
             put(_req(key, city, "hard", stripped))

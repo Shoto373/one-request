@@ -80,7 +80,7 @@ def _selected_fare(row: dict[str, Any], kind: str) -> dict[str, Any] | None:
 
 def transport_offer(
     row: dict[str, Any], *, kind: Literal["flight", "train"], direction: str,
-    search_args: dict[str, Any], fetched_at: str,
+    search_args: dict[str, Any], fetched_at: str, resolved_places: dict[str, Any] | None = None,
 ) -> Offer | None:
     cost = _price(row, kind)
     if cost is None:
@@ -131,13 +131,20 @@ def transport_offer(
         "checkout_ref": _clean_facts(row.get("checkout_ref")),
         "details_ref": _clean_facts(row.get("details_ref")),
         "search_results_url": row.get("search_results_url"),
+        "resolved_places": _clean_facts(resolved_places) if resolved_places else None,
         "pet_status": None,
         "cancellation_status": conditions.get("refundable"),
     }
     source_url = row.get("search_results_url")
     offer_id = f"tutu:{kind}:{direction}:{supplier_id}"
+    resolved_from = (resolved_places or {}).get("from") or {}
+    resolved_to = (resolved_places or {}).get("to") or {}
     return Offer(
         offer_id=offer_id, kind=kind, item_id=f"tutu:{transport}:{supplier_id}", title=title.strip(),
+        origin_city=str(resolved_from.get("name") or search_args.get("origin") or ""),
+        destination_city=str(resolved_to.get("name") or search_args.get("destination") or ""),
+        origin_provider_id=str(resolved_from.get("geo_id") or "") or None,
+        destination_provider_id=str(resolved_to.get("geo_id") or "") or None,
         variant=summary, quantity=1, unit_price_rub=total, price_unit="per_trip", units=1, total_rub=total,
         included=[], baggage=None, times=OfferTimes(start=start, end=end), synthetic=False,
         source_refs=[f"tutu:{transport}:{supplier_id}", f"mcp:{'search_avia' if kind == 'flight' else 'search_rail'}"],
@@ -169,6 +176,7 @@ def _pet_fact(details: dict[str, Any] | None) -> bool | None:
 def hotel_offer(
     row: dict[str, Any], *, search_args: dict[str, Any], fetched_at: str,
     details: dict[str, Any] | None = None, city_timezone: str = "Europe/Moscow",
+    resolved_destination: dict[str, Any] | None = None,
 ) -> Offer | None:
     best = row.get("best_offer") if isinstance(row.get("best_offer"), dict) else {}
     supplier_id = str(row.get("tutu_offer_id") or row.get("hotel_id") or "")
@@ -253,7 +261,10 @@ def hotel_offer(
     return Offer(
         offer_id=f"tutu:hotel:{hotel_id}:{exact_rate_id}:{checkin:%Y%m%d}:{checkout:%Y%m%d}", kind="hotel",
         item_id=f"tutu:hotel:{hotel_id}",
-        title=(str(row.get("name") or "Отель в Сочи") + (f" · {terms['room_name']}" if terms["room_name"] else "")),
+        destination_city=str((resolved_destination or {}).get("name") or search_args.get("city_name") or "") or None,
+        destination_provider_id=str((resolved_destination or {}).get("geo_id") or search_args.get("geo_id") or "") or None,
+        title=(str(row.get("name") or f"Отель в {search_args.get('city_name') or 'городе назначения'}")
+               + (f" · {terms['room_name']}" if terms["room_name"] else "")),
         variant={"provider": "tutu", "provider_offer_id": str(exact_rate_id), "hotel_id": hotel_id,
                  "hotel_name": row.get("name"), "stars": row.get("stars"), "rating": row.get("rating"),
                  "address": row.get("address"), "price_amount": raw_amount, "price_basis": "stay_total",

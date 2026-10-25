@@ -27,7 +27,9 @@ from app.agent.replanning import track_a_replan, track_a_validate_bundle
 from app.agent.rule_parser import rule_parse
 from app.providers.base import ProviderError
 from app.providers.tutu.planner import (assert_tutu_scope, reset_trace_recorder,
+                                       TutuPlaceResolutionError, TutuOriginUnavailable, TutuOriginOutsideRussia,
                                        tutu_live_enabled, use_trace_recorder)
+from app.product_scope import coverage_payload, destination_supported, fixed_destination_id
 from app.state.models import Bundle as StateBundle
 from app.state.models import Check, Claim, HistoryEntry, OpenQuestion, PendingReplan, Requirement, TripState
 
@@ -123,7 +125,7 @@ Local reference time: {self.local_now().isoformat()} (timezone {self.timezone.ke
 Current requirements: {known}
 Open questions, in priority order: {questions}
 Assumption keys the user removed; do not restore them: {suppressed}
-Product route scope: {"Live provider mode supports only Moscow ↔ Sochi. This is a product limit, not a user quote; never ask for the origin again when absent." if tutu_live_enabled() else "No fixed provider route scope."}
+Product coverage: {coverage_payload()['destinations']}. The current single destination is a product limit, not a user quote. The user chooses the origin city; never assume Moscow. If the origin is missing, ask for it. Preserve a named origin outside demo fixtures as written for Tutu's search resolver. If the user names a destination outside the configured coverage, explain the currently available destination(s) and ask whether to continue with one; never change it silently.
 
 Supported keys and value formats: origin and destination (city name as written), dates ({{start,end}} ISO dates when
 explicit), travel_start_date (one explicit departure date, ISO), travel_month (1..12), duration_nights (int), date_flex_days (int), adults (int), children_count (int),
@@ -264,7 +266,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
     @staticmethod
     def _destination_requirement(state: TripState) -> Requirement | None:
         return next((r for r in state.requirements if r.key == "destination" and r.value not in (None, "")
-                     and r.kind in {"hard", "soft"}), None)
+                     and (r.kind in {"hard", "soft"} or r.source == "product_scope")), None)
 
     @staticmethod
     def _requirements_map(state: TripState, *, include_assumptions: bool = True) -> dict[str, Any]:
@@ -272,6 +274,21 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             r.key: r.value for r in state.requirements
             if r.kind != "unknown" and (include_assumptions or r.kind != "assumption")
         }
+
+    @staticmethod
+    def _destination_scope_prompt(state: TripState) -> str | None:
+        requirement = next((r for r in state.requirements if r.key == "destination" and r.value not in (None, "")), None)
+        if requirement is None or destination_supported(requirement.value):
+            return None
+        names = [item["name"] for item in coverage_payload()["destinations"]]
+        state.open_questions = [OpenQuestion(
+            key="destination",
+            question=(f"В текущем прототипе доступно направление {names[0]}. Продолжить с ним?" if len(names) == 1
+                      else f"В текущем прототипе доступны: {', '.join(names)}. Какое направление выбрать?"),
+            why="Прототип проверяет поездки только в направлениях, указанных в покрытии продукта.",
+        )]
+        state.stage = "clarify"
+        return f"Пока можно искать поездки только по направлениям: {', '.join(names)}. Другие направления не подменяю."
 
     def _record(self, trace: list[dict[str, Any]], item: dict[str, Any]) -> None:
         if len(trace) >= self.max_steps:
@@ -340,14 +357,15 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             suppressed_assumptions=state.suppressed_assumptions,
         )
         requirements = self._year_resolve(requirements, suppressed)
-        if tutu_live_enabled():
-            for key, value, label in (("origin", "MOW", "Ограничение прототипа: Москва"),
-                                      ("destination", "AER", "Ограничение прототипа: Сочи")):
-                current = next((r for r in requirements if r.key == key and r.kind in {"hard", "soft"}), None)
-                if current is None:
-                    requirements = [r for r in requirements if r.key != key]
-                    requirements.append(Requirement(key=key, value=value, kind="assumption",
-                                                    source="product_scope", quote=None, label=label))
+        # Remove the previous automatic Moscow assumption from legacy sessions.
+        # User-provided origins remain intact; only the destination is fixed.
+        requirements = [r for r in requirements if not (r.key == "origin" and r.source == "product_scope")]
+        current_destination = next((r for r in requirements if r.key == "destination" and r.value not in (None, "")), None)
+        if current_destination is None:
+            destination_id = fixed_destination_id()
+            requirements.append(Requirement(key="destination", value=destination_id, kind="hard",
+                                            source="product_scope", quote=None,
+                                            label=f"Направление прототипа: {coverage_payload()['fixed_destination']['name']}"))
         candidate = state.model_copy(deep=True, update={
             "requirements": requirements,
             "suppressed_assumptions": suppressed,
@@ -414,6 +432,11 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         pending = state.pending_replan
         if pending is None:
             return await self._continue(state, trace)
+        scope_message = self._destination_scope_prompt(state)
+        if scope_message:
+            state.bundles = []
+            state.selected_bundle_id = None
+            return state, scope_message
         questions = self._select_questions(state)
         if questions:
             state.open_questions = questions
@@ -427,7 +450,21 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                              "input": {"previous": [r.model_dump(mode="json") for r in pending.previous_requirements]},
                              "output": diff, "status": "ok"})
         self._record(trace, {"step_type": "tool", "name": "replan", "input": diff, "output": None, "status": "calling"})
-        result = dict(await self._call(self.replanner, source_state, diff, trace))
+        try:
+            result = dict(await self._call(self.replanner, source_state, diff, trace))
+        except TutuPlaceResolutionError as exc:
+            state.bundles = []
+            state.selected_bundle_id = None
+            state.open_questions = [OpenQuestion(
+                key="origin",
+                question=("Назовите город отправления в России."
+                          if isinstance(exc, TutuOriginOutsideRussia)
+                          else f"Напишите «из {exc.candidate}», если согласны проверить этот город."
+                          if isinstance(exc, TutuOriginUnavailable) and exc.candidate
+                          else "Уточните город отправления: добавьте область или район, если название встречается в нескольких местах."),
+            )]
+            state.stage = "clarify"
+            return state, str(exc)
         bundles = list(await asyncio.gather(*(
             self._complete_bundle_explanation(
                 b if isinstance(b, StateBundle) else StateBundle.model_validate(b), state, trace)
@@ -643,6 +680,11 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         candidates = list(await asyncio.gather(*(
             self._enrich_candidate(raw, trace) for raw in raw_destinations[:3] if raw.get("feasible") is True)))
         alternatives = await self._validated_alternatives(result.alternatives)
+        if explicit_destination:
+            alternatives = [alternative for alternative in alternatives if all(
+                change.get("key") != "destination" or destination_supported(change.get("value"))
+                for change in alternative.get("changes", [])
+            )]
         state.destinations = candidates
         state.proposed_changes = alternatives
         state.stage = "select" if candidates or alternatives else "inspire"
@@ -659,6 +701,9 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         return state, (notes + " " if notes else "") + "Подтверждённых выполнимых направлений и изменений не найдено. Жёсткие условия оставлены без изменений."
 
     async def _build(self, state: TripState, trace: list[dict[str, Any]]) -> tuple[TripState, str]:
+        scope_message = self._destination_scope_prompt(state)
+        if scope_message:
+            return state, scope_message
         if tutu_live_enabled():
             try:
                 assert_tutu_scope(self._requirements_map(state), state)
@@ -677,6 +722,19 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         self._record(trace, {"step_type": "tool", "name": "build_bundles", "input": requirements, "output": None, "status": "calling"})
         try:
             bundles = await self._call(self.bundle_builder, requirements, search_state, trace)
+        except TutuPlaceResolutionError as exc:
+            state.bundles = []
+            state.selected_bundle_id = None
+            state.open_questions = [OpenQuestion(
+                key="origin",
+                question=("Назовите город отправления в России."
+                          if isinstance(exc, TutuOriginOutsideRussia)
+                          else f"Вы подтверждаете поиск из города «{exc.candidate}»? Напишите его название, чтобы я продолжил."
+                          if isinstance(exc, TutuOriginUnavailable) and exc.candidate
+                          else "Уточните город отправления: добавьте область или район, если название встречается в нескольких местах."),
+            )]
+            state.stage = "clarify"
+            return state, str(exc)
         except ProviderError as exc:
             state.bundles = []
             state.selected_bundle_id = None
@@ -828,6 +886,14 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
     async def prepare_command(self, state: TripState, command_type: str, payload: dict[str, Any]) -> tuple[TripState, str, list[dict[str, Any]]]:
         before = state
         trace: list[dict[str, Any]] = []
+        if command_type in {"select_bundle", "request_checkout"}:
+            scope_message = self._destination_scope_prompt(state)
+            if scope_message:
+                candidate = state.model_copy(deep=True, update={"bundles": [], "selected_bundle_id": None})
+                candidate.open_questions = state.open_questions
+                candidate.stage = "clarify"
+                trace.append(self._state_diff(before, candidate))
+                return candidate, scope_message, trace
         if command_type == "edit_requirement":
             key = str(payload.get("key", ""))
             if not key:
@@ -849,6 +915,11 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             candidate, reply = await self._continue_changed(candidate, trace)
         elif command_type == "select_destination":
             destination_id = str(payload.get("destination_id", ""))
+            if not destination_supported(destination_id):
+                names = ", ".join(item["name"] for item in coverage_payload()["destinations"])
+                raise InvalidAgentCommand(
+                    f"destination_id is outside configured product coverage ({names}); it was not changed"
+                )
             choice = next((x for x in state.destinations if x.get("id") == destination_id and x.get("feasible") is True), None)
             if choice is None:
                 raise InvalidAgentCommand("destination_id must identify a currently tool-confirmed feasible destination")

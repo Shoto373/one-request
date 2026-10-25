@@ -27,6 +27,7 @@ COPY db/ ./db/
 COPY data/ ./data/
 # сценарии и независимые проверки: нужны рантайму для GET /api/metrics (трек A)
 COPY eval/ ./eval/
+COPY scripts/ ./scripts/
 COPY --from=web /src/web/dist ./web/dist
 USER 10001
 EXPOSE 8080

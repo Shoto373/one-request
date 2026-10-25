@@ -86,7 +86,7 @@ type Send = (version: number, onEvent: (e: StreamEvent) => void, signal: AbortSi
  * сообщение переотправляем к новой версии сами (намерение пользователя не зависит от версии),
  * команду — нет (её id могли исчезнуть после пересборки).
  */
-export function useTripSession() {
+export function useTripSession(freshOnMount = false) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [state, setState] = useState<TripState | null>(null)
   const [messages, setMessages] = useState<UiMessage[]>([])
@@ -96,6 +96,7 @@ export function useTripSession() {
   const [trace, setTrace] = useState<TraceStep[]>([])
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const initialFresh = useRef(freshOnMount)
   /** последняя пересборка: что сохранено, что заменено */
   const [diff, setDiff] = useState<PlanDiff | null>(null)
   const versionRef = useRef(0)
@@ -174,7 +175,7 @@ export function useTripSession() {
   }, [reload, fail])
 
   useEffect(() => {
-    start()
+    start(initialFresh.current)
     return () => abortRef.current?.abort()
   }, [start])
 

@@ -13,6 +13,10 @@ export interface Offer {
   offer_id: string
   kind: OfferKind
   item_id: string
+  origin_city?: string | null
+  destination_city?: string | null
+  origin_provider_id?: string | null
+  destination_provider_id?: string | null
   /** человекочитаемое название */
   title?: string
   variant?: Record<string, unknown>
@@ -390,6 +394,13 @@ export interface AppStatus {
   /** rules — LLM не настроен, запрос разбирают правила; всё остальное работает */
   agent_mode: 'llm' | 'rules'
   message: string | null
+  product_coverage?: {
+    destinations: { id: string; name: string }[]
+    destination_selection_required: boolean
+    fixed_destination: { id: string; name: string } | null
+    origin_policy: string
+    provider_coverage_required: boolean
+  }
 }
 
 /** Ошибки API: {detail: {code, message, ...}} */
