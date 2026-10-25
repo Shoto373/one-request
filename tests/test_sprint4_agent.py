@@ -97,7 +97,7 @@ async def test_anywhere_is_not_invented_as_destination_and_missing_search_inputs
         TripState(session_id=uuid4()), "I want to go anywhere warm in November",
     )
     assert not any(r.key == "destination" for r in result.requirements)
-    assert {q.key for q in result.open_questions} >= {"origin", "adults"}
+    assert len(result.open_questions) == 1 and result.open_questions[0].key == "origin"
     assert not calls
 
 

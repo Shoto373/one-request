@@ -313,7 +313,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             questions = next_questions(
                 state.requirements,
                 action="suggest_destinations",
-                required_inputs=("origin", "adults", "travel_window"),
+                required_inputs=("origin", "travel_window", "adults"),
             )
         # A child needs a real age for fare/capacity search; no catalog default age here.
         count = next((r for r in state.requirements if r.key == "children_count" and r.value is not None), None)
@@ -330,7 +330,9 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             questions.append(OpenQuestion(key="pets", question="Какое животное едет?", why="Правила перевозки зависят от вида животного.", options=["Собака", "Кошка"]))
         elif pets and not weight:
             questions.append(OpenQuestion(key="pet_weight_kg", question="Сколько весит животное?", why="Вес влияет на правила перевозчика и вместимость трансфера."))
-        return questions[:2]
+        # Chat answers are free text, not bound to a particular card. Keep exactly
+        # one active clarification so the parser and UI cannot disagree on its key.
+        return questions[:1]
 
     def _merge(self, state: TripState, parsed: ParsedRequest) -> TripState:
         requirements, suppressed = merge_requirement_changes(
