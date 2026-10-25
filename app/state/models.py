@@ -42,6 +42,7 @@ class Bundle(BaseModel):
     advantages: list[Claim] = Field(default_factory=list)
     tradeoffs: list[Claim] = Field(default_factory=list)
     risks: list[Claim] = Field(default_factory=list)
+    price_note: str | None = None
 
 
 class OpenQuestion(BaseModel):

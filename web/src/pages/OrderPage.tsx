@@ -62,6 +62,7 @@ export default function OrderPage() {
               <OfferRow key={o.offer_id + i} o={o} last={i === b.items.length - 1} markSynthetic={false} />
             ))}
           </ol>
+          {b.price_note && <p className="border-t border-black/[.05] bg-warn-bg p-4 text-xs text-[#8a4b00]">{b.price_note}</p>}
         </section>
 
         <Aftercare orderId={order.order_id} />

@@ -25,6 +25,9 @@ from app.agent.requirements import (
 )
 from app.agent.replanning import track_a_replan, track_a_validate_bundle
 from app.agent.rule_parser import rule_parse
+from app.providers.base import ProviderError
+from app.providers.tutu.planner import (assert_tutu_scope, reset_trace_recorder,
+                                       tutu_live_enabled, use_trace_recorder)
 from app.state.models import Bundle as StateBundle
 from app.state.models import Check, Claim, HistoryEntry, OpenQuestion, PendingReplan, Requirement, TripState
 
@@ -62,14 +65,17 @@ def bounded_turn_llm(method):
 CatalogIntegrationUnavailable = DestinationIntegrationUnavailable
 
 
-def track_a_build_bundles(requirements: dict[str, Any], state: TripState) -> list[StateBundle]:
+def track_a_build_bundles(requirements: dict[str, Any], state: TripState) -> Any:
     """Call the real deterministic A tool; this layer never calculates offers."""
     try:
         module = importlib.import_module("app.planning.build")
         build = getattr(module, "build_bundles")
     except (ImportError, AttributeError) as exc:
         raise CatalogIntegrationUnavailable("Track A build_bundles is unavailable") from exc
-    return [StateBundle.model_validate(item) for item in build(requirements=requirements, state=state)]
+    result = build(requirements=requirements, state=state)
+    if inspect.isawaitable(result):
+        return result
+    return [StateBundle.model_validate(item) for item in result]
 
 
 class Orchestrator:
@@ -117,6 +123,7 @@ Local reference time: {self.local_now().isoformat()} (timezone {self.timezone.ke
 Current requirements: {known}
 Open questions, in priority order: {questions}
 Assumption keys the user removed; do not restore them: {suppressed}
+Product route scope: {"Live provider mode supports only Moscow ↔ Sochi. This is a product limit, not a user quote; never ask for the origin again when absent." if tutu_live_enabled() else "No fixed provider route scope."}
 
 Supported keys and value formats: origin and destination (city name as written), dates ({{start,end}} ISO dates when
 explicit), travel_month (1..12), duration_nights (int), date_flex_days (int), adults (int), children_count (int),
@@ -231,9 +238,32 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             raise OrchestrationLimitError(f"Ход остановлен: достигнут лимит {self.max_steps} шагов.")
         trace.append(item)
 
-    async def _call(self, tool: Callable[..., Any], requirements: dict[str, Any], state: TripState) -> Any:
-        result = tool(requirements, state)
-        return await result if inspect.isawaitable(result) else result
+    async def _call(self, tool: Callable[..., Any], requirements: dict[str, Any], state: TripState,
+                    trace: list[dict[str, Any]] | None = None) -> Any:
+        grouped: dict[str, dict[str, Any]] = {}
+        def capture(item: dict[str, Any]) -> None:
+            name = str(item.get("name", "tutu_tool"))
+            entry = grouped.setdefault(name, {"calls": [], "results": [], "status": "ok"})
+            if item.get("status") == "calling":
+                entry["calls"].append(item.get("input"))
+            else:
+                entry["results"].append(item.get("output"))
+                if item.get("status") == "error":
+                    entry["status"] = "error"
+        token = use_trace_recorder(capture) if tutu_live_enabled() and trace is not None else None
+        try:
+            result = tool(requirements, state)
+            return await result if inspect.isawaitable(result) else result
+        finally:
+            if token is not None:
+                try:
+                    for name, event in grouped.items():
+                        self._record(trace, {"step_type": "tool", "name": name,
+                                             "input": {"calls": event["calls"]},
+                                             "output": {"results": event["results"]},
+                                             "status": event["status"]})
+                finally:
+                    reset_trace_recorder(token)
 
     @staticmethod
     def _select_questions(state: TripState) -> list[OpenQuestion]:
@@ -268,6 +298,14 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             suppressed_assumptions=state.suppressed_assumptions,
         )
         requirements = self._year_resolve(requirements, suppressed)
+        if tutu_live_enabled():
+            for key, value, label in (("origin", "MOW", "Ограничение прототипа: Москва"),
+                                      ("destination", "AER", "Ограничение прототипа: Сочи")):
+                current = next((r for r in requirements if r.key == key and r.kind in {"hard", "soft"}), None)
+                if current is None:
+                    requirements = [r for r in requirements if r.key != key]
+                    requirements.append(Requirement(key=key, value=value, kind="assumption",
+                                                    source="product_scope", quote=None, label=label))
         candidate = state.model_copy(deep=True, update={
             "requirements": requirements,
             "suppressed_assumptions": suppressed,
@@ -347,7 +385,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                              "input": {"previous": [r.model_dump(mode="json") for r in pending.previous_requirements]},
                              "output": diff, "status": "ok"})
         self._record(trace, {"step_type": "tool", "name": "replan", "input": diff, "output": None, "status": "calling"})
-        result = dict(await self._call(self.replanner, source_state, diff))
+        result = dict(await self._call(self.replanner, source_state, diff, trace))
         bundles = list(await asyncio.gather(*(
             self._complete_bundle_explanation(
                 b if isinstance(b, StateBundle) else StateBundle.model_validate(b), state, trace)
@@ -436,7 +474,8 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
 
     @staticmethod
     def _explain_bundle(bundle: StateBundle) -> StateBundle:
-        """Keep only source-backed A claims and add a deterministic total claim."""
+        """Keep only source-backed claims and add a deterministic total claim."""
+        check_source = "Tutu MCP" if any(item.provider == "tutu" for item in bundle.items) else "A"
         offer_refs = {f"offer:{item.offer_id}" for item in bundle.items}
         bundle.checks = [
             check.model_copy(update={"id": check.id or f"check:{bundle.id}:{index}",
@@ -467,11 +506,11 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         bundle.tradeoffs = [c for c in bundle.tradeoffs if supported(c)]
         bundle.risks = [c for c in bundle.risks if supported(c)]
         bundle.advantages.extend(
-            Claim(text=f"Проверка A «{check.kind}»: пройдена.", refs=[check.id])
+            Claim(text=f"Проверка {check_source} «{check.kind}»: пройдена.", refs=[check.id])
             for check in bundle.checks if check.status == "ok" and check.id
         )
         bundle.risks.extend(
-            Claim(text=f"Проверка A «{check.kind}»: предупреждение.", refs=[check.id])
+            Claim(text=f"Проверка {check_source} «{check.kind}»: предупреждение.", refs=[check.id])
             for check in bundle.checks if check.status == "warn" and check.id
         )
         kinds = {item.kind for item in bundle.items}
@@ -578,6 +617,12 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         return state, (notes + " " if notes else "") + "Подтверждённых выполнимых направлений и изменений не найдено. Жёсткие условия оставлены без изменений."
 
     async def _build(self, state: TripState, trace: list[dict[str, Any]]) -> tuple[TripState, str]:
+        if tutu_live_enabled():
+            try:
+                assert_tutu_scope(self._requirements_map(state), state)
+            except ProviderError as exc:
+                state.stage = "inspire"
+                return state, str(exc)
         questions = self._select_questions(state)
         if questions:
             state.open_questions = questions
@@ -588,7 +633,15 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             "requirements": [r for r in state.requirements if r.kind not in {"unknown", "assumption"}],
         })
         self._record(trace, {"step_type": "tool", "name": "build_bundles", "input": requirements, "output": None, "status": "calling"})
-        bundles = await self._call(self.bundle_builder, requirements, search_state)
+        try:
+            bundles = await self._call(self.bundle_builder, requirements, search_state, trace)
+        except ProviderError as exc:
+            state.bundles = []
+            state.selected_bundle_id = None
+            state.stage = "inspire"
+            self._record(trace, {"step_type": "tool", "name": "build_bundles_result", "input": requirements,
+                                 "output": {"provider": "tutu", "error": type(exc).__name__}, "status": "error"})
+            return state, str(exc)
         # три комплекта объясняются параллельно, а не по очереди (на бесплатных моделях это минуты)
         state.bundles = list(await asyncio.gather(*(
             self._complete_bundle_explanation(
@@ -632,6 +685,8 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         return state, msg + " Подтверждённых альтернатив нет; жёсткие требования сохранены. вымышленные предложения не показываю."
 
     async def _continue(self, state: TripState, trace: list[dict[str, Any]]) -> tuple[TripState, str]:
+        if tutu_live_enabled():
+            return await self._build(state, trace)
         destination = self._destination_requirement(state)
         if destination is not None:
             return await self._build(state, trace)
@@ -789,6 +844,8 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             if bundle is None:
                 raise InvalidAgentCommand("select a current bundle before requesting checkout")
             checks = self.bundle_validator(bundle.model_dump(mode="json"), state)
+            if inspect.isawaitable(checks):
+                checks = await checks
             validated_bundle = bundle.model_copy(update={
                 "checks": [c if isinstance(c, Check) else Check.model_validate(c) for c in checks],
             })

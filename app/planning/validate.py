@@ -377,7 +377,7 @@ def _in_catalog(cat: Catalog, o: Offer) -> bool:
     return o.item_id in index
 
 
-def validate_bundle(bundle: dict[str, Any], state: Any = None) -> list[dict[str, Any]]:
+def validate_bundle(bundle: dict[str, Any], state: Any = None) -> list[dict[str, Any]] | Any:
     """Checkout re-validation (track C cart): plan checks + offers still exist at the same price.
 
     ``bundle`` and ``state`` are JSON dicts as stored in TripState; returns wire checks
@@ -385,6 +385,9 @@ def validate_bundle(bundle: dict[str, Any], state: Any = None) -> list[dict[str,
     A bundle with no item from the track A catalog (test fixtures, hand-made bundles)
     has nothing to re-check here: its stored checks are returned unchanged.
     """
+    if any(item.get("provider") == "tutu" for item in bundle.get("items") or []):
+        from app.providers.tutu.revalidation import validate_tutu_bundle
+        return validate_tutu_bundle(bundle, state)
     cat = get_catalog()
     items = [Offer.model_validate(i) for i in bundle.get("items") or []]
     if not any(_in_catalog(cat, o) for o in items):

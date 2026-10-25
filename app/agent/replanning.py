@@ -90,10 +90,12 @@ async def track_a_replan(state: TripState, changes: dict[str, Any]) -> dict[str,
     }
 
 
-def track_a_validate_bundle(bundle: dict[str, Any], state: TripState) -> list[dict[str, Any]]:
+async def track_a_validate_bundle(bundle: dict[str, Any], state: TripState) -> list[dict[str, Any]]:
     """Run A's validation tool before the agent marks the selected bundle ready."""
     tool = _load("app.planning.validate", "validate_bundle")
     result = tool(bundle, state.model_dump(mode="json"))
+    if inspect.isawaitable(result):
+        result = await result
     if not isinstance(result, list):
         raise TypeError("Track A validate_bundle must return a list of checks")
     return result

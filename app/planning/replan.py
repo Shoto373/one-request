@@ -347,7 +347,7 @@ def _old_bundle(state: Any, bundle_id: str | None) -> dict[str, Any] | None:
 
 
 def replan(requirements: dict[str, Any], state: Any, bundle_id: str | None = None,
-           changes: dict[str, Any] | None = None) -> dict[str, Any]:
+           changes: dict[str, Any] | None = None) -> dict[str, Any] | Any:
     """Rebuild the selected (or given) bundle of ``state`` under the new ``requirements``.
 
     Returns ``{bundle, kept, replaced, price_delta_rub, change, notes, history_entry, alternatives}``.
@@ -356,6 +356,9 @@ def replan(requirements: dict[str, Any], state: Any, bundle_id: str | None = Non
     ``bundle`` keeps the old bundle's id and label. When nothing fits, ``bundle`` is None and
     ``alternatives`` holds confirmed minimal changes (same format as suggest_destinations).
     """
+    from app.providers.tutu.planner import replan_tutu, tutu_live_enabled
+    if tutu_live_enabled():
+        return replan_tutu(state, changes or {})
     cat = get_catalog()
     old = _old_bundle(state, bundle_id)
     q, problems = query_from_requirements(cat, requirements, state)

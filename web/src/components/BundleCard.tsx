@@ -2,6 +2,35 @@ import type { Bundle, Check, Offer } from '../api/types'
 import { CHECK_STYLE, KIND_LABEL, PRICE_UNIT, localParts, rub, when } from '../lib/format'
 import Icon, { KIND_ICON } from './Icon'
 
+function providerTerms(o: Offer): string[] {
+  const v = o.variant ?? {}
+  const terms = (v.terms && typeof v.terms === 'object' ? v.terms : v) as Record<string, unknown>
+  const facts: string[] = []
+  if (terms.breakfast_included === true) facts.push('завтрак включён')
+  if (terms.breakfast_included === false) facts.push('завтрак не включён')
+  if (terms.free_cancellation === true) facts.push('отмена бесплатна по условиям тарифа')
+  if (terms.free_cancellation === false) facts.push('бесплатная отмена не предусмотрена')
+  if (terms.free_cancellation == null && o.kind === 'hotel') facts.push('условия отмены неизвестны')
+  if (o.kind !== 'hotel' && terms.cancellation_status === true) facts.push('возвратность тарифа указана Туту')
+  if (o.kind !== 'hotel' && terms.cancellation_status === false) facts.push('невозвратный тариф по данным Туту')
+  if (o.kind !== 'hotel' && terms.cancellation_status == null) facts.push('условия возврата неизвестны')
+  if (terms.pet_allowed === true) facts.push('размещение с животными указано поставщиком')
+  if (terms.pet_allowed === false) facts.push('животные запрещены')
+  if (terms.pet_allowed == null && o.kind === 'hotel') facts.push('правила для животных неизвестны')
+  if (terms.check_in_time) facts.push(`заезд с ${terms.check_in_time}`)
+  if (terms.check_out_time) facts.push(`выезд до ${terms.check_out_time}`)
+  if (terms.room_size_sqm == null && o.kind === 'hotel') facts.push('площадь номера неизвестна')
+  if (terms.max_occupancy == null && o.kind === 'hotel') facts.push('вместимость номера неизвестна')
+  if (terms.mandatory_charges == null && o.kind === 'hotel') facts.push('обязательные доплаты не указаны')
+  if (o.kind !== 'hotel' && terms.baggage == null) facts.push('багаж не указан')
+  if (o.kind !== 'hotel' && terms.baggage && typeof terms.baggage === 'object') {
+    const baggage = terms.baggage as Record<string, unknown>
+    const details = Object.entries(baggage).map(([key, value]) => `${key}: ${String(value)}`).join(', ')
+    if (details) facts.push(`багаж: ${details}`)
+  }
+  return facts
+}
+
 export function SyntheticBadge() {
   return (
     <span
@@ -30,6 +59,7 @@ const KIND_TINT: Record<Offer['kind'], string> = {
 export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Offer; last?: boolean; markSynthetic?: boolean; checks?: Check[] }) {
   const start = o.times && localParts(o.times.start)
   const end = o.times && localParts(o.times.end)
+  const legs = Array.isArray(o.variant?.legs) ? o.variant.legs as Array<Record<string, unknown>> : []
   return (
     <li className="relative flex gap-3 pb-4">
       {!last && <span className="absolute bottom-0 left-[17px] top-10 w-px bg-black/10" aria-hidden />}
@@ -42,14 +72,26 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
             <div className="flex flex-wrap items-center gap-1.5 text-[14px] font-semibold leading-snug">
               {offerTitle(o)}
               {markSynthetic && o.synthetic && <SyntheticBadge />}
+              {o.provider === 'tutu' && <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Tutu {o.data_mode === 'estimated' ? 'оценка' : 'live'}</span>}
             </div>
-            {start && end && (
+            {legs.length > 0 ? (
+              <div className="mt-0.5 space-y-0.5 text-[12px] text-ink-grey">
+                {legs.map((leg, index) => (
+                  <div key={index}>
+                    {typeof leg.label === 'string' ? `${leg.label === 'return' ? 'Обратно' : 'Туда'}: ` : ''}
+                    {String(leg.from ?? '')} → {String(leg.to ?? '')}
+                    {typeof leg.departure_at === 'string' && typeof leg.arrival_at === 'string'
+                      ? ` · ${new Date(leg.departure_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })} — ${new Date(leg.arrival_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })} (МСК)` : ''}
+                  </div>
+                ))}
+              </div>
+            ) : start && end ? (
               <div className="mt-0.5 text-[13px] text-ink-grey">
                 <span className="font-medium text-ink">{start.time}</span> {start.date} →{' '}
                 <span className="font-medium text-ink">{end.time}</span> {end.date === start.date ? '' : end.date}
                 <span className="ml-1 text-[11px] text-ink-muted">UTC{start.tz}</span>
               </div>
-            )}
+            ) : null}
           </div>
           <div className="price shrink-0 text-[15px]">{rub(o.total_rub)}</div>
         </div>
@@ -66,6 +108,9 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
               {o.cancel_policy.free_until ? `бесплатная отмена до ${when(o.cancel_policy.free_until)}` : 'невозвратный'}
             </span>
           )}
+          {providerTerms(o).map((fact) => <span key={fact}>{fact}</span>)}
+          {o.provider === 'tutu' && o.fetched_at && <span>получено {new Date(o.fetched_at).toLocaleString('ru-RU')}</span>}
+          {o.source_url && <a className="text-brand underline" href={o.source_url} target="_blank" rel="noreferrer">ссылка Туту</a>}
         </div>
         {checks.length > 0 && (
           <div className="mt-2 rounded-xl border border-black/[.05] bg-white p-2.5">
@@ -156,6 +201,7 @@ export default function BundleCard({ bundle, selected, onCheckout, checkoutBusy,
         <div className="text-right">
           <div className="price text-[26px] leading-none">{rub(bundle.total_rub)}</div>
           <div className="mt-1 text-[11px] text-ink-muted">за всех и весь период</div>
+          {bundle.price_note && <div className="mt-1 max-w-[240px] text-[11px] text-ink-muted">{bundle.price_note}</div>}
         </div>
       </header>
 
