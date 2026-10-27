@@ -391,142 +391,150 @@ def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str,
         source_refs=["ref:world_resolver"],
     )
 
-    # Hotels: Budget 3*, Comfort 4*, Luxury 5* + signature options
-    h_base = int(data.get("base_hotel_rub", 8000))
-    if city_id == "CDG":
-        hotel_specs = [
-            ("h_std", "Hôtel de Paris Montmartre 3★", 3, 8.6, 0.75, ["wifi"], "RO"),
-            ("h_comf", "Boutique Hôtel Saint-Germain & Spa 4★", 4, 9.2, 1.25, ["wifi", "pool", "spa"], "BB"),
-            ("h_lux", "Grand Hôtel Champs-Élysées 5★", 5, 9.7, 1.95, ["wifi", "pool", "spa", "gym"], "HB"),
-            ("h_ver", "Waldorf Astoria Versailles - Trianon Palace 5★", 5, 9.6, 1.80, ["wifi", "pool", "spa"], "BB"),
-        ]
-    elif city_id == "PRG":
-        hotel_specs = [
-            ("h_std", "Hotel Old Town Prague 3★", 3, 8.5, 0.75, ["wifi"], "RO"),
-            ("h_comf", "Boutique Hotel Charles Bridge & Spa 4★", 4, 9.3, 1.20, ["wifi", "pool", "spa"], "BB"),
-            ("h_lux", "Grand Hotel Bohemia Prague 5★", 5, 9.7, 1.90, ["wifi", "pool", "spa", "gym"], "HB"),
-        ]
-    elif city_id == "FCO":
-        hotel_specs = [
-            ("h_std", "Hotel Colosseum Forum 3★", 3, 8.6, 0.75, ["wifi"], "RO"),
-            ("h_comf", "Boutique Hotel Navona & Spa 4★", 4, 9.3, 1.20, ["wifi", "pool", "spa"], "BB"),
-            ("h_lux", "Grand Hotel Plaza Roma 5★", 5, 9.7, 1.90, ["wifi", "pool", "spa", "gym"], "HB"),
-        ]
-    else:
-        hotel_specs = [
-            ("h_std", f"Отель {data['name']} Центр 3★", 3, 8.5, 0.8, ["wifi"], "RO"),
-            ("h_comf", f"Resort & Spa {data['name']} 4★", 4, 9.2, 1.25, ["wifi", "pool", "spa"], "BB"),
-            ("h_lux", f"Grand Hotel {data['name']} 5★", 5, 9.7, 1.95, ["wifi", "pool", "spa", "gym"], "AI" if "beach" in data.get("tags", []) else "HB"),
-        ]
-    for h_code, h_name, stars, rating, price_mult, amenities, meal in hotel_specs:
-        h_id = f"hot_{city_id.lower()}_{h_code}"
-        hotel_obj = Hotel(
-            id=h_id,
-            city_id=city_id,
-            name=h_name,
-            kind="hotel",
-            coord=GeoPoint(lat=data["coord"]["lat"] + 0.01, lon=data["coord"]["lon"] + 0.01),
-            address=f"Центральный район, {data['name']}",
-            stars=stars,
-            stars_source="generated",
-            rating=rating,
-            reviews_count=350,
-            dist_center_km=1.5,
-            dist_beach_km=0.5 if "beach" in data.get("tags", []) else None,
-            checkin_time=time(14, 0),
-            checkout_time=time(12, 0),
-            reception=Reception(
-                hours=ServiceHours(round_the_clock=True),
-                late_arrival_possible=True,
-                note="Круглосуточная стойка регистрации",
-            ),
-            early_checkin=EarlyCheckin(available=False),
-            late_checkout=LateCheckout(available=True, until=time(16, 0), price_rub=2000, guaranteed=False),
-            luggage_storage=True,
-            pets=HotelPets(allowed=True, max_weight_kg=50.0, fee_rub_per_night=1000, note="Допускаются домашние животные"),
-            kids=HotelKids(kids_club=True, kids_pool=True, cribs=True, kids_menu=True),
-            amenities=amenities,
-            rooms=[
-                RoomType(
-                    id=f"rm_{h_id}_std",
-                    name="Стандартный номер",
-                    max_adults=2,
-                    max_children=1,
-                    max_occupancy=3,
-                    beds="1 большая двуспальная кровать",
-                    area_m2=26,
-                    base_price_rub=int(h_base * price_mult),
-                    inventory=10,
-                ),
-                RoomType(
-                    id=f"rm_{h_id}_fam",
-                    name="Семейный номер",
-                    max_adults=3,
-                    max_children=2,
-                    max_occupancy=4,
-                    beds="1 двуспальная и 2 односпальные кровати",
-                    area_m2=42,
-                    base_price_rub=int(h_base * price_mult * 1.4),
-                    inventory=6,
-                ),
-            ],
-            tariffs=[
-                Tariff(
-                    id=f"tf_{h_id}_ro",
-                    room_ids=[f"rm_{h_id}_std", f"rm_{h_id}_fam"],
-                    name="Без питания (гибкая отмена)" if meal == "RO" else "Стандартный тариф",
-                    meal="RO",
-                    refundable=True,
-                    free_cancel_days=3,
-                    penalty_nights=1,
-                    price_factor=1.0,
-                ),
-                Tariff(
-                    id=f"tf_{h_id}_bb",
-                    room_ids=[f"rm_{h_id}_std", f"rm_{h_id}_fam"],
-                    name=f"С питанием ({meal})",
-                    meal=meal,
-                    refundable=True,
-                    free_cancel_days=7,
-                    penalty_nights=1,
-                    price_factor=1.2,
-                ),
-            ],
-            month_factors=[1.0] * 12,
-            weekend_factor=1.1,
-            extra_guest_rub_per_night=1500,
-            child_free_age=6,
-            open_periods=[DateRange(start=date(2025, 1, 1), end=date(2028, 1, 1))],
-            sold_out=[],
-            synthetic=False,
-            source_refs=["ref:world_resolver"],
-        )
-        cat.hotels[h_id] = hotel_obj
-        cat.hotels_by_city[city_id].append(hotel_obj)
+    # Populate authentic real Ostrovok hotels for this destination
+    try:
+        from app.catalog.ostrovok_live import ensure_ostrovok_hotels
+        ensure_ostrovok_hotels(cat, city_id)
+    except Exception as e:
+        log.warning("Could not load live Ostrovok hotels for %s: %s", city_id, e)
 
-        t_route = TransferRoute(
-            id=f"tr_{hub_id}_{h_id}",
-            city_id=city_id,
-            hub_id=hub_id,
-            hotel_id=h_id,
-            mode="taxi",
-            provider="Островок Трансфер",
-            distance_km=25.0,
-            duration_min=35,
-            price_rub=2500,
-            price_unit="per_vehicle",
-            capacity_pax=4,
-            capacity_bags=3,
-            pets_allowed=True,
-            pet_fee_rub=0,
-            hours=ServiceHours(round_the_clock=True),
-            child_seat=True,
-            free_cancel_hours=2,
-            synthetic=False,
-            source_refs=["ref:world_resolver"],
-        )
-        cat.transfers[t_route.id] = t_route
-        cat.transfers_by_pair[(hub_id, h_id)].append(t_route)
+    if not cat.hotels_by_city.get(city_id):
+        # Fallback only if no real Ostrovok hotels are registered
+        h_base = int(data.get("base_hotel_rub", 8000))
+        if city_id == "CDG":
+            hotel_specs = [
+                ("h_std", "Hôtel de Paris Montmartre 3★", 3, 8.6, 0.75, ["wifi"], "RO"),
+                ("h_comf", "Boutique Hôtel Saint-Germain & Spa 4★", 4, 9.2, 1.25, ["wifi", "pool", "spa"], "BB"),
+                ("h_lux", "Grand Hôtel Champs-Élysées 5★", 5, 9.7, 1.95, ["wifi", "pool", "spa", "gym"], "HB"),
+                ("h_ver", "Waldorf Astoria Versailles - Trianon Palace 5★", 5, 9.6, 1.80, ["wifi", "pool", "spa"], "BB"),
+            ]
+        elif city_id == "PRG":
+            hotel_specs = [
+                ("h_std", "Hotel Old Town Prague 3★", 3, 8.5, 0.75, ["wifi"], "RO"),
+                ("h_comf", "Boutique Hotel Charles Bridge & Spa 4★", 4, 9.3, 1.20, ["wifi", "pool", "spa"], "BB"),
+                ("h_lux", "Grand Hotel Bohemia Prague 5★", 5, 9.7, 1.90, ["wifi", "pool", "spa", "gym"], "HB"),
+            ]
+        elif city_id == "FCO":
+            hotel_specs = [
+                ("h_std", "Hotel Colosseum Forum 3★", 3, 8.6, 0.75, ["wifi"], "RO"),
+                ("h_comf", "Boutique Hotel Navona & Spa 4★", 4, 9.3, 1.20, ["wifi", "pool", "spa"], "BB"),
+                ("h_lux", "Grand Hotel Plaza Roma 5★", 5, 9.7, 1.90, ["wifi", "pool", "spa", "gym"], "HB"),
+            ]
+        else:
+            hotel_specs = [
+                ("h_std", f"Отель {data['name']} Центр 3★", 3, 8.5, 0.8, ["wifi"], "RO"),
+                ("h_comf", f"Resort & Spa {data['name']} 4★", 4, 9.2, 1.25, ["wifi", "pool", "spa"], "BB"),
+                ("h_lux", f"Grand Hotel {data['name']} 5★", 5, 9.7, 1.95, ["wifi", "pool", "spa", "gym"], "AI" if "beach" in data.get("tags", []) else "HB"),
+            ]
+        for h_code, h_name, stars, rating, price_mult, amenities, meal in hotel_specs:
+            h_id = f"hot_{city_id.lower()}_{h_code}"
+            hotel_obj = Hotel(
+                id=h_id,
+                city_id=city_id,
+                name=h_name,
+                kind="hotel",
+                coord=GeoPoint(lat=data["coord"]["lat"] + 0.01, lon=data["coord"]["lon"] + 0.01),
+                address=f"Центральный район, {data['name']}",
+                stars=stars,
+                stars_source="generated",
+                rating=rating,
+                reviews_count=350,
+                dist_center_km=1.5,
+                dist_beach_km=0.5 if "beach" in data.get("tags", []) else None,
+                checkin_time=time(14, 0),
+                checkout_time=time(12, 0),
+                reception=Reception(
+                    hours=ServiceHours(round_the_clock=True),
+                    late_arrival_possible=True,
+                    note="Круглосуточная стойка регистрации",
+                ),
+                early_checkin=EarlyCheckin(available=False),
+                late_checkout=LateCheckout(available=True, until=time(16, 0), price_rub=2000, guaranteed=False),
+                luggage_storage=True,
+                pets=HotelPets(allowed=True, max_weight_kg=50.0, fee_rub_per_night=1000, note="Допускаются домашние животные"),
+                kids=HotelKids(kids_club=True, kids_pool=True, cribs=True, kids_menu=True),
+                amenities=amenities,
+                rooms=[
+                    RoomType(
+                        id=f"rm_{h_id}_std",
+                        name="Стандартный номер",
+                        max_adults=2,
+                        max_children=1,
+                        max_occupancy=3,
+                        beds="1 большая двуспальная кровать",
+                        area_m2=26,
+                        base_price_rub=int(h_base * price_mult),
+                        inventory=10,
+                    ),
+                    RoomType(
+                        id=f"rm_{h_id}_fam",
+                        name="Семейный номер",
+                        max_adults=3,
+                        max_children=2,
+                        max_occupancy=4,
+                        beds="1 двуспальная и 2 односпальные кровати",
+                        area_m2=42,
+                        base_price_rub=int(h_base * price_mult * 1.4),
+                        inventory=6,
+                    ),
+                ],
+                tariffs=[
+                    Tariff(
+                        id=f"tf_{h_id}_ro",
+                        room_ids=[f"rm_{h_id}_std", f"rm_{h_id}_fam"],
+                        name="Без питания (гибкая отмена)" if meal == "RO" else "Стандартный тариф",
+                        meal="RO",
+                        refundable=True,
+                        free_cancel_days=3,
+                        penalty_nights=1,
+                        price_factor=1.0,
+                    ),
+                    Tariff(
+                        id=f"tf_{h_id}_bb",
+                        room_ids=[f"rm_{h_id}_std", f"rm_{h_id}_fam"],
+                        name=f"С питанием ({meal})",
+                        meal=meal,
+                        refundable=True,
+                        free_cancel_days=7,
+                        penalty_nights=1,
+                        price_factor=1.2,
+                    ),
+                ],
+                month_factors=[1.0] * 12,
+                weekend_factor=1.1,
+                extra_guest_rub_per_night=1500,
+                child_free_age=6,
+                open_periods=[DateRange(start=date(2025, 1, 1), end=date(2028, 1, 1))],
+                sold_out=[],
+                synthetic=False,
+                source_refs=["ref:world_resolver"],
+            )
+            cat.hotels[h_id] = hotel_obj
+            cat.hotels_by_city[city_id].append(hotel_obj)
+
+            t_route = TransferRoute(
+                id=f"tr_{hub_id}_{h_id}",
+                city_id=city_id,
+                hub_id=hub_id,
+                hotel_id=h_id,
+                mode="taxi",
+                provider="Островок Трансфер",
+                distance_km=25.0,
+                duration_min=35,
+                price_rub=2500,
+                price_unit="per_vehicle",
+                capacity_pax=4,
+                capacity_bags=3,
+                pets_allowed=True,
+                pet_fee_rub=0,
+                hours=ServiceHours(round_the_clock=True),
+                child_seat=True,
+                free_cancel_hours=2,
+                synthetic=False,
+                source_refs=["ref:world_resolver"],
+            )
+            cat.transfers[t_route.id] = t_route
+            cat.transfers_by_pair[(hub_id, h_id)].append(t_route)
 
 
     # Generate daily flights from major hubs (MOW, LED, SVX) for 2026/2027

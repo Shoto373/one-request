@@ -267,7 +267,7 @@ def nightly_prices(h: Hotel, room: RoomType, factor: float, checkin: date, check
 OSTROVOK_DESTINATIONS = {
     "AER": ("russia", "sochi"),
     "MOW": ("russia", "moscow"),
-    "LED": ("russia", "saint_petersburg"),
+    "LED": ("russia", "st._petersburg"),
     "KZN": ("russia", "kazan"),
     "SVX": ("russia", "yekaterinburg"),
     "KGD": ("russia", "kaliningrad"),
@@ -276,6 +276,21 @@ OSTROVOK_DESTINATIONS = {
     "SSH": ("egypt", "sharm_el_sheikh"),
     "DXB": ("united_arab_emirates", "dubai"),
     "EVN": ("armenia", "yerevan"),
+    "DPS": ("indonesia", "indonesia_bali_province"),
+    "MLE": ("maldives", "maldives"),
+    "HKT": ("thailand", "phuket"),
+    "BKK": ("thailand", "bangkok"),
+    "CDG": ("france", "paris"),
+    "PAR": ("france", "paris"),
+    "FCO": ("italy", "rome"),
+    "ROM": ("italy", "rome"),
+    "NRT": ("japan", "tokyo"),
+    "TYO": ("japan", "tokyo"),
+    "BCN": ("spain", "barcelona"),
+    "PRG": ("czech_republic", "prague"),
+    "INN": ("austria", "innsbruck"),
+    "GVA": ("switzerland", "geneva"),
+    "SOF": ("bulgaria", "sofia"),
 }
 
 
