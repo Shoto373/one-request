@@ -116,7 +116,7 @@ FLIGHT_TEMPLATES = [
     {"origin": "SSH", "dest": "MOW", "carrier": "Аэрофлот", "code": "SU", "flight": "425", "dep": time(14, 50), "arr": time(20, 15), "dur": 325, "base": 24900},
 
     {"origin": "MOW", "dest": "DPS", "carrier": "Аэрофлот", "code": "SU", "flight": "296", "dep": time(14, 40), "arr": time(8, 5), "dur": 745, "base": 48500},
-    {"origin": "DPS", "dest": "MOW", "carrier": "Аэрофлот", "code": "SU", "flight": "297", "dep": time(10, 05), "arr": time(17, 50), "dur": 765, "base": 48500},
+    {"origin": "DPS", "dest": "MOW", "carrier": "Аэрофлот", "code": "SU", "flight": "297", "dep": time(10, 5), "arr": time(17, 50), "dur": 765, "base": 48500},
 
     {"origin": "MOW", "dest": "MLE", "carrier": "Аэрофлот", "code": "SU", "flight": "320", "dep": time(21, 55), "arr": time(8, 45), "dur": 530, "base": 42000},
     {"origin": "MLE", "dest": "MOW", "carrier": "Аэрофлот", "code": "SU", "flight": "321", "dep": time(11, 15), "arr": time(18, 30), "dur": 555, "base": 42000},
