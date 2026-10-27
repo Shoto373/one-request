@@ -87,25 +87,15 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                   Яндекс Go
                 </span>
               )}
-              {o.source_url && (
+              {o.kind === 'hotel' && o.source_url && (
                 <a
                   href={o.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 rounded bg-black/[0.04] hover:bg-black/[0.08] px-2 py-0.5 text-[11px] text-brand font-medium transition"
-                  title="Открыть прямое предложение у партнера"
+                  title="Открыть страницу отеля на Островке"
                 >
-                  <span>
-                    {o.provider === 'ostrovok' || o.kind === 'hotel'
-                      ? (o.kind === 'transfer' ? 'Островок Трансфер' : 'Островок')
-                      : o.kind === 'transfer'
-                        ? 'Островок Трансфер'
-                        : o.provider === 'yandex_go'
-                          ? 'Яндекс Go'
-                          : o.kind === 'flight'
-                            ? (o.variant?.flight_no ? `Рейс ${o.variant.flight_no}` : 'Билеты на рейс')
-                            : 'Туту'}
-                  </span>
+                  <span>Островок</span>
                   <span className="text-[10px]">↗</span>
                 </a>
               )}
@@ -183,18 +173,6 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                               minute: '2-digit',
                             })} (МСК)
                           </span>
-                        )}
-                        {legUrl && (
-                          <a
-                            href={legUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-auto inline-flex items-center gap-0.5 font-semibold text-brand hover:underline"
-                            title={isTransfer ? 'Открыть трансфер на Островке' : 'Открыть билеты'}
-                          >
-                            <span>{isTransfer ? 'Островок Трансфер' : 'Билеты'}</span>
-                            <span className="text-[10px]">↗</span>
-                          </a>
                         )}
                       </div>
                     </div>

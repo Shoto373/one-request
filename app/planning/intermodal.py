@@ -290,7 +290,7 @@ def make_intermodal_outbound(
         "duration_min": transfer_dur,
         "price_rub": transfer_price,
         "distance_km": transfer_dist,
-        "source_url": "https://ostrovok.ru/transfers/",
+        "source_url": None,
         "label": "Трансфер до авиахаба",
     }
     leg_flight = {
@@ -302,7 +302,7 @@ def make_intermodal_outbound(
         "arrival_at": base_flight.times.end.isoformat(),
         "duration_min": flight_dur,
         "price_rub": flight_price,
-        "source_url": flight_url,
+        "source_url": None,
         "label": "Авиаперелёт",
     }
 
@@ -313,7 +313,7 @@ def make_intermodal_outbound(
             "price_rub": transfer_price,
             "duration_min": transfer_dur,
             "distance_km": transfer_dist,
-            "source_url": "https://ostrovok.ru/transfers/",
+            "source_url": None,
         }
     ]
     total_price = flight_price + transfer_price
@@ -332,8 +332,8 @@ def make_intermodal_outbound(
         "transfer_distance_km": transfer_dist,
         "flight_price_rub": flight_price,
         "flight_duration_min": flight_dur,
-        "flight_source_url": flight_url,
-        "transfer_source_url": "https://ostrovok.ru/transfers/",
+        "flight_source_url": None,
+        "transfer_source_url": None,
         "extras": extras,
         "legs": [leg_transfer, leg_flight],
     })
@@ -361,7 +361,7 @@ def make_intermodal_outbound(
         provider="ostrovok",
         currency="RUB",
         data_mode="live",
-        source_url=flight_url,
+        source_url=None,
     )
 
 
@@ -404,7 +404,7 @@ def make_intermodal_inbound(
         "arrival_at": flight_end.isoformat(),
         "duration_min": flight_dur,
         "price_rub": flight_price,
-        "source_url": flight_url,
+        "source_url": None,
         "label": "Авиаперелёт",
     }
     leg_transfer = {
@@ -417,7 +417,7 @@ def make_intermodal_inbound(
         "duration_min": transfer_dur,
         "price_rub": transfer_price,
         "distance_km": transfer_dist,
-        "source_url": "https://ostrovok.ru/transfers/",
+        "source_url": None,
         "label": "Трансфер из хаба домой",
     }
 
@@ -428,7 +428,7 @@ def make_intermodal_inbound(
             "price_rub": transfer_price,
             "duration_min": transfer_dur,
             "distance_km": transfer_dist,
-            "source_url": "https://ostrovok.ru/transfers/",
+            "source_url": None,
         }
     ]
     total_price = flight_price + transfer_price
@@ -447,8 +447,8 @@ def make_intermodal_inbound(
         "transfer_distance_km": transfer_dist,
         "flight_price_rub": flight_price,
         "flight_duration_min": flight_dur,
-        "flight_source_url": flight_url,
-        "transfer_source_url": "https://ostrovok.ru/transfers/",
+        "flight_source_url": None,
+        "transfer_source_url": None,
         "extras": extras,
         "legs": [leg_flight, leg_transfer],
     })
@@ -476,5 +476,5 @@ def make_intermodal_inbound(
         provider="ostrovok",
         currency="RUB",
         data_mode="live",
-        source_url=flight_url,
+        source_url=None,
     )

@@ -794,7 +794,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                     f"• ✈️ Перелёт: {hub} ➔ {im0.destination_city} (~{f_dur_str}) — {f_price_str}\n"
                 )
 
-            msg += "Все детали, прямые ссылки на отели Островка и авиабилеты Туту — в карточках ниже. Если хотите изменить отель, даты или бюджет — просто напишите!"
+            msg += "Все детали и прямые ссылки на отели Островка — в карточках предложений ниже. Если хотите изменить отель, даты или бюджет — просто напишите!"
             return state, msg
         notes: list[str] = []
         try:
@@ -895,7 +895,8 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         if (state.bundles or any(r.key in {"destination", "dates", "origin"} for r in state.requirements)) and is_asking_sources:
             from app.rag.service import build_sources_summary
             candidate = state.model_copy(deep=True)
-            reply = "Прямые ссылки на бронирование и официальные источники данных:\n\n" + build_sources_summary(candidate)
+            summary = build_sources_summary(candidate)
+            reply = summary if summary else "Прямые ссылки на отели Островка доступны в карточках предложений ниже."
             trace.append(self._state_diff(before, candidate))
             return candidate, reply, trace
         accepted, ambiguous = self._match_alternative(text, state.proposed_changes, parsed)

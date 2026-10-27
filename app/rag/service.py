@@ -267,100 +267,33 @@ def format_rag_sources_markdown(rag_data: dict[str, Any]) -> str:
 
 
 def build_sources_summary(state: Any) -> str:
-    """Collect compact, deduplicated direct booking links and source citations."""
-    sources_section = ["### 🔗 Прямые ссылки на бронирование и источники:"]
+    """Collect compact, deduplicated direct booking links to Ostrovok hotels."""
+    sources_section = ["### 🔗 Прямые ссылки на отели (Островок):"]
     seen_urls = set()
     seen_titles = set()
     bundle_hotels = []
-    bundle_flights = []
-    bundle_trains = []
-    bundle_transfers = []
 
-    # 1. Links from current state bundles
     for b in getattr(state, "bundles", []):
         for it in getattr(b, "items", []):
-            v = it.variant if isinstance(it.variant, dict) else {}
-            legs = v.get("legs", [])
-            if legs:
-                for leg in legs:
-                    leg_url = leg.get("source_url")
-                    if leg.get("mode") == "transfer":
-                        t_from = leg.get("from")
-                        t_to = leg.get("to")
-                        t_price = leg.get("price_rub", 0)
-                        t_url = leg_url or "https://ostrovok.ru/transfers/"
-                        if t_from and t_to and str(t_from) != "None" and str(t_to) != "None" and t_url not in seen_urls:
-                            seen_urls.add(t_url)
-                            bundle_transfers.append(
-                                f"- [Трансфер {t_from} ➔ {t_to} ({t_price:,.0f} ₽)]({t_url}) *(Островок)*"
-                            )
-                    else:
-                        fl_carrier = leg.get("carrier", "Авиарейс")
-                        fl_no = leg.get("flight_no", "")
-                        fl_price = leg.get("price_rub", 0)
-                        fl_url = leg_url or getattr(it, "source_url", None)
-                        fl_key = f"{fl_carrier}_{fl_no}"
-                        if fl_url and fl_url not in seen_urls and fl_key not in seen_titles:
-                            seen_urls.add(fl_url)
-                            seen_titles.add(fl_key)
-                            bundle_flights.append(
-                                f"- [Рейс {fl_carrier} {fl_no} ({fl_price:,.0f} ₽)]({fl_url}) *(Туту Авиа)*"
-                            )
-
-            s_url = getattr(it, "source_url", None) or (v.get("booking_url") if isinstance(v, dict) else None)
+            if getattr(it, "kind", None) != "hotel":
+                continue
+            s_url = getattr(it, "source_url", None) or (it.variant.get("booking_url") if isinstance(it.variant, dict) else None)
             if not s_url or s_url in seen_urls:
                 continue
-            if it.kind == "hotel":
-                h_title = v.get("hotel_name") or (it.title.split(",")[0] if it.title else "Отель")
-                h_norm = h_title.strip().lower()
-                if h_norm in seen_titles:
-                    continue
-                seen_titles.add(h_norm)
-                seen_urls.add(s_url)
-                rating = v.get("rating", 9.0)
-                stars = v.get("stars", 4)
-                bundle_hotels.append(
-                    f"- [{h_title} (★ {stars}, рейтинг {rating})]({s_url}) *(Островок)*"
-                )
-            elif it.kind == "flight":
-                f_no = v.get("flight_no", "")
-                c_name = v.get("carrier_name", "Авиарейс")
-                fl_key = f"{c_name}_{f_no}"
-                if fl_key in seen_titles:
-                    continue
-                seen_titles.add(fl_key)
-                seen_urls.add(s_url)
-                price = f"{it.total_rub:,.0f} ₽".replace(",", " ")
-                bundle_flights.append(
-                    f"- [Рейс {c_name} {f_no} ({price})]({s_url}) *(Туту Авиа)*"
-                )
-            elif it.kind == "train":
-                t_no = v.get("train_no", "")
-                if t_no in seen_titles:
-                    continue
-                seen_titles.add(t_no)
-                seen_urls.add(s_url)
-                price = f"{it.total_rub:,.0f} ₽".replace(",", " ")
-                bundle_trains.append(
-                    f"- [Поезд № {t_no} ({price})]({s_url}) *(Туту Ж/Д)*"
-                )
-            elif it.kind == "transfer":
-                orig_c = v.get("origin_name", getattr(it, "origin_city", None))
-                dest_c = v.get("hub_name", getattr(it, "destination_city", None))
-                if orig_c and dest_c and str(orig_c) != "None" and str(dest_c) != "None" and s_url not in seen_urls:
-                    seen_urls.add(s_url)
-                    price = f"{it.total_rub:,.0f} ₽".replace(",", " ")
-                    bundle_transfers.append(
-                        f"- [Трансфер {orig_c} ➔ {dest_c} ({price})]({s_url}) *(Островок)*"
-                    )
+            v = it.variant if isinstance(it.variant, dict) else {}
+            h_title = v.get("hotel_name") or (it.title.split(",")[0] if it.title else "Отель")
+            h_norm = h_title.strip().lower()
+            if h_norm in seen_titles:
+                continue
+            seen_titles.add(h_norm)
+            seen_urls.add(s_url)
+            rating = v.get("rating", 9.0)
+            stars = v.get("stars", 4)
+            bundle_hotels.append(
+                f"- [{h_title} (★ {stars}, рейтинг {rating})]({s_url})"
+            )
 
     if bundle_hotels:
-        sources_section.append("\n**🏨 Отели:**\n" + "\n".join(bundle_hotels[:3]))
-    if bundle_flights:
-        sources_section.append("\n**✈️ Авиабилеты:**\n" + "\n".join(bundle_flights[:2]))
-    if bundle_trains:
-        sources_section.append("\n**🚆 Поезда:**\n" + "\n".join(bundle_trains[:2]))
-    if bundle_transfers:
-        sources_section.append("\n**🚗 Трансферы:**\n" + "\n".join(bundle_transfers[:1]))
-
-    return "\n".join(sources_section)
+        sources_section.append("\n".join(bundle_hotels[:4]))
+        return "\n".join(sources_section)
+    return ""

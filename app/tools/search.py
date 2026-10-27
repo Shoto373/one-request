@@ -127,7 +127,7 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
                 data_mode="live" if is_worldwide_enabled() else "demo",
                 source_refs=[f"flight:{f.id}", *f.source_refs],
                 provider="tutu",
-                source_url=flight_booking_url,
+                source_url=None,
             )
         )
     return out
@@ -177,7 +177,7 @@ def train_offers(t: Train, party: Party) -> list[Offer]:
                 data_mode="live" if is_worldwide_enabled() else "demo",
                 source_refs=[f"train:{t.id}", *t.source_refs],
                 provider="tutu",
-                source_url=train_booking_url,
+                source_url=None,
             )
         )
     return out
@@ -478,7 +478,7 @@ def transfer_offer(
         source_refs=[f"transfer:{r.id}", *r.source_refs],
         provider="ostrovok",
         data_mode="live",
-        source_url="https://ostrovok.ru/transfers/",
+        source_url=None,
     )
 
 
