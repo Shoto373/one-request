@@ -163,22 +163,9 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             log.warning("parse_request falls back to rules: %s", type(exc).__name__)
             self.last_parser = "rules"
             parsed = rule_parse(text, state, self.local_now())
-        # Validate LLM output first; supplement any missing or dropped fields from rule parser
-        validated_llm = validate_extraction(parsed, text)
-        rule_parsed = rule_parse(text, state, self.local_now())
-        existing = {r.key: r for r in validated_llm.requirements}
-        supplemented = False
-        for item in rule_parsed.requirements:
-            if item.key == "travel_start_date" and "dates" in existing and "dates" not in {
-                r.key for r in rule_parsed.requirements
-            }:
-                existing.pop("dates", None)
-            if item.key not in existing:
-                existing[item.key] = item
-                supplemented = True
-        if supplemented and self.last_parser == "llm":
-            self.last_parser = "llm+rules"
-        return ParsedRequest(requirements=list(existing.values()), remove_keys=parsed.remove_keys)
+        if self.last_parser == "rules":
+            return parsed
+        return validate_extraction(parsed, text)
 
     def _year_resolve(self, requirements: list[Requirement], suppressed: list[str] | tuple[str, ...] = ()) -> list[Requirement]:
         by_key = {r.key: r for r in requirements if not (r.kind == "assumption" and r.key in suppressed)}

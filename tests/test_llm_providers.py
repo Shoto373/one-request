@@ -111,7 +111,7 @@ async def test_no_key_message_is_clear() -> None:
 
 def test_status_endpoint_without_key(monkeypatch) -> None:
     monkeypatch.setenv("LLM_API_KEY", "")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "")
     from app.main import app
 
     with TestClient(app) as client:
@@ -125,7 +125,7 @@ def test_status_endpoint_without_key(monkeypatch) -> None:
 def test_status_never_returns_the_key(monkeypatch) -> None:
     monkeypatch.setenv("LLM_API_KEY", "sk-secret-value-123")
     monkeypatch.setenv("LLM_MODEL", "some-model")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "")
     from app.main import app
 
     with TestClient(app) as client:
