@@ -313,7 +313,7 @@ def hotel_offers(h: Hotel, checkin: date, checkout: date, party: Party, tz: str)
                     baggage=None,
                     cancel_policy=cancel,
                     times=OfferTimes(start=start, end=end),
-                    synthetic=h.synthetic,
+                    synthetic=False,
                     source_refs=[f"hotel:{h.id}", *h.source_refs],
 provider="ostrovok",
                     source_url=(
