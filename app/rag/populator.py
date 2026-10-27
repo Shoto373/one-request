@@ -174,8 +174,17 @@ INTERMODAL_TRANSFERS = [
 ]
 
 
-def populate_rag_database(database_url: str) -> dict[str, int]:
+def populate_rag_database(
+    database_url: str | None = None,
+    start_date: date | None = None,
+    days: int = HORIZON_DAYS,
+    db_url: str | None = None,
+) -> dict[str, int]:
     """Populate inventory tables with 6 months of data, storing all direct booking URLs."""
+    import os
+    database_url = database_url or db_url or os.getenv("DATABASE_URL") or "postgresql://app:app@localhost:5432/trip"
+    start_date = start_date or START_DATE
+    horizon_days = days or HORIZON_DAYS
     counts = {"hotels": 0, "flights": 0, "trains": 0, "transfers": 0}
     
     with psycopg.connect(database_url) as conn:
@@ -235,8 +244,8 @@ def populate_rag_database(database_url: str) -> dict[str, int]:
             # 2. Populate Flights across 180 days (6 months)
             log.info("Populating RAG flights for 180 days (6 months horizon)...")
             flight_records = []
-            for day_offset in range(HORIZON_DAYS):
-                cur_date = START_DATE + timedelta(days=day_offset)
+            for day_offset in range(horizon_days):
+                cur_date = start_date + timedelta(days=day_offset)
                 date_str = cur_date.strftime("%d%m%Y")
                 is_weekend = cur_date.weekday() in (4, 5, 6) # Fri, Sat, Sun price surge
                 season_mult = 1.25 if cur_date.month in (12, 1, 5) else 1.0 # New Year & May holiday season
@@ -277,8 +286,8 @@ def populate_rag_database(database_url: str) -> dict[str, int]:
             # 3. Populate Trains across 180 days (6 months)
             log.info("Populating RAG trains for 180 days...")
             train_records = []
-            for day_offset in range(HORIZON_DAYS):
-                cur_date = START_DATE + timedelta(days=day_offset)
+            for day_offset in range(horizon_days):
+                cur_date = start_date + timedelta(days=day_offset)
                 is_weekend = cur_date.weekday() in (4, 6)
                 
                 for tmpl in TRAIN_TEMPLATES:
