@@ -86,4 +86,11 @@ class Catalog:
 
 @lru_cache(maxsize=1)
 def get_catalog() -> Catalog:
-    return Catalog.load()
+    cat = Catalog.load()
+    try:
+        from app.catalog.world_resolver import init_world_catalog
+        init_world_catalog(cat)
+    except Exception:
+        pass
+    return cat
+

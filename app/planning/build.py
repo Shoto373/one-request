@@ -178,6 +178,10 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
     notes: list[str] = []
     if q.return_date <= q.depart_date:
         return BuildResult([], ["Дата обратной дороги должна быть позже даты отправления."])
+    from app.catalog.world_resolver import init_world_catalog
+    init_world_catalog(cat)
+    from app.catalog.ostrovok_live import ensure_ostrovok_hotels
+    ensure_ostrovok_hotels(cat, q.dest_city)
     outs = search_transport(cat, q.origin_city, q.dest_city, q.depart_date, q.party, q.kinds)
     backs = search_transport(cat, q.dest_city, q.origin_city, q.return_date, q.party, q.kinds)
     if limited:
@@ -206,10 +210,33 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
             if checkin not in hotels_by_checkin:
                 found = search_hotels(cat, q.dest_city, checkin, q.return_date, q.party) if checkin < q.return_date else []
                 found = [h for h in found if hotel_fits(cat, h, q)]
-                pool = found[:TOP_HOTELS]
-                if variants > 1 and (q.min_stars or q.meal):
-                    # Soft hotel wishes: the cheapest matching hotels compete for «удобнее» too.
-                    pool += [h for h in found[TOP_HOTELS:] if meets_wish(cat, h, q)][:WISH_HOTELS]
+                if variants > 1:
+                    cheap_cands = found[:12]
+                    comfort_cands = sorted(
+                        found,
+                        key=lambda o: (
+                            -(cat.hotels[o.item_id].stars or 0),
+                            -(1 if q.meal and o.variant.get("meal") == q.meal else 0),
+                            -(cat.hotels[o.item_id].rating or 0),
+                            cat.hotels[o.item_id].dist_center_km,
+                            o.total_rub,
+                        ),
+                    )[:12]
+                    flex_cands = sorted(
+                        [o for o in found if o.variant.get("refundable")],
+                        key=lambda o: (
+                            -(cat.hotels[o.item_id].rating or 0),
+                            o.total_rub,
+                        ),
+                    )[:8]
+                    seen_off_ids = set()
+                    pool = []
+                    for o in cheap_cands + comfort_cands + flex_cands:
+                        if o.offer_id not in seen_off_ids:
+                            seen_off_ids.add(o.offer_id)
+                            pool.append(o)
+                else:
+                    pool = found[:TOP_HOTELS]
                 hotels_by_checkin[checkin] = pool
         hotels = [h for c in checkins for h in hotels_by_checkin[c]]
         for hotel in hotels:
@@ -284,9 +311,6 @@ def build_bundles(requirements: dict[str, Any], state: Any = None) -> list[dict[
     Returns ``[]`` when the request cannot be resolved or nothing is feasible; the reasons
     are logged (and available from ``build_trip_bundles`` / ``explain_no_bundles``).
     """
-    from app.providers.tutu.planner import build_tutu_bundles, tutu_live_enabled
-    if tutu_live_enabled():
-        return build_tutu_bundles(requirements, state)
     cat = get_catalog()
     query, problems = query_from_requirements(cat, requirements, state)
     if query is None:

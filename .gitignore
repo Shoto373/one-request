@@ -46,3 +46,4 @@ eval/reports/
 deploy/.deployed
 deploy/.failed
 deploy/cd.log
+scratch/

@@ -70,7 +70,7 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
               )}
               {o.provider === 'ostrovok' && (
                 <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 border border-orange-200">
-                  Островок {o.variant?.rating ? `★ ${o.variant.rating}` : ''}
+                  {o.kind === 'transfer' ? 'Островок Трансфер' : `Островок ${o.variant?.rating ? `★ ${o.variant.rating}` : ''}`}
                 </span>
               )}
               {o.provider === 'yandex_go' && (
@@ -88,10 +88,12 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                 >
                   <span>
                     {o.provider === 'ostrovok' || o.kind === 'hotel'
-                      ? 'Островок'
-                      : o.provider === 'yandex_go' || o.kind === 'transfer'
-                        ? 'Яндекс Go'
-                        : 'Туту'}
+                      ? (o.kind === 'transfer' ? 'Островок Трансфер' : 'Островок')
+                      : o.kind === 'transfer'
+                        ? 'Островок Трансфер'
+                        : o.provider === 'yandex_go'
+                          ? 'Яндекс Go'
+                          : 'Туту'}
                   </span>
                   <span className="text-[10px]">↗</span>
                 </a>
@@ -158,10 +160,12 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
               rel="noreferrer"
             >
               {o.provider === 'ostrovok' || o.kind === 'hotel'
-                ? 'перейти на Островок'
-                : o.provider === 'yandex_go' || o.kind === 'transfer'
-                  ? 'маршрут в Яндекс Go'
-                  : 'билеты на Туту'}
+                ? (o.kind === 'transfer' ? 'трансфер на Островке' : 'перейти на Островок')
+                : o.kind === 'transfer'
+                  ? 'трансфер на Островке'
+                  : o.provider === 'yandex_go'
+                    ? 'маршрут в Яндекс Go'
+                    : 'билеты на Туту'}
             </a>
           )}
         </div>

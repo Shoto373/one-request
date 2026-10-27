@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 from contextvars import ContextVar
 from contextlib import contextmanager
 import os
 import re
+
+log = logging.getLogger(__name__)
 from datetime import datetime, timezone, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -17,7 +20,7 @@ from app.planning.query import MEAL_RANK, TripQuery, parse_meal, query_from_requ
 from app.providers.base import ProviderError
 from app.providers.tutu.adapter import hotel_offer, transport_offer
 from app.providers.tutu.client import TutuMCPClient, TutuMCPError
-from app.product_scope import destination_ids, fixed_destination_id
+from app.product_scope import destination_ids, fixed_destination_id, is_worldwide_enabled
 from app.planning.build import _best_transfer
 from app.tools.search import search_hotels as search_ostrovok_hotels
 
@@ -102,15 +105,17 @@ def tutu_live_enabled() -> bool:
 
 def _mapped_requirements(requirements: dict[str, Any], state: Any) -> dict[str, Any]:
     req = dict(requirements)
-    if not any(req.get(k) for k in ("destination", "dest", "destination_city", "to", "city")):
-        req["destination"] = fixed_destination_id()
     cat = get_catalog()
     destination_value = next((req.get(key) for key in ("destination", "dest", "destination_city", "to", "city")
                               if req.get(key) not in (None, "")), None)
-    destination = resolve_city(cat, destination_value)
-    if destination not in destination_ids():
-        names = ", ".join(cat.cities[city_id].name for city_id in destination_ids())
-        raise TutuScopeError(f"Текущее покрытие прототипа включает только: {names}. Направление без вашего согласия не меняю.")
+    if not destination_value:
+        if not is_worldwide_enabled():
+            req["destination"] = fixed_destination_id()
+    else:
+        destination = resolve_city(cat, destination_value)
+        if not is_worldwide_enabled() and destination not in destination_ids():
+            names = ", ".join(cat.cities[city_id].name for city_id in destination_ids())
+            raise TutuScopeError(f"Текущее покрытие прототипа включает только: {names}. Направление без вашего согласия не меняю.")
     return req
 
 
@@ -255,8 +260,8 @@ def _wire(bundle: Bundle) -> dict[str, Any]:
     return bundle.model_dump(mode="json")
 
 
-async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) -> list[dict[str, Any]]:
-    """Search only the requested date window; all quantities come from provider results."""
+async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> list[dict[str, Any]]:
+    """Search only the requested date window via Tutu MCP; all quantities come from provider results."""
     query = _parse_query(requirements, state)
     catalog = get_catalog()
     destination_name = catalog.cities[query.dest_city].name
@@ -301,8 +306,12 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
                 source_errors.append(f"{key}: {getattr(result, 'upstream_message', None) or 'техническая ошибка поиска'}")
                 continue
             meta = result.data.get("meta") or {}
-            if any(_explicitly_non_russian(meta.get(side)) for side in ("from", "to")):
-                raise TutuOriginOutsideRussia("Туту определил один из городов маршрута за пределами России. Укажите российский город отправления.")
+            if is_worldwide_enabled():
+                if _explicitly_non_russian(meta.get("from")):
+                    raise TutuOriginOutsideRussia("Туту определил город отправления за пределами России. Укажите российский город отправления.")
+            else:
+                if any(_explicitly_non_russian(meta.get(side)) for side in ("from", "to")):
+                    raise TutuOriginOutsideRussia("Туту определил один из городов маршрута за пределами России. Укажите российский город отправления.")
             search_facts[key] = {"args": result.args, "fetched_at": result.fetched_at,
                                  "resolved_from": meta.get("from"),
                                  "resolved_to": meta.get("to")}
@@ -350,6 +359,13 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
                 duration = int(out.variant.get("duration_min") or 0) + int(back.variant.get("duration_min") or 0)
                 transport_choices.append(("rail", [out, back], duration))
         if not transport_choices:
+            if is_worldwide_enabled():
+                log.info("Tutu returned no transport for %s -> %s, falling back to worldwide catalog", origin_name, destination_name)
+                from app.planning.build import build_trip_bundles
+                from app.planning.models import bundle_to_wire
+                res = build_trip_bundles(catalog, query)
+                if res.bundles:
+                    return [bundle_to_wire(b) for b in res.bundles]
             if place_errors:
                 raise place_errors[0]
             failed = "; ".join(source_errors)
@@ -586,6 +602,25 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
                                              for bundle in bundles]},
                       "status": "ok"})
         return bundles
+
+
+async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) -> list[dict[str, Any]]:
+    """Search with Tutu live MCP; seamlessly falls back to worldwide catalog when live search is unavailable or unsupported."""
+    query = _parse_query(requirements, state)
+    catalog = get_catalog()
+    try:
+        return await _search_tutu_core(requirements, state)
+    except TutuOriginOutsideRussia:
+        raise
+    except BaseException as exc:
+        if is_worldwide_enabled():
+            log.warning("Tutu live search failed or unsupported for route (%s: %s). Falling back to worldwide catalog.", type(exc).__name__, exc)
+            from app.planning.build import build_trip_bundles
+            from app.planning.models import bundle_to_wire
+            res = build_trip_bundles(catalog, query)
+            if res.bundles:
+                return [bundle_to_wire(b) for b in res.bundles]
+        raise
 
 
 async def replan_tutu(state: Any, changes: dict[str, Any]) -> dict[str, Any]:

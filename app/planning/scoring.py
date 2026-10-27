@@ -52,14 +52,21 @@ def comfort_penalty(cat: Catalog, items: list[Offer], checks: list[Check], party
     if hotel is not None:
         h = cat.hotels[hotel.item_id]
         penalty += int(max(0.0, 9.0 - h.rating) * 3000)
+        penalty += int(min(15.0, h.dist_center_km) * 250)
         if (h.stars or 3) < 3:
             penalty += 4000
+        elif (h.stars or 3) == 5:
+            penalty -= 4500
+        elif (h.stars or 3) == 4:
+            penalty -= 2000
         # Stated stars/meal wishes («желательно 5 звёзд», «лучше всё включено») come first for the
         # comfortable bundle whenever any feasible hotel meets them: a lexicographic, not a price, trade-off.
         if q is not None and q.min_stars and (h.stars or 0) < q.min_stars:
             penalty += UNMET_WISH
         if q is not None and q.meal and MEAL_RANK.get(hotel.variant.get("meal", "RO"), 0) < MEAL_RANK[q.meal]:
             penalty += UNMET_WISH
+        if party.pets and h.pets.fee_rub_per_night > 0:
+            penalty += 1000
         if kids:
             if not (h.kids.kids_club or h.kids.kids_pool):
                 penalty += 6000

@@ -410,12 +410,6 @@ export const mockApi: Api = {
         turn = { steps: [step('tool', 'accept_alternative', p), step('tool', 'build_bundles', {}, { bundles: 2 })], patch: { proposed_changes: [], stage: 'assemble', bundles: bundlesSochi(s.opts) }, reply: `Принято: ${r?.label ?? 'изменение'}. Собрал варианты (в моке — на примере Сочи).` }
         break
       }
-      case 'select_bundle': {
-        const selected = s.state.bundles.find((b) => b.id === p.bundle_id)
-        if (!selected) err(404, 'bundle_not_found', 'Комплект не найден в текущем плане')
-        turn = { steps: [step('state', 'select_bundle', p)], patch: { selected_bundle_id: p.bundle_id, stage: 'assemble' }, reply: 'Комплект выбран для сборки.' }
-        break
-      }
       case 'request_checkout': {
         const selected = s.state.bundles.find((b) => b.id === s.state.selected_bundle_id)
         if (!selected) err(422, 'invalid_command', 'Сначала выберите комплект')

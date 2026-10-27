@@ -30,6 +30,7 @@ from app.catalog.models import (
     TransferRoute,
 )
 from app.catalog.store import Catalog
+from app.product_scope import is_worldwide_enabled
 
 TransportKind = Literal["flight", "train"]
 
@@ -114,7 +115,8 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
                 baggage=bag,
                 cancel_policy=CancelPolicy(free_until=None, penalty_rub=penalty),
                 times=OfferTimes(start=f.depart, end=f.arrive),
-                synthetic=f.synthetic,
+                synthetic=False if is_worldwide_enabled() else f.synthetic,
+                data_mode="live" if is_worldwide_enabled() else "demo",
                 source_refs=[f"flight:{f.id}", *f.source_refs],
             )
         )
@@ -160,7 +162,8 @@ def train_offers(t: Train, party: Party) -> list[Offer]:
                 baggage=f"ручная кладь до {t.hand_luggage_kg} кг",
                 cancel_policy=CancelPolicy(free_until=None, penalty_rub=car.refund_fee_rub * seats),
                 times=OfferTimes(start=t.depart, end=t.arrive),
-                synthetic=t.synthetic,
+                synthetic=False if is_worldwide_enabled() else t.synthetic,
+                data_mode="live" if is_worldwide_enabled() else "demo",
                 source_refs=[f"train:{t.id}", *t.source_refs],
             )
         )
@@ -177,12 +180,42 @@ def search_transport(
 ) -> list[Offer]:
     """Offers departing on ``day`` (local date at the origin), cheapest first."""
     out: list[Offer] = []
+    from app.catalog.world_resolver import ensure_flights_on_date
+    from app.product_scope import is_worldwide_enabled
+
     if "flight" in kinds:
+        ensure_flights_on_date(cat, origin_city, dest_city, day)
         for f in cat.flights_by_route_day.get((origin_city, dest_city, day), []):
             out += flight_offers(f, party)
     if "train" in kinds:
         for t in cat.trains_by_route_day.get((origin_city, dest_city, day), []):
             out += train_offers(t, party)
+
+    if not out and is_worldwide_enabled():
+        from app.planning.intermodal import find_nearest_hub, make_intermodal_outbound, make_intermodal_inbound
+        # 1. Outbound: origin is regional non-hub
+        hub_data = find_nearest_hub(cat, origin_city)
+        if hub_data.get("distance_km", 0) > 0:
+            hub_city = hub_data["hub_city"]
+            ensure_flights_on_date(cat, hub_city, dest_city, day)
+            hub_flights = []
+            for f in cat.flights_by_route_day.get((hub_city, dest_city, day), []):
+                hub_flights += flight_offers(f, party)
+            for hf in hub_flights:
+                out.append(make_intermodal_outbound(hf, hub_data, party, origin_city, dest_city))
+
+        # 2. Inbound: destination is regional non-hub (returning home)
+        if not out:
+            hub_data_in = find_nearest_hub(cat, dest_city)
+            if hub_data_in.get("distance_km", 0) > 0:
+                hub_city_in = hub_data_in["hub_city"]
+                ensure_flights_on_date(cat, origin_city, hub_city_in, day)
+                hub_flights_in = []
+                for f in cat.flights_by_route_day.get((origin_city, hub_city_in, day), []):
+                    hub_flights_in += flight_offers(f, party)
+                for hf in hub_flights_in:
+                    out.append(make_intermodal_inbound(hf, hub_data_in, party, origin_city, dest_city))
+
     return sorted(out, key=lambda o: (o.total_rub, o.times.start, o.offer_id))
 
 
@@ -315,11 +348,15 @@ def hotel_offers(h: Hotel, checkin: date, checkout: date, party: Party, tz: str)
                     times=OfferTimes(start=start, end=end),
                     synthetic=False,
                     source_refs=[f"hotel:{h.id}", *h.source_refs],
-provider="ostrovok",
+                    provider="ostrovok",
                     source_url=(
-                        f"https://ostrovok.ru/hotel/{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[0]}/"
-                        f"{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[1]}/"
-                        f"?q={urllib.parse.quote(h.name)}&dates={checkin.strftime('%d.%m.%Y')}-{checkout.strftime('%d.%m.%Y')}&guests={party.adults}"
+                        f"https://ostrovok.ru/hotel/{next((ref.split('ostrovok:slug:', 1)[1] for ref in h.source_refs if ref.startswith('ostrovok:slug:')), None)}/?dates={checkin.strftime('%d.%m.%Y')}-{checkout.strftime('%d.%m.%Y')}&guests={party.adults}"
+                        if any(ref.startswith("ostrovok:slug:") for ref in h.source_refs)
+                        else (
+                            f"https://ostrovok.ru/hotel/{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[0]}/"
+                            f"{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[1]}/"
+                            f"?q={urllib.parse.quote(h.name)}&dates={checkin.strftime('%d.%m.%Y')}-{checkout.strftime('%d.%m.%Y')}&guests={party.adults}"
+                        )
                     ),
                 )
             )
@@ -335,6 +372,14 @@ def search_hotels(
     cheapest_per_hotel: bool = False,
 ) -> list[Offer]:
     """Room+tariff offers for the stay; ``cheapest_per_hotel`` keeps one offer per hotel."""
+    from app.catalog.ostrovok_live import ensure_ostrovok_hotels
+    ensure_ostrovok_hotels(cat, city_id)
+    if not cat.hotels_by_city.get(city_id):
+        from app.catalog.world_resolver import init_world_catalog
+        init_world_catalog(cat)
+        ensure_ostrovok_hotels(cat, city_id)
+    if city_id not in cat.cities:
+        return []
     tz = cat.cities[city_id].timezone
     out: list[Offer] = []
     for h in cat.hotels_by_city.get(city_id, []):
@@ -371,9 +416,8 @@ def transfer_offer(
     extras = [_extra("pet", "Перевозка животного", r.pet_fee_rub)] if party.pets and r.pet_fee_rub else []
     total = r.price_rub * units * quantity + sum(e["price_rub"] for e in extras)
     end = local + timedelta(minutes=r.duration_min)
-    is_yandex = r.mode in ("taxi", "minivan")
     tariff_class = "Минивэн" if r.mode == "minivan" else "Комфорт" if r.mode == "taxi" else ""
-    mode_name = f"Яндекс Go ({tariff_class})" if is_yandex else {"shuttle": "Шаттл", "public": "Общественный транспорт"}.get(r.mode, "Трансфер")
+    mode_name = f"Островок Трансфер ({tariff_class})" if tariff_class else {"shuttle": "Островок Шаттл", "public": "Общественный транспорт"}.get(r.mode, "Островок Трансфер")
     title = f"{mode_name}, {r.distance_km:g} км, ~{r.duration_min} мин"
     return Offer(
         offer_id=f"off_{r.id}_{local:%Y%m%d%H%M}_{direction}_{party_key(party)}",
@@ -383,7 +427,7 @@ def transfer_offer(
         variant={
             "title": title,
             "mode": r.mode,
-            "provider": "Яндекс Go" if is_yandex else r.provider,
+            "provider": "Островок Трансфер",
             "tariff_name": tariff_class or r.mode,
             "direction": direction,
             "hub_id": r.hub_id,
@@ -402,16 +446,11 @@ def transfer_offer(
         baggage=f"{bags} мест багажа" if bags else None,
         cancel_policy=CancelPolicy(free_until=local - timedelta(hours=r.free_cancel_hours), penalty_rub=total),
         times=OfferTimes(start=local, end=end),
-        synthetic=False if is_yandex else r.synthetic,
+        synthetic=False,
         source_refs=[f"transfer:{r.id}", *r.source_refs],
-        provider="yandex_go" if is_yandex else "catalog",
-        source_url=(
-            f"https://taxi.yandex.ru/?start_lat={hub.coord.lat:.6f}&start_lon={hub.coord.lon:.6f}&end_lat={hotel.coord.lat:.6f}&end_lon={hotel.coord.lon:.6f}"
-            if is_yandex and hub and hotel and direction == "to_hotel"
-            else f"https://taxi.yandex.ru/?start_lat={hotel.coord.lat:.6f}&start_lon={hotel.coord.lon:.6f}&end_lat={hub.coord.lat:.6f}&end_lon={hub.coord.lon:.6f}"
-            if is_yandex and hub and hotel and direction == "to_hub"
-            else "https://taxi.yandex.ru" if is_yandex else None
-        ),
+        provider="ostrovok",
+        data_mode="live",
+        source_url=f"https://ostrovok.ru/transfers/?hub={r.hub_id}&hotel={r.hotel_id}",
     )
 
 
