@@ -755,7 +755,38 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             count = len(state.bundles)
             noun = "комплект" if count == 1 else ("комплекта" if count % 10 in {2, 3, 4} and count % 100 not in {12, 13, 14} else "комплектов")
             verb = "проверенный" if count == 1 else ("проверенных" if noun == "комплектов" else "проверенных")
-            return state, f"Нашёл {count} {noun}, {verb} по условиям. Выберите один, чтобы продолжить."
+            msg = f"Нашёл {count} {noun}, {verb} по условиям."
+
+            im_items = [
+                item for b in state.bundles for item in b.items
+                if item.variant.get("intermodal") or (item.variant.get("legs") and any(l.get("mode") == "transfer" for l in item.variant["legs"]))
+            ]
+            if im_items:
+                im0 = im_items[0]
+                orig = im0.variant.get("origin_name", im0.origin_city)
+                hub = im0.variant.get("hub_name", "авиахаб")
+                t_price = im0.variant.get("transfer_price_rub", im0.variant.get("ground_transfer_rub", 0))
+                t_dur = im0.variant.get("transfer_duration_min", 0)
+                t_dist = im0.variant.get("transfer_distance_km", 0)
+                f_price = im0.variant.get("flight_price_rub", max(0, im0.total_rub - t_price))
+                f_dur = im0.variant.get("flight_duration_min", 0)
+
+                t_dur_str = f"{t_dur // 60} ч {t_dur % 60} мин" if t_dur >= 60 else f"{t_dur} мин"
+                f_dur_str = f"{f_dur // 60} ч {f_dur % 60} мин" if f_dur >= 60 else f"{f_dur} мин"
+                dist_str = f", {t_dist} км" if t_dist else ""
+
+                t_price_str = f"{t_price:,.0f} ₽".replace(",", " ")
+                f_price_str = f"{f_price:,.0f} ₽".replace(",", " ")
+
+                msg += (
+                    f" Построен составной интермодальный маршрут:\n"
+                    f"• 🚗 Трансфер Островок: {orig} ➔ {hub} (~{t_dur_str}{dist_str}) — {t_price_str}\n"
+                    f"• ✈️ Перелёт: {hub} ➔ {im0.destination_city} (~{f_dur_str}) — {f_price_str}\n"
+                    f"Детализация каждого отрезка пути и прямые ссылки на трансфер Островка и авиабилеты доступны в карточках ниже."
+                )
+            else:
+                msg += " Выберите один, чтобы продолжить."
+            return state, msg
         notes: list[str] = []
         try:
             if self.no_bundle_explainer is not None:

@@ -45,6 +45,15 @@ const KIND_TINT: Record<Offer['kind'], string> = {
   hotel: 'bg-lime-soft text-[#2f6b0f]',
 }
 
+function formatDuration(min?: number): string {
+  if (!min || min <= 0) return ''
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h > 0 && m > 0) return `${h} ч ${m} мин`
+  if (h > 0) return `${h} ч`
+  return `${m} мин`
+}
+
 export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Offer; last?: boolean; markSynthetic?: boolean; checks?: Check[] }) {
   const start = o.times && localParts(o.times.start)
   const end = o.times && localParts(o.times.end)
@@ -100,21 +109,95 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
               )}
             </div>
             {legs.length > 0 ? (
-              <div className="mt-1 space-y-0.5 text-[12px] text-ink-grey">
-                {legs.map((leg, index) => (
-                  <div key={index} className="flex flex-wrap items-center gap-1">
-                    <span className="font-medium text-ink">
-                      {typeof leg.label === 'string' ? (leg.label === 'return' ? 'Обратно: ' : 'Туда: ') : ''}
-                      {String(leg.from ?? '')} → {String(leg.to ?? '')}
-                    </span>
-                    {typeof leg.departure_at === 'string' && typeof leg.arrival_at === 'string' && (
-                      <span className="text-ink-muted">
-                        · {new Date(leg.departure_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} —{' '}
-                        {new Date(leg.arrival_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} (МСК)
-                      </span>
-                    )}
-                  </div>
-                ))}
+              <div className="mt-2 space-y-1.5">
+                {legs.map((leg, index) => {
+                  const isTransfer = leg.mode === 'transfer' || String(leg.carrier || '').toLowerCase().includes('трансфер')
+                  const legPrice = typeof leg.price_rub === 'number' ? leg.price_rub : null
+                  const legDur = typeof leg.duration_min === 'number' ? leg.duration_min : null
+                  const legDist = typeof leg.distance_km === 'number' && leg.distance_km > 0 ? leg.distance_km : null
+                  const legUrl = typeof leg.source_url === 'string' ? leg.source_url : null
+
+                  return (
+                    <div
+                      key={index}
+                      className={`rounded-lg border p-2 text-[12px] transition ${
+                        isTransfer
+                          ? 'border-amber-200 bg-amber-50/60'
+                          : 'border-blue-100 bg-blue-50/40'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 font-medium">
+                        <div className="flex items-center gap-1.5 text-ink">
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                              isTransfer
+                                ? 'bg-amber-200/80 text-amber-900'
+                                : 'bg-blue-200/80 text-blue-900'
+                            }`}
+                          >
+                            {isTransfer ? 'Трансфер' : 'Авиа / Поезд'}
+                          </span>
+                          <span>
+                            {String(leg.from ?? '')} → {String(leg.to ?? '')}
+                          </span>
+                        </div>
+                        {legPrice != null && (
+                          <div className="font-bold text-ink">
+                            {rub(legPrice)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-muted">
+                        {legDur != null && legDur > 0 && (
+                          <span className="flex items-center gap-1 font-medium text-ink-grey">
+                            <span>⏱</span>
+                            <span>{formatDuration(legDur)}</span>
+                          </span>
+                        )}
+                        {legDist != null && (
+                          <span className="text-ink-muted">
+                            {legDist} км
+                          </span>
+                        )}
+                        {typeof leg.carrier === 'string' && (
+                          <span className="text-ink-muted">
+                            {leg.carrier}
+                          </span>
+                        )}
+                        {typeof leg.departure_at === 'string' && typeof leg.arrival_at === 'string' && (
+                          <span className="text-ink-muted">
+                            {new Date(leg.departure_at).toLocaleString('ru-RU', {
+                              timeZone: 'Europe/Moscow',
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })} — {new Date(leg.arrival_at).toLocaleString('ru-RU', {
+                              timeZone: 'Europe/Moscow',
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })} (МСК)
+                          </span>
+                        )}
+                        {legUrl && (
+                          <a
+                            href={legUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-auto inline-flex items-center gap-0.5 font-semibold text-brand hover:underline"
+                            title={isTransfer ? 'Открыть трансфер на Островке' : 'Открыть билеты'}
+                          >
+                            <span>{isTransfer ? 'Островок Трансфер' : 'Билеты'}</span>
+                            <span className="text-[10px]">↗</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             ) : start && end ? (
               <div className="mt-1 text-[13px] text-ink-grey">
@@ -124,7 +207,14 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
               </div>
             ) : null}
           </div>
-          <div className="price shrink-0 text-[15px] font-bold text-ink">{rub(o.total_rub)}</div>
+          <div className="price shrink-0 text-right">
+            <div className="text-[15px] font-bold text-ink">{rub(o.total_rub)}</div>
+            {Boolean(o.variant?.intermodal) && typeof o.variant?.transfer_price_rub === 'number' && typeof o.variant?.flight_price_rub === 'number' ? (
+              <div className="text-[10px] text-ink-muted leading-tight mt-0.5 font-normal">
+                {rub(Number(o.variant.transfer_price_rub))} трансфер + {rub(Number(o.variant.flight_price_rub))} авиа
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
           <span className="rounded bg-black/[0.03] px-1.5 py-0.5 font-medium text-ink">

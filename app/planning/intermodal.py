@@ -6,7 +6,11 @@ Uses Ostrovok Transfer for the ground legs.
 """
 from __future__ import annotations
 
+import json
+import logging
 import math
+import urllib.parse
+import urllib.request
 from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -21,6 +25,8 @@ from app.catalog.models import (
     TransportPets,
 )
 from app.catalog.store import Catalog
+
+log = logging.getLogger(__name__)
 
 # Major aviation hubs with international flights
 MAJOR_HUBS: dict[str, dict[str, Any]] = {
@@ -72,6 +78,30 @@ MAJOR_HUBS: dict[str, dict[str, Any]] = {
         "lat": 55.0084,
         "lon": 82.9357,
     },
+    "MRV": {
+        "city_id": "MRV",
+        "city_name": "Минеральные Воды",
+        "hub_id": "MRV",
+        "hub_name": "Минводы (MRV)",
+        "lat": 44.2251,
+        "lon": 43.0819,
+    },
+    "UFA": {
+        "city_id": "UFA",
+        "city_name": "Уфа",
+        "hub_id": "UFA",
+        "hub_name": "Уфа (UFA)",
+        "lat": 54.5575,
+        "lon": 55.8744,
+    },
+    "SAM": {
+        "city_id": "SAM",
+        "city_name": "Самара",
+        "hub_id": "KUF",
+        "hub_name": "Курумоч (KUF)",
+        "lat": 53.5049,
+        "lon": 50.1643,
+    },
 }
 
 KNOWN_REGIONAL_CONNECTIONS: dict[str, dict[str, Any]] = {
@@ -96,6 +126,30 @@ KNOWN_REGIONAL_CONNECTIONS: dict[str, dict[str, Any]] = {
     "первоуральск": {"hub": "SVX", "distance_km": 45, "duration_min": 50, "price_rub": 1200, "name": "Первоуральск"},
 }
 
+_GEOCODE_CACHE: dict[str, tuple[float, float]] = {}
+
+
+def geocode_city_coords(city_name: str) -> tuple[float, float] | None:
+    """Dynamically geocodes any city with in-memory caching (no hardcoding)."""
+    norm = city_name.strip().lower()
+    if norm in _GEOCODE_CACHE:
+        return _GEOCODE_CACHE[norm]
+    try:
+        quoted = urllib.parse.quote(city_name.strip())
+        req = urllib.request.Request(
+            f"https://nominatim.openstreetmap.org/search?q={quoted}&format=json&limit=1",
+            headers={"User-Agent": "OstrovokIntermodal/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data and isinstance(data, list) and len(data) > 0:
+                coords = (float(data[0]["lat"]), float(data[0]["lon"]))
+                _GEOCODE_CACHE[norm] = coords
+                return coords
+    except Exception as e:
+        log.debug("Dynamic geocoding for %s failed: %s", city_name, e)
+    return None
+
 
 def _haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     r = 6371.0
@@ -108,27 +162,12 @@ def _haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -
 
 
 def find_nearest_hub(cat: Catalog, city_id_or_name: str) -> dict[str, Any]:
-    """Find the nearest aviation hub and ground transfer parameters for any city."""
+    """Find the nearest aviation hub and ground transfer parameters for ANY city."""
     raw = city_id_or_name.lower().strip()
     city_obj = cat.cities.get(city_id_or_name)
-    name = (city_obj.name if city_obj else city_id_or_name).lower().strip()
+    origin_display_name = city_obj.name if city_obj else city_id_or_name.capitalize()
 
-    # Direct match in known regional connections
-    for alias, conn in KNOWN_REGIONAL_CONNECTIONS.items():
-        if alias in raw or alias in name or raw in alias:
-            hub_key = conn["hub"]
-            hub_info = MAJOR_HUBS[hub_key]
-            return {
-                "hub_city": hub_key,
-                "hub_code": hub_info["hub_id"],
-                "hub_name": hub_info["hub_name"],
-                "origin_name": conn["name"],
-                "distance_km": conn["distance_km"],
-                "duration_min": conn["duration_min"],
-                "price_rub": conn["price_rub"],
-            }
-
-    # If already a major hub
+    # 1. If already a major hub
     if city_id_or_name.upper() in MAJOR_HUBS:
         hub_info = MAJOR_HUBS[city_id_or_name.upper()]
         return {
@@ -141,23 +180,21 @@ def find_nearest_hub(cat: Catalog, city_id_or_name: str) -> dict[str, Any]:
             "price_rub": 0,
         }
 
-    # If destination has its own hub in catalog or is an international city
+    # 2. Check if international city in catalog
     from app.catalog.world_resolver import KNOWN_WORLD_DESTINATIONS
     if city_id_or_name.upper() in KNOWN_WORLD_DESTINATIONS:
         wdata = KNOWN_WORLD_DESTINATIONS[city_id_or_name.upper()]
-        hub_id = wdata.get("hub_id", f"HUB_{city_id_or_name.upper()}")
-        hub_name = wdata.get("hub_name", f"Аэропорт {wdata['name']}")
         return {
             "hub_city": city_id_or_name.upper(),
-            "hub_code": hub_id,
-            "hub_name": hub_name,
+            "hub_code": wdata.get("hub_id", f"HUB_{city_id_or_name.upper()}"),
+            "hub_name": wdata.get("hub_name", f"Аэропорт {wdata['name']}"),
             "origin_name": wdata["name"],
             "distance_km": 0,
             "duration_min": 0,
             "price_rub": 0,
         }
 
-    # If city already has an airport/hub in catalog
+    # 3. If city has its own hub in catalog
     city_hubs = [h for h in cat.hubs.values() if h.city_id == city_id_or_name]
     if city_hubs:
         h0 = city_hubs[0]
@@ -165,27 +202,21 @@ def find_nearest_hub(cat: Catalog, city_id_or_name: str) -> dict[str, Any]:
             "hub_city": city_id_or_name,
             "hub_code": h0.id,
             "hub_name": h0.name,
-            "origin_name": city_obj.name if city_obj else city_id_or_name,
+            "origin_name": origin_display_name,
             "distance_km": 0,
             "duration_min": 0,
             "price_rub": 0,
         }
 
-    if city_obj and (getattr(city_obj, "country_code", None) not in (None, "RU") or getattr(city_obj, "country", None) not in (None, "Россия")):
-        return {
-            "hub_city": city_obj.id,
-            "hub_code": f"HUB_{city_obj.id}",
-            "hub_name": f"Аэропорт {city_obj.name}",
-            "origin_name": city_obj.name,
-            "distance_km": 0,
-            "duration_min": 0,
-            "price_rub": 0,
-        }
-
-    # Coordinate-based distance if city has coords
-    origin_display_name = city_obj.name if city_obj else city_id_or_name.capitalize()
+    # 4. Dynamic coordinate resolution (from catalog or geocoding)
+    coords = None
     if city_obj and getattr(city_obj, "coord", None):
-        clat, clon = city_obj.coord.lat, city_obj.coord.lon
+        coords = (city_obj.coord.lat, city_obj.coord.lon)
+    if coords is None:
+        coords = geocode_city_coords(origin_display_name)
+
+    if coords:
+        clat, clon = coords
         best_hub = "MOW"
         best_dist = float("inf")
         for hub_key, hdata in MAJOR_HUBS.items():
@@ -194,19 +225,33 @@ def find_nearest_hub(cat: Catalog, city_id_or_name: str) -> dict[str, Any]:
                 best_dist = dist
                 best_hub = hub_key
         hinfo = MAJOR_HUBS[best_hub]
-        dur = max(60, int(best_dist / 70.0 * 60))
-        price = max(1500, int(best_dist * 14))
+        road_km = max(20, int(round(best_dist * 1.25)))
+        dur = max(45, int(25 + (road_km / 75.0) * 60))
+        price = max(1500, int(round((1200 + road_km * 12) / 100) * 100))
         return {
             "hub_city": best_hub,
             "hub_code": hinfo["hub_id"],
             "hub_name": hinfo["hub_name"],
             "origin_name": origin_display_name,
-            "distance_km": int(round(best_dist)),
+            "distance_km": road_km,
             "duration_min": dur,
             "price_rub": price,
         }
 
-    # Default to MOW
+    # Fallback to known regional connection or MOW default
+    for alias, conn in KNOWN_REGIONAL_CONNECTIONS.items():
+        if alias in raw or raw in alias:
+            hinfo = MAJOR_HUBS[conn["hub"]]
+            return {
+                "hub_city": conn["hub"],
+                "hub_code": hinfo["hub_id"],
+                "hub_name": hinfo["hub_name"],
+                "origin_name": conn["name"],
+                "distance_km": conn["distance_km"],
+                "duration_min": conn["duration_min"],
+                "price_rub": conn["price_rub"],
+            }
+
     hinfo = MAJOR_HUBS["MOW"]
     return {
         "hub_city": "MOW",
@@ -226,12 +271,16 @@ def make_intermodal_outbound(
     origin_city: str,
     dest_city: str,
 ) -> Offer:
-    """Build an intermodal outbound offer combining Ostrovok Transfer and Flight."""
+    """Build an intermodal outbound offer combining Ostrovok Transfer and Flight with individual leg details."""
     origin_name = hub_conn["origin_name"]
     hub_name = hub_conn["hub_name"]
     transfer_dur = hub_conn["duration_min"]
     transfer_price = hub_conn["price_rub"]
+    transfer_dist = hub_conn.get("distance_km", 0)
     dest_name = base_flight.variant.get("to_hub", dest_city)
+    flight_dur = base_flight.variant.get("duration_min", 240)
+    flight_price = base_flight.total_rub
+    flight_url = base_flight.source_url or "https://avia.tutu.ru/"
 
     flight_start = base_flight.times.start
     transfer_arrive = flight_start - timedelta(minutes=120)
@@ -245,7 +294,10 @@ def make_intermodal_outbound(
         "departure_at": transfer_depart.isoformat(),
         "arrival_at": transfer_arrive.isoformat(),
         "duration_min": transfer_dur,
-        "label": "Трансфер до хаба",
+        "price_rub": transfer_price,
+        "distance_km": transfer_dist,
+        "source_url": "https://ostrovok.ru/transfers/",
+        "label": "Трансфер до авиахаба",
     }
     leg_flight = {
         "from": f"{hub_conn['hub_city']} ({hub_name})",
@@ -254,14 +306,23 @@ def make_intermodal_outbound(
         "flight_no": base_flight.variant.get("flight_no", ""),
         "departure_at": flight_start.isoformat(),
         "arrival_at": base_flight.times.end.isoformat(),
-        "duration_min": base_flight.variant.get("duration_min", 240),
+        "duration_min": flight_dur,
+        "price_rub": flight_price,
+        "source_url": flight_url,
         "label": "Авиаперелёт",
     }
 
     extras = list(base_flight.variant.get("extras", [])) + [
-        {"kind": "transfer", "label": f"Островок Трансфер ({origin_name} ➔ {hub_name})", "price_rub": transfer_price}
+        {
+            "kind": "transfer",
+            "label": f"Островок Трансфер ({origin_name} ➔ {hub_name}, ~{transfer_dur // 60} ч {transfer_dur % 60} мин, {transfer_dist} км)",
+            "price_rub": transfer_price,
+            "duration_min": transfer_dur,
+            "distance_km": transfer_dist,
+            "source_url": "https://ostrovok.ru/transfers/",
+        }
     ]
-    total_price = base_flight.total_rub + transfer_price
+    total_price = flight_price + transfer_price
     title = f"Составной: Островок Трансфер ({origin_name}) + {base_flight.title}"
     paying_units = max(1, base_flight.units)
 
@@ -272,6 +333,13 @@ def make_intermodal_outbound(
         "origin_name": origin_name,
         "hub_name": hub_name,
         "ground_transfer_rub": transfer_price,
+        "transfer_price_rub": transfer_price,
+        "transfer_duration_min": transfer_dur,
+        "transfer_distance_km": transfer_dist,
+        "flight_price_rub": flight_price,
+        "flight_duration_min": flight_dur,
+        "flight_source_url": flight_url,
+        "transfer_source_url": "https://ostrovok.ru/transfers/",
         "extras": extras,
         "legs": [leg_transfer, leg_flight],
     })
@@ -299,7 +367,7 @@ def make_intermodal_outbound(
         provider="ostrovok",
         currency="RUB",
         data_mode="live",
-        source_url=f"https://ostrovok.ru/transfers/?from={origin_name}&to={hub_name}",
+        source_url="https://ostrovok.ru/transfers/",
     )
 
 
@@ -310,12 +378,16 @@ def make_intermodal_inbound(
     origin_city: str,
     dest_city: str,
 ) -> Offer:
-    """Build an intermodal return offer combining Flight and Ostrovok Transfer."""
+    """Build an intermodal return offer combining Flight and Ostrovok Transfer with individual leg details."""
     origin_name = hub_conn["origin_name"]
     hub_name = hub_conn["hub_name"]
     transfer_dur = hub_conn["duration_min"]
     transfer_price = hub_conn["price_rub"]
+    transfer_dist = hub_conn.get("distance_km", 0)
     dest_name = base_flight.variant.get("from_hub", origin_city)
+    flight_dur = base_flight.variant.get("duration_min", 240)
+    flight_price = base_flight.total_rub
+    flight_url = base_flight.source_url or "https://avia.tutu.ru/"
 
     flight_end = base_flight.times.end
     transfer_depart = flight_end + timedelta(minutes=60)
@@ -328,7 +400,9 @@ def make_intermodal_inbound(
         "flight_no": base_flight.variant.get("flight_no", ""),
         "departure_at": base_flight.times.start.isoformat(),
         "arrival_at": flight_end.isoformat(),
-        "duration_min": base_flight.variant.get("duration_min", 240),
+        "duration_min": flight_dur,
+        "price_rub": flight_price,
+        "source_url": flight_url,
         "label": "Авиаперелёт",
     }
     leg_transfer = {
@@ -339,13 +413,23 @@ def make_intermodal_inbound(
         "departure_at": transfer_depart.isoformat(),
         "arrival_at": transfer_arrive.isoformat(),
         "duration_min": transfer_dur,
+        "price_rub": transfer_price,
+        "distance_km": transfer_dist,
+        "source_url": "https://ostrovok.ru/transfers/",
         "label": "Трансфер из хаба домой",
     }
 
     extras = list(base_flight.variant.get("extras", [])) + [
-        {"kind": "transfer", "label": f"Островок Трансфер ({hub_name} ➔ {origin_name})", "price_rub": transfer_price}
+        {
+            "kind": "transfer",
+            "label": f"Островок Трансфер ({hub_name} ➔ {origin_name}, ~{transfer_dur // 60} ч {transfer_dur % 60} мин, {transfer_dist} км)",
+            "price_rub": transfer_price,
+            "duration_min": transfer_dur,
+            "distance_km": transfer_dist,
+            "source_url": "https://ostrovok.ru/transfers/",
+        }
     ]
-    total_price = base_flight.total_rub + transfer_price
+    total_price = flight_price + transfer_price
     title = f"Составной: {base_flight.title} + Островок Трансфер (в {origin_name})"
     paying_units = max(1, base_flight.units)
 
@@ -356,6 +440,13 @@ def make_intermodal_inbound(
         "origin_name": origin_name,
         "hub_name": hub_name,
         "ground_transfer_rub": transfer_price,
+        "transfer_price_rub": transfer_price,
+        "transfer_duration_min": transfer_dur,
+        "transfer_distance_km": transfer_dist,
+        "flight_price_rub": flight_price,
+        "flight_duration_min": flight_dur,
+        "flight_source_url": flight_url,
+        "transfer_source_url": "https://ostrovok.ru/transfers/",
         "extras": extras,
         "legs": [leg_flight, leg_transfer],
     })
@@ -383,5 +474,5 @@ def make_intermodal_inbound(
         provider="ostrovok",
         currency="RUB",
         data_mode="live",
-        source_url=f"https://ostrovok.ru/transfers/?from={hub_name}&to={origin_name}",
+        source_url="https://ostrovok.ru/transfers/",
     )

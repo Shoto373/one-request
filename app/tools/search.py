@@ -450,7 +450,7 @@ def transfer_offer(
         source_refs=[f"transfer:{r.id}", *r.source_refs],
         provider="ostrovok",
         data_mode="live",
-        source_url=f"https://ostrovok.ru/transfers/?hub={r.hub_id}&hotel={r.hotel_id}",
+        source_url="https://ostrovok.ru/transfers/",
     )
 
 
