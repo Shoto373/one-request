@@ -265,6 +265,7 @@ def make_intermodal_outbound(
     transfer_dist = hub_conn.get("distance_km", 0)
     dest_name = base_flight.variant.get("to_hub", dest_city)
     flight_dur = base_flight.variant.get("duration_min", 240)
+    flight_price = base_flight.total_rub
     pax_adults = party.adults
     pax_infants = party.infants
     pax_children = max(0, party.children - pax_infants)
@@ -379,6 +380,7 @@ def make_intermodal_inbound(
     transfer_dist = hub_conn.get("distance_km", 0)
     dest_name = base_flight.variant.get("from_hub", origin_city)
     flight_dur = base_flight.variant.get("duration_min", 240)
+    flight_price = base_flight.total_rub
     pax_adults = party.adults
     pax_infants = party.infants
     pax_children = max(0, party.children - pax_infants)
