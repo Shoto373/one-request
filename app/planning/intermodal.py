@@ -265,8 +265,15 @@ def make_intermodal_outbound(
     transfer_dist = hub_conn.get("distance_km", 0)
     dest_name = base_flight.variant.get("to_hub", dest_city)
     flight_dur = base_flight.variant.get("duration_min", 240)
-    flight_price = base_flight.total_rub
-    flight_url = base_flight.source_url or "https://avia.tutu.ru/"
+    pax_adults = party.adults
+    pax_infants = party.infants
+    pax_children = max(0, party.children - pax_infants)
+    pax_str = f"{pax_adults}{pax_children}{pax_infants}"
+    flight_dep_str = base_flight.times.start.strftime("%d%m%Y")
+    from_hub_code = (base_flight.variant.get("from_hub") or "SVO").replace("HUB_", "")
+    to_hub_code = (base_flight.variant.get("to_hub") or dest_city).replace("HUB_", "")
+    default_flight_url = f"https://avia.tutu.ru/offers/?passengers={pax_str}&route[0]={from_hub_code}-{flight_dep_str}-{to_hub_code}"
+    flight_url = base_flight.source_url or default_flight_url
 
     flight_start = base_flight.times.start
     transfer_arrive = flight_start - timedelta(minutes=120)
@@ -372,8 +379,15 @@ def make_intermodal_inbound(
     transfer_dist = hub_conn.get("distance_km", 0)
     dest_name = base_flight.variant.get("from_hub", origin_city)
     flight_dur = base_flight.variant.get("duration_min", 240)
-    flight_price = base_flight.total_rub
-    flight_url = base_flight.source_url or "https://avia.tutu.ru/"
+    pax_adults = party.adults
+    pax_infants = party.infants
+    pax_children = max(0, party.children - pax_infants)
+    pax_str = f"{pax_adults}{pax_children}{pax_infants}"
+    flight_dep_str = base_flight.times.start.strftime("%d%m%Y")
+    from_hub_code = (base_flight.variant.get("from_hub") or origin_city).replace("HUB_", "")
+    to_hub_code = (base_flight.variant.get("to_hub") or "SVO").replace("HUB_", "")
+    default_flight_url = f"https://avia.tutu.ru/offers/?passengers={pax_str}&route[0]={from_hub_code}-{flight_dep_str}-{to_hub_code}"
+    flight_url = base_flight.source_url or default_flight_url
 
     flight_end = base_flight.times.end
     transfer_depart = flight_end + timedelta(minutes=60)

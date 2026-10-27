@@ -102,6 +102,10 @@ class Party(Model):
         return len(self.children_ages)
 
     @property
+    def infants(self) -> int:
+        return sum(1 for a in self.children_ages if a < 2)
+
+    @property
     def people(self) -> int:
         return self.adults + self.children
 
@@ -349,6 +353,7 @@ class Flight(Model):
     infant_free_age: int = 2
     synthetic: bool = True
     source_refs: list[str]
+    source_url: str | None = None
 
 
 class TrainCar(Model):

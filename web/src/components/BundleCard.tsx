@@ -102,7 +102,9 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                         ? 'Островок Трансфер'
                         : o.provider === 'yandex_go'
                           ? 'Яндекс Go'
-                          : 'Туту'}
+                          : o.kind === 'flight'
+                            ? (o.variant?.flight_no ? `Рейс ${o.variant.flight_no}` : 'Билеты на рейс')
+                            : 'Туту'}
                   </span>
                   <span className="text-[10px]">↗</span>
                 </a>
@@ -255,7 +257,9 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                   ? 'трансфер на Островке'
                   : o.provider === 'yandex_go'
                     ? 'маршрут в Яндекс Go'
-                    : 'билеты на Туту'}
+                    : o.kind === 'flight'
+                      ? (o.variant?.flight_no ? `билеты на рейс ${o.variant.flight_no}` : 'билеты на рейс')
+                      : 'билеты на Туту'}
             </a>
           )}
         </div>

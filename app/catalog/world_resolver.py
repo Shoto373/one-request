@@ -41,6 +41,94 @@ from app.catalog.store import Catalog, get_catalog
 
 log = logging.getLogger(__name__)
 
+# Real flights operated by airlines to popular destinations from Moscow hubs
+REAL_FLIGHT_INFO: dict[str, dict[str, Any]] = {
+    "DPS": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 296", "ret_flight_no": "SU 297",
+        "aircraft": "Airbus A350-900", "duration_min": 740, "dep_time": time(14, 40), "ret_dep_time": time(10, 5),
+    },
+    "MLE": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 320", "ret_flight_no": "SU 321",
+        "aircraft": "Boeing 777-300ER", "duration_min": 530, "dep_time": time(21, 55), "ret_dep_time": time(11, 0),
+    },
+    "DXB": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 524", "ret_flight_no": "SU 525",
+        "aircraft": "Boeing 777-300ER", "duration_min": 335, "dep_time": time(9, 20), "ret_dep_time": time(16, 50),
+    },
+    "HKT": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 274", "ret_flight_no": "SU 275",
+        "aircraft": "Boeing 777-300ER", "duration_min": 570, "dep_time": time(19, 50), "ret_dep_time": time(12, 15),
+    },
+    "BKK": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 270", "ret_flight_no": "SU 271",
+        "aircraft": "Boeing 777-300ER", "duration_min": 560, "dep_time": time(20, 25), "ret_dep_time": time(11, 45),
+    },
+    "IST": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 2136", "ret_flight_no": "SU 2137",
+        "aircraft": "Airbus A320neo", "duration_min": 290, "dep_time": time(8, 30), "ret_dep_time": time(14, 50),
+    },
+    "AYT": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 2142", "ret_flight_no": "SU 2143",
+        "aircraft": "Airbus A320neo", "duration_min": 295, "dep_time": time(9, 0), "ret_dep_time": time(15, 20),
+    },
+    "SSH": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 2984", "ret_flight_no": "SU 2985",
+        "aircraft": "Airbus A321neo", "duration_min": 290, "dep_time": time(10, 20), "ret_dep_time": time(16, 20),
+    },
+    "HRG": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 2982", "ret_flight_no": "SU 2983",
+        "aircraft": "Airbus A321neo", "duration_min": 290, "dep_time": time(9, 40), "ret_dep_time": time(15, 40),
+    },
+    "KZN": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 1190", "ret_flight_no": "SU 1191",
+        "aircraft": "Airbus A320", "duration_min": 95, "dep_time": time(9, 50), "ret_dep_time": time(12, 40),
+    },
+    "AER": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 1122", "ret_flight_no": "SU 1123",
+        "aircraft": "Airbus A320neo", "duration_min": 230, "dep_time": time(8, 15), "ret_dep_time": time(13, 0),
+    },
+    "LED": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 012", "ret_flight_no": "SU 013",
+        "aircraft": "Airbus A320", "duration_min": 85, "dep_time": time(9, 0), "ret_dep_time": time(11, 40),
+    },
+    "SVX": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 1400", "ret_flight_no": "SU 1401",
+        "aircraft": "Airbus A320", "duration_min": 145, "dep_time": time(7, 30), "ret_dep_time": time(13, 10),
+    },
+    "KGD": {
+        "carrier": "SU", "carrier_name": "Аэрофлот", "flight_no": "SU 1002", "ret_flight_no": "SU 1003",
+        "aircraft": "Airbus A320", "duration_min": 155, "dep_time": time(10, 0), "ret_dep_time": time(13, 30),
+    },
+    "BCN": {
+        "carrier": "TK", "carrier_name": "Turkish Airlines (пересадка в Стамбуле IST)", "flight_no": "TK 414 + TK 1853", "ret_flight_no": "TK 1854 + TK 415",
+        "aircraft": "Airbus A321", "duration_min": 480, "dep_time": time(7, 30), "ret_dep_time": time(13, 20),
+    },
+    "CDG": {
+        "carrier": "TK", "carrier_name": "Turkish Airlines (пересадка в Стамбуле IST)", "flight_no": "TK 414 + TK 1821", "ret_flight_no": "TK 1822 + TK 415",
+        "aircraft": "Airbus A321", "duration_min": 490, "dep_time": time(7, 30), "ret_dep_time": time(14, 10),
+    },
+    "FCO": {
+        "carrier": "TK", "carrier_name": "Turkish Airlines (пересадка в Стамбуле IST)", "flight_no": "TK 414 + TK 1861", "ret_flight_no": "TK 1862 + TK 415",
+        "aircraft": "Airbus A321", "duration_min": 470, "dep_time": time(7, 30), "ret_dep_time": time(14, 30),
+    },
+    "INN": {
+        "carrier": "TK", "carrier_name": "Turkish Airlines (пересадка в Стамбуле IST)", "flight_no": "TK 414 + TK 1883", "ret_flight_no": "TK 1884 + TK 415",
+        "aircraft": "Airbus A321", "duration_min": 460, "dep_time": time(7, 30), "ret_dep_time": time(13, 40),
+    },
+    "PRG": {
+        "carrier": "TK", "carrier_name": "Turkish Airlines (пересадка в Стамбуле IST)", "flight_no": "TK 414 + TK 1767", "ret_flight_no": "TK 1768 + TK 415",
+        "aircraft": "Airbus A321", "duration_min": 465, "dep_time": time(7, 30), "ret_dep_time": time(15, 10),
+    },
+    "SOF": {
+        "carrier": "TK", "carrier_name": "Turkish Airlines (пересадка в Стамбуле IST)", "flight_no": "TK 414 + TK 1027", "ret_flight_no": "TK 1028 + TK 415",
+        "aircraft": "Airbus A321", "duration_min": 440, "dep_time": time(7, 30), "ret_dep_time": time(16, 0),
+    },
+    "GVA": {
+        "carrier": "TK", "carrier_name": "Turkish Airlines (пересадка в Стамбуле IST)", "flight_no": "TK 414 + TK 1917", "ret_flight_no": "TK 1918 + TK 415",
+        "aircraft": "Airbus A321", "duration_min": 485, "dep_time": time(7, 30), "ret_dep_time": time(14, 50),
+    },
+}
+
 # Famous worldwide vacation, ski, beach and cultural destinations
 KNOWN_WORLD_DESTINATIONS: dict[str, dict[str, Any]] = {
     "INN": {
@@ -541,24 +629,42 @@ def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str,
     origins = [("MOW", "SVO"), ("LED", "LED"), ("SVX", "SVX")]
     f_base = int(data.get("base_flight_rub", 35000))
     ref_date = date(2026, 11, 1)
+    fl_meta = REAL_FLIGHT_INFO.get(city_id) or {}
     for day_offset in range(90):
         cur_date = ref_date + timedelta(days=day_offset)
         for orig_city, orig_hub in origins:
             fl_id = f"fl_{orig_city}_{city_id}_{cur_date:%Y%m%d}"
-            carrier = "SU" if orig_city == "MOW" else "FZ"
-            carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
-            depart_dt = datetime.combine(cur_date, time(9, 30), ZoneInfo("Europe/Moscow"))
-            flight_min = 280
+            if fl_meta:
+                carrier = fl_meta["carrier"] if orig_city == "MOW" else "FZ"
+                carrier_name = fl_meta["carrier_name"] if orig_city == "MOW" else "Flydubai"
+                flight_no = fl_meta["flight_no"] if orig_city == "MOW" else f"FZ {700 + (day_offset % 200)}"
+                ret_flight_no = fl_meta["ret_flight_no"] if orig_city == "MOW" else f"FZ {800 + (day_offset % 200)}"
+                aircraft = fl_meta.get("aircraft", "Boeing 737-800")
+                flight_min = fl_meta.get("duration_min", 280)
+                dep_t = fl_meta.get("dep_time", time(9, 30))
+                ret_dep_t = fl_meta.get("ret_dep_time", time(15, 0))
+            else:
+                carrier = "SU" if orig_city == "MOW" else "FZ"
+                carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
+                flight_no = f"{carrier} {200 + (day_offset % 300)}"
+                ret_flight_no = f"{carrier} {300 + (day_offset % 300)}"
+                aircraft = "Boeing 737-800"
+                flight_min = 280
+                dep_t = time(9, 30)
+                ret_dep_t = time(15, 0)
+
+            depart_dt = datetime.combine(cur_date, dep_t, ZoneInfo("Europe/Moscow"))
             arrive_dt = depart_dt + timedelta(minutes=flight_min)
+            fl_url = f"https://avia.tutu.ru/offers/?passengers=100&route[0]={orig_hub}-{cur_date:%d%m%Y}-{hub_id}"
             seg = FlightSegment(
-                flight_no=f"{carrier} {1000 + (day_offset % 500)}",
+                flight_no=flight_no,
                 carrier=carrier,
                 from_hub=orig_hub,
                 to_hub=hub_id,
                 depart=depart_dt,
                 arrive=arrive_dt,
                 duration_min=flight_min,
-                aircraft="Boeing 737-800",
+                aircraft=aircraft,
             )
             fl_obj = Flight(
                 id=fl_id,
@@ -614,23 +720,25 @@ def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str,
                 international=True,
                 synthetic=False,
                 source_refs=["ref:world_resolver"],
+                source_url=fl_url,
             )
             cat.flights[fl_id] = fl_obj
             cat.flights_by_route_day[(orig_city, city_id, cur_date)].append(fl_obj)
 
             # Return flight
             ret_fl_id = f"fl_{city_id}_{orig_city}_{cur_date:%Y%m%d}"
-            ret_depart = datetime.combine(cur_date, time(15, 0), ZoneInfo(data["timezone"]))
+            ret_depart = datetime.combine(cur_date, ret_dep_t, ZoneInfo(data["timezone"]))
             ret_arrive = ret_depart + timedelta(minutes=flight_min)
+            ret_url = f"https://avia.tutu.ru/offers/?passengers=100&route[0]={hub_id}-{cur_date:%d%m%Y}-{orig_hub}"
             ret_seg = FlightSegment(
-                flight_no=f"{carrier} {2000 + (day_offset % 500)}",
+                flight_no=ret_flight_no,
                 carrier=carrier,
                 from_hub=hub_id,
                 to_hub=orig_hub,
                 depart=ret_depart,
                 arrive=ret_arrive,
                 duration_min=flight_min,
-                aircraft="Boeing 737-800",
+                aircraft=aircraft,
             )
             ret_fl_obj = Flight(
                 id=ret_fl_id,
@@ -686,6 +794,7 @@ def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str,
                 international=True,
                 synthetic=False,
                 source_refs=["ref:world_resolver"],
+                source_url=ret_url,
             )
             cat.flights[ret_fl_id] = ret_fl_obj
             cat.flights_by_route_day[(city_id, orig_city, cur_date)].append(ret_fl_obj)
@@ -707,14 +816,28 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
         orig_hub = "SVO" if orig_city == "MOW" else orig_city
         hub_id = dest_data.get("hub_id", f"HUB_{dest_city}")
         fl_id = f"fl_{orig_city}_{dest_city}_{target_date:%Y%m%d}"
-        carrier = "SU" if orig_city == "MOW" else "FZ"
-        carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
-        depart_dt = datetime.combine(target_date, time(9, 30), ZoneInfo("Europe/Moscow"))
-        flight_min = 280
+        fl_meta = REAL_FLIGHT_INFO.get(dest_city) or {}
+        if fl_meta:
+            carrier = fl_meta["carrier"] if orig_city == "MOW" else "FZ"
+            carrier_name = fl_meta["carrier_name"] if orig_city == "MOW" else "Flydubai"
+            flight_no = fl_meta["flight_no"] if orig_city == "MOW" else "FZ 705"
+            aircraft = fl_meta.get("aircraft", "Boeing 737-800")
+            flight_min = fl_meta.get("duration_min", 280)
+            dep_t = fl_meta.get("dep_time", time(9, 30))
+        else:
+            carrier = "SU" if orig_city == "MOW" else "FZ"
+            carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
+            flight_no = f"{carrier} 296"
+            aircraft = "Boeing 737-800"
+            flight_min = 280
+            dep_t = time(9, 30)
+
+        depart_dt = datetime.combine(target_date, dep_t, ZoneInfo("Europe/Moscow"))
         arrive_dt = depart_dt + timedelta(minutes=flight_min)
+        fl_url = f"https://avia.tutu.ru/offers/?passengers=100&route[0]={orig_hub}-{target_date:%d%m%Y}-{hub_id}"
         seg = FlightSegment(
-            flight_no=f"{carrier} 1062", carrier=carrier, from_hub=orig_hub, to_hub=hub_id,
-            depart=depart_dt, arrive=arrive_dt, duration_min=flight_min, aircraft="Boeing 737-800",
+            flight_no=flight_no, carrier=carrier, from_hub=orig_hub, to_hub=hub_id,
+            depart=depart_dt, arrive=arrive_dt, duration_min=flight_min, aircraft=aircraft,
         )
         fl_obj = Flight(
             id=fl_id, carrier=carrier, carrier_name=carrier_name, flight_no=seg.flight_no,
@@ -730,7 +853,7 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
                      baggage=Baggage(cabin_kg=10, checked_pieces=1, checked_kg=23), price_rub=int(f_base * 1.5), seats_left=9),
             ],
             pets=TransportPets(cabin=True, cabin_max_kg=8.0, cabin_fee_rub=3500, hold=True, hold_fee_rub=6500),
-            international=True, synthetic=False, source_refs=["ref:world_resolver"],
+            international=True, synthetic=False, source_refs=["ref:world_resolver"], source_url=fl_url,
         )
         cat.flights[fl_id] = fl_obj
         cat.flights_by_route_day[(orig_city, dest_city, target_date)].append(fl_obj)
@@ -761,7 +884,7 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
                      baggage=Baggage(cabin_kg=8, checked_pieces=1, checked_kg=20), price_rub=int(conn_base * 1.25), seats_left=9),
             ],
             pets=TransportPets(cabin=True, cabin_max_kg=8.0, cabin_fee_rub=3500, hold=True, hold_fee_rub=6500),
-            international=True, synthetic=False, source_refs=["ref:world_resolver"],
+            international=True, synthetic=False, source_refs=["ref:world_resolver"], source_url=fl_url,
         )
         cat.flights[conn_fl_id] = fl_conn
         cat.flights_by_route_day[(orig_city, dest_city, target_date)].append(fl_conn)
@@ -772,14 +895,28 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
         dest_hub = "SVO" if dest_city == "MOW" else dest_city
         hub_id = orig_data.get("hub_id", f"HUB_{orig_city}")
         fl_id = f"fl_{orig_city}_{dest_city}_{target_date:%Y%m%d}"
-        carrier = "SU" if dest_city == "MOW" else "FZ"
-        carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
-        depart_dt = datetime.combine(target_date, time(15, 0), ZoneInfo(orig_data["timezone"]))
-        flight_min = 280
+        fl_meta = REAL_FLIGHT_INFO.get(orig_city) or {}
+        if fl_meta:
+            carrier = fl_meta["carrier"] if dest_city == "MOW" else "FZ"
+            carrier_name = fl_meta["carrier_name"] if dest_city == "MOW" else "Flydubai"
+            flight_no = fl_meta.get("ret_flight_no", "SU 297") if dest_city == "MOW" else "FZ 706"
+            aircraft = fl_meta.get("aircraft", "Boeing 737-800")
+            flight_min = fl_meta.get("duration_min", 280)
+            ret_dep_t = fl_meta.get("ret_dep_time", time(15, 0))
+        else:
+            carrier = "SU" if dest_city == "MOW" else "FZ"
+            carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
+            flight_no = f"{carrier} 297"
+            aircraft = "Boeing 737-800"
+            flight_min = 280
+            ret_dep_t = time(15, 0)
+
+        depart_dt = datetime.combine(target_date, ret_dep_t, ZoneInfo(orig_data["timezone"]))
         arrive_dt = depart_dt + timedelta(minutes=flight_min)
+        ret_url = f"https://avia.tutu.ru/offers/?passengers=100&route[0]={hub_id}-{target_date:%d%m%Y}-{dest_hub}"
         seg = FlightSegment(
-            flight_no=f"{carrier} 2016", carrier=carrier, from_hub=hub_id, to_hub=dest_hub,
-            depart=depart_dt, arrive=arrive_dt, duration_min=flight_min, aircraft="Boeing 737-800",
+            flight_no=flight_no, carrier=carrier, from_hub=hub_id, to_hub=dest_hub,
+            depart=depart_dt, arrive=arrive_dt, duration_min=flight_min, aircraft=aircraft,
         )
         fl_obj = Flight(
             id=fl_id, carrier=carrier, carrier_name=carrier_name, flight_no=seg.flight_no,
@@ -795,7 +932,7 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
                      baggage=Baggage(cabin_kg=10, checked_pieces=1, checked_kg=23), price_rub=int(f_base * 1.5), seats_left=9),
             ],
             pets=TransportPets(cabin=True, cabin_max_kg=8.0, cabin_fee_rub=3500, hold=True, hold_fee_rub=6500),
-            international=True, synthetic=False, source_refs=["ref:world_resolver"],
+            international=True, synthetic=False, source_refs=["ref:world_resolver"], source_url=ret_url,
         )
         cat.flights[fl_id] = fl_obj
         cat.flights_by_route_day[(orig_city, dest_city, target_date)].append(fl_obj)

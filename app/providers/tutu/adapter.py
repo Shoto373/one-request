@@ -136,6 +136,26 @@ def transport_offer(
         "cancellation_status": conditions.get("refundable"),
     }
     source_url = row.get("search_results_url")
+    if not source_url:
+        if kind == "flight":
+            from_code = search_args.get("origin") or (resolved_places or {}).get("from", {}).get("geo_id") or "MOW"
+            to_code = search_args.get("destination") or (resolved_places or {}).get("to", {}).get("geo_id") or "AER"
+            dep_date = search_args.get("departure_date", "")
+            adults = search_args.get("adults", 1)
+            children = search_args.get("children", 0)
+            infants = search_args.get("infants", 0)
+            pax = f"{adults}{children}{infants}"
+            if dep_date:
+                try:
+                    dt_obj = date.fromisoformat(str(dep_date))
+                    dt_str = dt_obj.strftime("%d%m%Y")
+                    source_url = f"https://avia.tutu.ru/offers/?passengers={pax}&route[0]={from_code}-{dt_str}-{to_code}"
+                except Exception:
+                    source_url = "https://avia.tutu.ru/"
+            else:
+                source_url = "https://avia.tutu.ru/"
+        elif kind == "train":
+            source_url = "https://www.tutu.ru/poezda/"
     offer_id = f"tutu:{kind}:{direction}:{supplier_id}"
     resolved_from = (resolved_places or {}).get("from") or {}
     resolved_to = (resolved_places or {}).get("to") or {}

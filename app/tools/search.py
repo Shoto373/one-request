@@ -69,6 +69,14 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
         return []
     seats = party.paying(f.infant_free_age)
     out = []
+    pax_adults = party.adults
+    pax_infants = party.infants
+    pax_children = max(0, party.children - pax_infants)
+    pax = f"{pax_adults}{pax_children}{pax_infants}"
+    dt_str = f.depart.strftime("%d%m%Y")
+    orig_code = f.from_hub.replace("HUB_", "")
+    dest_code = f.to_hub.replace("HUB_", "")
+    flight_booking_url = f"https://avia.tutu.ru/offers/?passengers={pax}&route[0]={orig_code}-{dt_str}-{dest_code}"
     for fare in f.fares:
         if fare.seats_left < seats:
             continue
@@ -118,6 +126,8 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
                 synthetic=False if is_worldwide_enabled() else f.synthetic,
                 data_mode="live" if is_worldwide_enabled() else "demo",
                 source_refs=[f"flight:{f.id}", *f.source_refs],
+                provider="tutu",
+                source_url=flight_booking_url,
             )
         )
     return out
@@ -126,6 +136,7 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
 def train_offers(t: Train, party: Party) -> list[Offer]:
     seats = party.paying(t.child_free_age)
     out = []
+    train_booking_url = "https://www.tutu.ru/poezda/"
     for car in t.cars:
         if car.seats_left < seats or (party.pets and not car.pets_allowed):
             continue
@@ -165,6 +176,8 @@ def train_offers(t: Train, party: Party) -> list[Offer]:
                 synthetic=False if is_worldwide_enabled() else t.synthetic,
                 data_mode="live" if is_worldwide_enabled() else "demo",
                 source_refs=[f"train:{t.id}", *t.source_refs],
+                provider="tutu",
+                source_url=train_booking_url,
             )
         )
     return out

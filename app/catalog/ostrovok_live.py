@@ -426,19 +426,19 @@ def ensure_ostrovok_hotels(cat: Catalog, city_id: str, fetch_live_network: bool 
     if city_id not in cat.cities:
         return
     existing = cat.hotels_by_city.get(city_id, [])
-    has_synthetic = any(
-        getattr(h, "synthetic", False) or "Центр 3★" in h.name or ("Resort & Spa" in h.name and city_id.lower() in h.id)
+    has_placeholder = any(
+        "Центр 3★" in h.name or ("Resort & Spa" in h.name and (city_id.lower() in h.id or any("world_resolver" in str(r) for r in getattr(h, "source_refs", []))))
         for h in existing
     )
-    if existing and not has_synthetic and city_id in _OSTROVOK_HOTEL_CACHE:
+    if existing and not has_placeholder:
         return
 
     hotels = fetch_live_ostrovok_hotels(cat, city_id, fetch_live_network=fetch_live_network)
     if not hotels:
         return
 
-    # If existing hotels were synthetic placeholders, clear them
-    if has_synthetic:
+    # If existing hotels were placeholder templates, clear them
+    if has_placeholder:
         for old_h in existing:
             cat.hotels.pop(old_h.id, None)
         cat.hotels_by_city[city_id] = []
