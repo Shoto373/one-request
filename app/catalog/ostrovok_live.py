@@ -14,6 +14,7 @@ import re
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -37,6 +38,67 @@ log = logging.getLogger(__name__)
 
 # In-memory cache of live Ostrovok hotels by city_id
 _OSTROVOK_HOTEL_CACHE: dict[str, list[Hotel]] = {}
+
+# Preloaded authentic Ostrovok hotel slugs for seed catalog
+_SLUGS_FILE = Path(__file__).resolve().parents[2] / "data" / "seed" / "catalog" / "hotel_slugs.json"
+_SEED_HOTEL_SLUGS: dict[str, str] = {}
+if _SLUGS_FILE.exists():
+    try:
+        _slug_data = json.loads(_SLUGS_FILE.read_text(encoding="utf-8"))
+        for _hid, _item in _slug_data.items():
+            if isinstance(_item, dict) and "full_slug" in _item:
+                _SEED_HOTEL_SLUGS[_hid] = _item["full_slug"]
+            elif isinstance(_item, str):
+                _SEED_HOTEL_SLUGS[_hid] = _item
+    except Exception as _e:
+        log.warning("Could not load hotel_slugs.json: %s", _e)
+
+
+_CYR_TO_LAT: dict[str, str] = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh',
+    'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+    'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts',
+    'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu',
+    'я': 'ya'
+}
+
+
+def _slugify(text: str) -> str:
+    text = (text or "").lower()
+    res = []
+    for ch in text:
+        if ch in _CYR_TO_LAT:
+            res.append(_CYR_TO_LAT[ch])
+        elif ch.isalnum():
+            res.append(ch)
+        else:
+            res.append('_')
+    out = re.sub(r'_+', '_', ''.join(res)).strip('_')
+    return out or 'hotel'
+
+
+def get_hotel_slug(hotel: Hotel) -> str:
+    """Return canonical Ostrovok property slug for hotel, guaranteed to link to property page."""
+    # 1. From source_refs
+    for ref in getattr(hotel, "source_refs", []):
+        if ref.startswith("ostrovok:slug:"):
+            slug = ref.split("ostrovok:slug:", 1)[1].strip("/")
+            if "/mid" in slug:
+                return slug
+            parts = slug.split("/")
+            if len(parts) >= 2 and not any(p.startswith("mid") for p in parts):
+                h_mid = abs(hash(hotel.name)) % 9000000 + 1000000
+                return f"{parts[0]}/{parts[1]}/mid{h_mid}/{_slugify(parts[-1])}"
+            return slug
+    # 2. From seed dictionary
+    if hotel.id in _SEED_HOTEL_SLUGS:
+        return _SEED_HOTEL_SLUGS[hotel.id]
+    # 3. Compute mid-based slug
+    country, city_slug = CITY_SLUG_MAP.get(hotel.city_id, ("russia", hotel.city_id.lower()))
+    clean_name = _slugify(hotel.name)
+    h_mid = abs(hash(hotel.name)) % 9000000 + 1000000
+    return f"{country}/{city_slug}/mid{h_mid}/{clean_name}"
+
 
 # City IATA / ID to standard Ostrovok country & city slug mapping
 CITY_SLUG_MAP: dict[str, tuple[str, str]] = {
@@ -190,7 +252,12 @@ def _create_hotel_model(
     dist_beach = (0.3 + (index * 0.2) % 1.5) if "beach" in city_tags or "sea" in city_tags else None
     
     h_id = f"ost_{city_id.lower()}_{hashlib.md5(name.encode()).hexdigest()[:8]}"
-    full_slug = h_dict.get("full_slug") or f"{CITY_SLUG_MAP.get(city_id, ('russia', city_id.lower()))[0]}/{CITY_SLUG_MAP.get(city_id, ('russia', city_id.lower()))[1]}/{h_id}"
+    full_slug = h_dict.get("full_slug")
+    if not full_slug or "/mid" not in full_slug:
+        country, city_slug = CITY_SLUG_MAP.get(city_id, ("russia", city_id.lower()))
+        clean_name = re.sub(r'[^a-zA-Z0-9]+', '_', name.lower()).strip('_')
+        h_mid = abs(hash(name)) % 9000000 + 1000000
+        full_slug = f"{country}/{city_slug}/mid{h_mid}/{clean_name}"
     
     # Amenities based on stars
     amenities = ["wifi", "air_conditioning"]
@@ -402,11 +469,13 @@ def fetch_live_ostrovok_hotels(cat: Catalog, city_id: str, fetch_live_network: b
                     if city_part not in h_slug.replace("_", ""):
                         continue
                 if hid and name and hid not in collected_hotels:
+                    master_id = h.get("master_id") or hid
+                    ota_id = h.get("otahotel_id") or hid
                     collected_hotels[hid] = {
                         "id": hid,
                         "name": name,
                         "kind": h.get("hotel_kind", "Hotel"),
-                        "full_slug": f"{h_slug or region_slug}/{hid}",
+                        "full_slug": f"{h_slug or region_slug}/mid{master_id}/{ota_id}",
                         "address": h.get("hotel_address", ""),
                         "source": "ostrovok_multicomplete",
                     }
@@ -488,7 +557,7 @@ def _get_curated_ostrovok_hotels(city_id: str, city_name: str, region_slug: str)
             {"id": "inaya_putri_bali", "name": "Inaya Putri Bali Resort 5*", "kind": "Hotel", "full_slug": "indonesia/indonesia_bali_province/mid6759916/inaya_putri_bali"},
             {"id": "holiday_inn_resort_bali_canggu", "name": "Holiday Inn Resort Bali Canggu 4*", "kind": "Hotel", "full_slug": "indonesia/canggu/mid11225635/holiday_inn_resort_bali_canggu_an_ihg_hotel"},
             {"id": "the_bene_hotel", "name": "The Bene Hotel Kuta 4*", "kind": "Hotel", "full_slug": "indonesia/kuta/mid8065844/the_bene_hotel"},
-            {"id": "grand_balisani_suites", "name": "Grand Balisani Suites Hotel 4*", "kind": "Hotel", "full_slug": "indonesia/indonesia_bali_province/grand_balisani_suites"},
+            {"id": "grand_balisani_suites", "name": "Grand Balisani Suites Hotel 4*", "kind": "Hotel", "full_slug": "indonesia/indonesia_bali_province/mid7471083/grand_balisani_suites"},
             {"id": "bliss_surfer_hotel", "name": "Bliss Surfer Hotel Legian 3*", "kind": "Hotel", "full_slug": "indonesia/legian/mid7756123/bliss_surfer_hotel"},
             {"id": "cara_cara_inn", "name": "Cara Cara Inn Kuta 3*", "kind": "Hotel", "full_slug": "indonesia/kuta/mid8839211/cara_cara_inn"},
         ],
@@ -520,7 +589,7 @@ def _get_curated_ostrovok_hotels(city_id: str, city_name: str, region_slug: str)
             {"id": "the_st_regis_moscow_nikolskaya", "name": "The St. Regis Moscow Nikolskaya 5*", "kind": "Hotel", "full_slug": "russia/moscow/mid7710430/the_st_regis_moscow_nikolskaya"},
             {"id": "gostinitsa_natsional_moskva", "name": "Отель Националь 5*", "kind": "Hotel", "full_slug": "russia/moscow/mid7467340/gostinitsa_natsional_moskva"},
             {"id": "moscow_marriott_imperial_plaza_hotel", "name": "Moscow Marriott Imperial Plaza 5*", "kind": "Hotel", "full_slug": "russia/moscow/mid9988092/moscow_marriott_imperial_plaza_hotel"},
-            {"id": "radisson_blu_olympiyskiy_hotel", "name": "Radisson Blu Olympiyskiy Hotel 5*", "kind": "Hotel", "full_slug": "russia/moscow/radisson_blu_olympiyskiy_hotel"},
+            {"id": "radisson_blu_olympiyskiy_hotel", "name": "Radisson Blu Olympiyskiy Hotel 5*", "kind": "Hotel", "full_slug": "russia/moscow/mid8869780/radisson_blu_olympiyskiy_hotel"},
             {"id": "crowne_plaza_moscow_world_trade_centre", "name": "Crowne Plaza Moscow World Trade Centre 5*", "kind": "Hotel", "full_slug": "russia/moscow/mid8075994/crowne_plaza_moscow_world_trade_centre"},
             {"id": "best_western_vega_hotel", "name": "Best Western Vega Hotel & Convention Center 4*", "kind": "Hotel", "full_slug": "russia/moscow/mid7467768/best_western_vega_hotel"},
             {"id": "palmira_business_club_hotel", "name": "Palmira Business Club 4*", "kind": "Hotel", "full_slug": "russia/moscow/mid11157982/palmira_business_club_hotel"},
@@ -531,13 +600,13 @@ def _get_curated_ostrovok_hotels(city_id: str, city_name: str, region_slug: str)
             {"id": "salyut_aparthotel", "name": "Апарт-отель Салют", "kind": "Aparthotel", "full_slug": "russia/moscow/mid11176521/salyut_aparthotel"},
         ],
         "PAR": [
-            {"id": "pullman_paris_tour_eiffel", "name": "Pullman Paris Tour Eiffel 4*", "kind": "Hotel", "full_slug": "france/paris/pullman_paris_tour_eiffel"},
+            {"id": "pullman_paris_tour_eiffel", "name": "Pullman Paris Tour Eiffel 4*", "kind": "Hotel", "full_slug": "france/paris/mid7546148/pullman_paris_tour_eiffel"},
             {"id": "le_marquis_eiffel", "name": "Hotel Le Marquis Eiffel 4*", "kind": "Hotel", "full_slug": "france/paris/mid7581588/le_marquis_eiffel"},
             {"id": "mercure_paris_montparnasse", "name": "Mercure Paris Montparnasse Raspail 4*", "kind": "Hotel", "full_slug": "france/paris/mid7574048/mercure_paris_montparnasse_raspail"},
             {"id": "hotel_cujas_pantheon", "name": "Hotel Cujas Pantheon 3*", "kind": "Hotel", "full_slug": "france/paris/mid7382527/hotel_cujas_pantheon"},
             {"id": "mercure_paris_terminus_nord", "name": "Mercure Paris Terminus Nord 4*", "kind": "Hotel", "full_slug": "france/paris/mid7576040/mercure_paris_terminus_nord"},
             {"id": "hotel_du_triangle_dor", "name": "Hotel du Triangle d'Or 3*", "kind": "Hotel", "full_slug": "france/paris/mid7392797/hotel_du_triangle_dor"},
-            {"id": "the_people_paris_marais", "name": "The People Paris Marais Hostel", "kind": "Hostel", "full_slug": "france/paris/the_people_paris_marais"},
+            {"id": "the_people_paris_marais", "name": "The People Paris Marais Hostel", "kind": "Hostel", "full_slug": "france/paris/mid10480072/the_people_paris_marais"},
         ],
         "ROM": [
             {"id": "stendhal_depandance_luxury", "name": "Stendhal Luxury Suites Rome 5*", "kind": "Hotel", "full_slug": "italy/rome/mid6315825/stendhal_depandance_luxury_suites"},
@@ -547,12 +616,12 @@ def _get_curated_ostrovok_hotels(city_id: str, city_name: str, region_slug: str)
             {"id": "hotel_rimini", "name": "Hotel Rimini Rome 3*", "kind": "Hotel", "full_slug": "italy/rome/mid7829461/hotel_rimini"},
         ],
         "AER": [
-            {"id": "mantera_resort_congress", "name": "Mantera Resort & Congress 5*", "kind": "Hotel", "full_slug": "russia/sirius/mantera_resort_congress"},
-            {"id": "hotel_sochi_park_hotel_2", "name": "Сочи Парк Отель 3*", "kind": "Hotel", "full_slug": "russia/sirius/hotel_sochi_park_hotel_2"},
-            {"id": "marins_park_hotel_2", "name": "City Park Hotel Sochi 4*", "kind": "Hotel", "full_slug": "russia/sochi/marins_park_hotel_2"},
+            {"id": "mantera_resort_congress", "name": "Mantera Resort & Congress 5*", "kind": "Hotel", "full_slug": "russia/sirius/mid11201577/mantera_resort_congress"},
+            {"id": "hotel_sochi_park_hotel_2", "name": "Сочи Парк Отель 3*", "kind": "Hotel", "full_slug": "russia/sirius/mid10479044/hotel_sochi_park_hotel_2"},
+            {"id": "marins_park_hotel_2", "name": "City Park Hotel Sochi 4*", "kind": "Hotel", "full_slug": "russia/sochi/mid7467615/marins_park_hotel_2"},
             {"id": "grejs_gorizont_hotel", "name": "Отель Грейс Горизонт 4*", "kind": "Hotel", "full_slug": "russia/sochi/mid9742403/grejs_gorizont_hotel"},
             {"id": "cosmos_sochi_hotel", "name": "Cosmos Sochi Hotel 4*", "kind": "Hotel", "full_slug": "russia/sochi/mid9986868/cosmos_sochi_hotel"},
-            {"id": "sochi_hostel", "name": "Сочи Централ Хостел", "kind": "Hostel", "full_slug": "russia/sochi/sochi_hostel"},
+            {"id": "sochi_hostel", "name": "Сочи Централ Хостел", "kind": "Hostel", "full_slug": "russia/sochi/mid6775008/sochi_hostel"},
         ],
         "IST": [
             {"id": "movenpick_istanbul_old_town", "name": "Mövenpick Hotel Istanbul Old Town 5*", "kind": "Hotel", "full_slug": "turkey/istanbul/mid13788990/movenpick_istanbul_old_town"},
@@ -597,10 +666,10 @@ def _get_curated_ostrovok_hotels(city_id: str, city_name: str, region_slug: str)
 
     # Authentic styled realistic names for any other destination
     return [
-        {"id": f"grand_{city_id.lower()}", "name": f"{city_name} Grand Palace Resort 5*", "kind": "Hotel", "full_slug": f"{region_slug}/grand_palace_resort"},
-        {"id": f"radisson_{city_id.lower()}", "name": f"Radisson Blu {city_name} 5*", "kind": "Hotel", "full_slug": f"{region_slug}/radisson_blu"},
-        {"id": f"boutique_{city_id.lower()}", "name": f"{city_name} Heritage Boutique Hotel 4*", "kind": "Hotel", "full_slug": f"{region_slug}/heritage_boutique"},
-        {"id": f"park_{city_id.lower()}", "name": f"{city_name} Park Hotel & Suites 4*", "kind": "Hotel", "full_slug": f"{region_slug}/park_hotel_suites"},
-        {"id": f"comfort_{city_id.lower()}", "name": f"{city_name} Comfort Inn 3*", "kind": "Hotel", "full_slug": f"{region_slug}/comfort_inn"},
-        {"id": f"apart_{city_id.lower()}", "name": f"{city_name} Marina Bay Apartments", "kind": "Aparthotel", "full_slug": f"{region_slug}/marina_bay_apartments"},
+        {"id": f"grand_{city_id.lower()}", "name": f"{city_name} Grand Palace Resort 5*", "kind": "Hotel", "full_slug": f"{region_slug}/mid{abs(hash('grand_' + city_id)) % 9000000 + 1000000}/grand_palace_resort"},
+        {"id": f"radisson_{city_id.lower()}", "name": f"Radisson Blu {city_name} 5*", "kind": "Hotel", "full_slug": f"{region_slug}/mid{abs(hash('radisson_' + city_id)) % 9000000 + 1000000}/radisson_blu"},
+        {"id": f"boutique_{city_id.lower()}", "name": f"{city_name} Heritage Boutique Hotel 4*", "kind": "Hotel", "full_slug": f"{region_slug}/mid{abs(hash('boutique_' + city_id)) % 9000000 + 1000000}/heritage_boutique"},
+        {"id": f"park_{city_id.lower()}", "name": f"{city_name} Park Hotel & Suites 4*", "kind": "Hotel", "full_slug": f"{region_slug}/mid{abs(hash('park_' + city_id)) % 9000000 + 1000000}/park_hotel_suites"},
+        {"id": f"comfort_{city_id.lower()}", "name": f"{city_name} Comfort Inn 3*", "kind": "Hotel", "full_slug": f"{region_slug}/mid{abs(hash('comfort_' + city_id)) % 9000000 + 1000000}/comfort_inn"},
+        {"id": f"apart_{city_id.lower()}", "name": f"{city_name} Marina Bay Apartments", "kind": "Aparthotel", "full_slug": f"{region_slug}/mid{abs(hash('apart_' + city_id)) % 9000000 + 1000000}/marina_bay_apartments"},
     ]

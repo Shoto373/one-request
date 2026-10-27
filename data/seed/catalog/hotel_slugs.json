@@ -1,0 +1,338 @@
+{
+  "h_AER_03": {
+    "name": "Mercure Sochi Centre",
+    "city_id": "AER",
+    "full_slug": "russia/sochi/mid13382339/hotel_mercure_sochi_centre",
+    "ostrovok_name": "Отель Меркюр Сочи Центр"
+  },
+  "h_AER_04": {
+    "name": "Azimut Парк Отель Виноградная",
+    "city_id": "AER",
+    "full_slug": "russia/sochi/mid13429040/hotel_azimut_park_hotel_plyus_rezidens_sochi",
+    "ostrovok_name": "AZIMUT Парк Отель Виноградная Сочи 4*"
+  },
+  "h_AER_05": {
+    "name": "Жемчужина",
+    "city_id": "AER",
+    "full_slug": "russia/sochi/mid7374217/zhemchuzhina_hotel_complex",
+    "ostrovok_name": "Гостиничный Комплекс Жемчужина"
+  },
+  "h_AER_07": {
+    "name": "Lavicon apart Sochi",
+    "city_id": "AER",
+    "full_slug": "russia/sochi/mid13947452/s_balkonom_v_lavicon_hotel_fregat_adler_4_apartments",
+    "ostrovok_name": "Апартаменты с балконом в Lavicon Отель Фрегат Адлер 4*"
+  },
+  "h_KGD_01": {
+    "name": "Калининград",
+    "city_id": "KGD",
+    "full_slug": "russia/kaliningrad/mid7386924/radisson_hotel_kaliningrad",
+    "ostrovok_name": "Отель Radisson Blu, Калининград"
+  },
+  "h_KGD_02": {
+    "name": "Рэдиссон Калининград",
+    "city_id": "KGD",
+    "full_slug": "russia/kaliningrad/mid7386924/radisson_hotel_kaliningrad",
+    "ostrovok_name": "Отель Radisson Blu, Калининград"
+  },
+  "h_KGD_03": {
+    "name": "Золотая бухта",
+    "city_id": "KGD",
+    "full_slug": "russia/kaliningrad/mid7853687/zolotaya_buhta_hotel",
+    "ostrovok_name": "Гостиница Золотая Бухта"
+  },
+  "h_KGD_04": {
+    "name": "Дона",
+    "city_id": "KGD",
+    "full_slug": "russia/kaliningrad/mid7446657/dona_hotel",
+    "ostrovok_name": "Отель Дона"
+  },
+  "h_KGD_05": {
+    "name": "Отель RiverSide",
+    "city_id": "KGD",
+    "full_slug": "russia/kaliningrad/mid6497980/hotel_riverside_",
+    "ostrovok_name": "Отель РиверСайд"
+  },
+  "h_KGD_06": {
+    "name": "Москва",
+    "city_id": "KGD",
+    "full_slug": "russia/kaliningrad/mid13647475/hotel_moskva_5",
+    "ostrovok_name": "Отель Москва"
+  },
+  "h_KGD_07": {
+    "name": "Ибис",
+    "city_id": "KGD",
+    "full_slug": "russia/kaliningrad/mid7999515/hotel_ibis_kaliningrad_center",
+    "ostrovok_name": "Отель Ibis Калининград Центр"
+  },
+  "h_KZN_01": {
+    "name": "Courtyard by Marriott Kazan Kremlin",
+    "city_id": "KZN",
+    "full_slug": "russia/kazan/mid7805012/courtyard_by_marriott_kazan_kremlin",
+    "ostrovok_name": "Отель Cort Inn Казань Кремль (ex Courtyard by Marriott)"
+  },
+  "h_KZN_02": {
+    "name": "DoubleTree",
+    "city_id": "KZN",
+    "full_slug": "russia/kazan/mid6634118/doubletree_hilton_kazan_city_center",
+    "ostrovok_name": "Гостиница DoubleTree by Hilton Kazan City Center"
+  },
+  "h_KZN_03": {
+    "name": "Шаляпин Палас Отель",
+    "city_id": "KZN",
+    "full_slug": "russia/kazan/mid7467279/shalyapin_palace_hotel",
+    "ostrovok_name": "Шаляпин Палас Отель"
+  },
+  "h_KZN_04": {
+    "name": "Амакс Сафар",
+    "city_id": "KZN",
+    "full_slug": "russia/kazan/mid7820380/amaks_safar_hotel",
+    "ostrovok_name": "Отель Амакс Сафар"
+  },
+  "h_KZN_05": {
+    "name": "Регина",
+    "city_id": "KZN",
+    "full_slug": "russia/kazan/mid7848232/reginapeterburgskaya_hotel_",
+    "ostrovok_name": "Гостиница Регина - Петербургская"
+  },
+  "h_KZN_06": {
+    "name": "Джузеппе",
+    "city_id": "KZN",
+    "full_slug": "russia/kazan/mid7467785/dzhuzeppe_hotel",
+    "ostrovok_name": "Отель Джузеппе"
+  },
+  "h_KZN_07": {
+    "name": "Cosmos",
+    "city_id": "KZN",
+    "full_slug": "russia/kazan/mid7382449/park_inn_kazan",
+    "ostrovok_name": "Отель Космос Казань"
+  },
+  "h_IST_01": {
+    "name": "Hampton by Hilton Istanbul Sirkeci",
+    "city_id": "IST",
+    "full_slug": "turkey/istanbul/mid11176529/hampton_by_hilton_istanbul_sirkeci",
+    "ostrovok_name": "Hampton By Hilton Istanbul Sirkeci"
+  },
+  "h_IST_02": {
+    "name": "DoubleTree by Hilton Hotel Istanbul - Old Town",
+    "city_id": "IST",
+    "full_slug": "turkey/istanbul/mid7377740/dt_by_hilton_istanbul__old_city",
+    "ostrovok_name": "Отель Doubletree By Hilton Istanbul Old Town"
+  },
+  "h_IST_03": {
+    "name": "Hagia Sofia Mansions Istanbul, Curio Collection by Hilton",
+    "city_id": "IST",
+    "full_slug": "turkey/istanbul/mid8902690/hagia_sofia_mansions",
+    "ostrovok_name": "Отель Hagia Sofia Mansions Istanbul, Curio Collection by Hilton"
+  },
+  "h_IST_04": {
+    "name": "Grand Hyatt Istanbul",
+    "city_id": "IST",
+    "full_slug": "turkey/istanbul/mid7775272/grand_hyatt_istanbul_2",
+    "ostrovok_name": "Grand Hyatt Istanbul"
+  },
+  "h_IST_05": {
+    "name": "Angel's Home Hotel",
+    "city_id": "IST",
+    "full_slug": "turkey/istanbul/mid7478529/angels_home_hotel",
+    "ostrovok_name": "Отель Angel's Home"
+  },
+  "h_IST_06": {
+    "name": "Marlon Hotel",
+    "city_id": "IST",
+    "full_slug": "turkey/istanbul/mid13678483/marlon_hotel",
+    "ostrovok_name": "Отель Marlon"
+  },
+  "h_IST_07": {
+    "name": "DoubleTree by Hilton Istanbul - Piyalepasa",
+    "city_id": "IST",
+    "full_slug": "turkey/istanbul/mid6679026/doubletree_by_hilton_piyalepasa",
+    "ostrovok_name": "DoubleTree by Hilton Hotel Istanbul - Piyalepasa"
+  },
+  "h_AYT_01": {
+    "name": "DoubleTree by Hilton Antalya City Centre",
+    "city_id": "AYT",
+    "full_slug": "turkey/antalya/mid9211004/doubletree_by_hilton_antalya_city_centre",
+    "ostrovok_name": "DoubleTree By Hilton Antalya City Centre"
+  },
+  "h_AYT_03": {
+    "name": "Hampton by Hilton Antalya Airport",
+    "city_id": "AYT",
+    "full_slug": "turkey/antalya/mid10858889/hampton_by_hilton_antalya_airport",
+    "ostrovok_name": "Hampton By Hilton Antalya Airport"
+  },
+  "h_AYT_04": {
+    "name": "Sky Business Hotel",
+    "city_id": "AYT",
+    "full_slug": "turkey/antalya/mid8754197/basaran_business_hotel",
+    "ostrovok_name": "Sky Business Hotel"
+  },
+  "h_AYT_06": {
+    "name": "Eva Butik Otel",
+    "city_id": "AYT",
+    "full_slug": "turkey/antalya/mid10111239/eva_boutique_hotel_spa_2",
+    "ostrovok_name": "Бутик-отель EVA Boutique Hotel"
+  },
+  "h_AYT_07": {
+    "name": "Atan Park Hotel",
+    "city_id": "AYT",
+    "full_slug": "turkey/antalya/mid7460124/atan_park_hotel",
+    "ostrovok_name": "Atan Park Hotel"
+  },
+  "h_SSH_02": {
+    "name": "Park Regency Sharm El Sheikh Resort",
+    "city_id": "SSH",
+    "full_slug": "egypt/sharm_el_sheikh/mid7855668/hyatt_regency_sharm_el_sheikh",
+    "ostrovok_name": "Park Regency Sharm El Sheikh Resort"
+  },
+  "h_SSH_03": {
+    "name": "Safir Sharm Waterfalls Resort",
+    "city_id": "SSH",
+    "full_slug": "egypt/sharm_el_sheikh/mid7599220/hilton_waterfalls_resort_3",
+    "ostrovok_name": "Курортный Отель Safir Sharm Waterfalls Resort"
+  },
+  "h_SSH_04": {
+    "name": "Naama Blue Hotel",
+    "city_id": "SSH",
+    "full_slug": "egypt/sharm_el_sheikh/mid6471417/falcon_naama_blue",
+    "ostrovok_name": "Naama Blue hotel"
+  },
+  "h_SSH_05": {
+    "name": "Aqua Blu Resort",
+    "city_id": "SSH",
+    "full_slug": "egypt/hurghada/mid8445288/pickalbatros_sea_world_resort__all_inclusive",
+    "ostrovok_name": "Pickalbatros Aqua Blu Resort - Hurghada"
+  },
+  "h_SSH_06": {
+    "name": "Renaissance Sharm El Sheikh Golden View Beach Resort",
+    "city_id": "SSH",
+    "full_slug": "egypt/sharm_el_sheikh/mid7459029/renaissance_sharm_el_sheikh_golden_view_beach_resort",
+    "ostrovok_name": "Renaissance Sharm El Sheikh Golden View Beach Resort"
+  },
+  "h_DXB_02": {
+    "name": "DoubleTree by Hilton Dubai - Business Bay",
+    "city_id": "DXB",
+    "full_slug": "united_arab_emirates/dubai/mid8719189/doubletree_by_hilton_dubai_business_bay",
+    "ostrovok_name": "Отель Double Tree by Hilton Dubai Business Bay"
+  },
+  "h_DXB_03": {
+    "name": "Hilton Garden Inn Dubai Business Bay",
+    "city_id": "DXB",
+    "full_slug": "united_arab_emirates/dubai/mid11222348/hilton_garden_inn_dubai_business_bay",
+    "ostrovok_name": "Hilton Garden Inn Dubai Business Bay"
+  },
+  "h_DXB_04": {
+    "name": "Raffles Dubai",
+    "city_id": "DXB",
+    "full_slug": "united_arab_emirates/dubai/mid9932390/raffles_the_palm_opening_october_2021",
+    "ostrovok_name": "Raffles The Palm Dubai"
+  },
+  "h_DXB_05": {
+    "name": "Waldorf Astoria Dubai International Financial Centre",
+    "city_id": "DXB",
+    "full_slug": "united_arab_emirates/dubai/mid8948003/waldorf_astoria_dubai_international_financial_centre",
+    "ostrovok_name": "Waldorf Astoria Dubai International Financial Centre"
+  },
+  "h_DXB_07": {
+    "name": "JW Marriott Marquis Hotel",
+    "city_id": "DXB",
+    "full_slug": "united_arab_emirates/dubai/mid7700636/jw_marriott_marquis_hotel_dubai",
+    "ostrovok_name": "JW Marriott Marquis Hotel Dubai"
+  },
+  "h_EVN_01": {
+    "name": "Ибис",
+    "city_id": "EVN",
+    "full_slug": "armenia/yerevan/mid8680701/ibis_yerevan_center",
+    "ostrovok_name": "ibis Yerevan Center "
+  },
+  "h_EVN_02": {
+    "name": "Ани Плаза",
+    "city_id": "EVN",
+    "full_slug": "armenia/yerevan/mid7752500/ani_plaza_hotel",
+    "ostrovok_name": "Отель Ани Плаза"
+  },
+  "h_EVN_03": {
+    "name": "The Alexander",
+    "city_id": "EVN",
+    "full_slug": "armenia/yerevan/mid11227174/hotel_the_alexander_a_luxury_collection_hotel",
+    "ostrovok_name": "The Alexander, a Luxury Collection Hotel"
+  },
+  "h_EVN_04": {
+    "name": "Holiday Inn Express Yerevan",
+    "city_id": "EVN",
+    "full_slug": "armenia/yerevan/mid8905200/holiday_inn_express_yerevan",
+    "ostrovok_name": "Holiday Inn Express - Yerevan by IHG"
+  },
+  "h_EVN_05": {
+    "name": "Radisson Blu",
+    "city_id": "EVN",
+    "full_slug": "armenia/yerevan/mid8473020/radisson_blu_hotel_yerevan",
+    "ostrovok_name": "Radisson Blu Hotel, Yerevan"
+  },
+  "h_EVN_06": {
+    "name": "Хилтон",
+    "city_id": "EVN",
+    "full_slug": "armenia/yerevan/mid11245773/doubletree_by_hilton_hotel_yerevan_city_centre_2",
+    "ostrovok_name": "DoubleTree by Hilton Hotel Yerevan City Centre"
+  },
+  "h_EVN_07": {
+    "name": "Наири Отель Ереван",
+    "city_id": "EVN",
+    "full_slug": "armenia/yerevan/mid13315419/hotel_nairi_yerevan",
+    "ostrovok_name": "Отель Nairi Yerevan"
+  },
+  "h_AER_01": {
+    "name": "Hyatt Regency Sochi",
+    "city_id": "AER",
+    "full_slug": "russia/sochi/mid7124982/grand_karat_sochi",
+    "ostrovok_name": "Отель Гранд Карат Сочи"
+  },
+  "h_AER_02": {
+    "name": "Marina Yacht by Stellar",
+    "city_id": "AER",
+    "full_slug": "russia/sochi/mid13531126/marina_yacht_by_stellar_hotels_sochi",
+    "ostrovok_name": "Отель Marina Yacht by Stellar"
+  },
+  "h_AER_06": {
+    "name": "Каникулы в Сочи",
+    "city_id": "AER",
+    "full_slug": "russia/sochi/mid11176211/kanikuly_v_sochi",
+    "ostrovok_name": "Отель Каникулы в Сочи"
+  },
+  "h_AYT_02": {
+    "name": "Puding Marina Residence",
+    "city_id": "AYT",
+    "full_slug": "turkey/antalya/mid7456782/puding_marina_residence",
+    "ostrovok_name": "Puding Marina Residence"
+  },
+  "h_AYT_05": {
+    "name": "Marmara Otel Antalya",
+    "city_id": "AYT",
+    "full_slug": "turkey/antalya/mid7458129/the_marmara_antalya",
+    "ostrovok_name": "The Marmara Antalya"
+  },
+  "h_SSH_01": {
+    "name": "DoubleTree by Hilton Sharm El Sheikh",
+    "city_id": "SSH",
+    "full_slug": "egypt/sharm_el_sheikh/mid7456382/doubletree_by_hilton_sharm_el_sheikh_sharks_bay_resort",
+    "ostrovok_name": "DoubleTree by Hilton Sharks Bay Resort"
+  },
+  "h_SSH_07": {
+    "name": "Sunrise White Hills",
+    "city_id": "SSH",
+    "full_slug": "egypt/sharm_el_sheikh/mid11195678/sunrise_white_hills_resort",
+    "ostrovok_name": "Sunrise White Hills Resort"
+  },
+  "h_DXB_01": {
+    "name": "Hilton Garden Inn Dubai Jumeirah",
+    "city_id": "DXB",
+    "full_slug": "united_arab_emirates/dubai/mid7756192/hilton_garden_inn_dubai_al_mina",
+    "ostrovok_name": "Hilton Garden Inn Dubai Al Mina"
+  },
+  "h_DXB_06": {
+    "name": "La Quinta by Wyndham Bur Dubai",
+    "city_id": "DXB",
+    "full_slug": "united_arab_emirates/dubai/mid9945123/la_quinta_by_wyndham_bur_dubai",
+    "ostrovok_name": "La Quinta by Wyndham Bur Dubai"
+  }
+}

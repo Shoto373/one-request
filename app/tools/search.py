@@ -307,6 +307,14 @@ OSTROVOK_DESTINATIONS = {
 }
 
 
+def build_ostrovok_hotel_url(h: Hotel, checkin: date, checkout: date, guests: int) -> str:
+    """Build a direct booking URL leading to the specific hotel property page on Ostrovok."""
+    from app.catalog.ostrovok_live import get_hotel_slug
+    slug = get_hotel_slug(h)
+    dates_str = f"{checkin.strftime('%d.%m.%Y')}-{checkout.strftime('%d.%m.%Y')}"
+    return f"https://ostrovok.ru/hotel/{slug}/?dates={dates_str}&guests={guests}"
+
+
 def hotel_offers(h: Hotel, checkin: date, checkout: date, party: Party, tz: str) -> list[Offer]:
     nights = (checkout - checkin).days
     if nights < 1 or not hotel_available(h, checkin, checkout) or not hotel_accepts_pets(h, party):
@@ -377,15 +385,7 @@ def hotel_offers(h: Hotel, checkin: date, checkout: date, party: Party, tz: str)
                     synthetic=False,
                     source_refs=[f"hotel:{h.id}", *h.source_refs],
                     provider="ostrovok",
-                    source_url=(
-                        f"https://ostrovok.ru/hotel/{next((ref.split('ostrovok:slug:', 1)[1] for ref in h.source_refs if ref.startswith('ostrovok:slug:')), None)}/?dates={checkin.strftime('%d.%m.%Y')}-{checkout.strftime('%d.%m.%Y')}&guests={party.adults}"
-                        if any(ref.startswith("ostrovok:slug:") for ref in h.source_refs)
-                        else (
-                            f"https://ostrovok.ru/hotel/{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[0]}/"
-                            f"{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[1]}/"
-                            f"?q={urllib.parse.quote(h.name)}&dates={checkin.strftime('%d.%m.%Y')}-{checkout.strftime('%d.%m.%Y')}&guests={party.adults}"
-                        )
-                    ),
+                    source_url=build_ostrovok_hotel_url(h, checkin, checkout, party.adults),
                 )
             )
     return out
