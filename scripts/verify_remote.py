@@ -39,12 +39,15 @@ def test_query(text):
             prov = item.get("provider")
             src_url = item.get("source_url")
             legs = item.get("variant", {}).get("legs", [])
-            print(f"    Item ({kind}, {prov}): {item.get('title')} -> {item.get('total_rub')} RUB")
+            title = item.get('title', '').encode('ascii', 'replace').decode('ascii')
+            print(f"    Item ({kind}, {prov}): {title} -> {item.get('total_rub')} RUB")
             print(f"      source_url: {src_url}")
             if legs:
                 print(f"      Legs ({len(legs)}):")
                 for leg in legs:
-                    print(f"        - {leg.get('mode') or 'leg'}: {leg.get('from')} -> {leg.get('to')} | {leg.get('duration_min')} min | {leg.get('price_rub')} RUB | url: {leg.get('source_url')}")
+                    f_name = str(leg.get('from')).encode('ascii', 'replace').decode('ascii')
+                    t_name = str(leg.get('to')).encode('ascii', 'replace').decode('ascii')
+                    print(f"        - {leg.get('mode') or 'leg'}: {f_name} -> {t_name} | {leg.get('duration_min')} min | {leg.get('price_rub')} RUB | url: {leg.get('source_url')}")
 
 if __name__ == "__main__":
     test_query("хочу из Рязани в Париж с 10 по 15 ноября, 1 взрослый")
