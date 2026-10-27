@@ -194,10 +194,12 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
     if notes:
         return BuildResult([], notes)
 
-    k = 3 if variants > 1 else 1
+    k = 8 if variants > 1 else 1
     tops = {"cheap": _TopK(k)}
     if variants > 1:
-        tops["comfort"], tops["flex"] = _TopK(k), _TopK(k)
+        tops["comfort"] = _TopK(k)
+        tops["luxury"] = _TopK(k)
+        tops["flex"] = _TopK(k)
     tz = ZoneInfo(cat.cities[q.dest_city].timezone)
     hotels_by_checkin: dict[date, list[Offer]] = {}
     cheapest_any: int | None = None
@@ -211,7 +213,7 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
                 found = search_hotels(cat, q.dest_city, checkin, q.return_date, q.party) if checkin < q.return_date else []
                 found = [h for h in found if hotel_fits(cat, h, q)]
                 if variants > 1:
-                    cheap_cands = found[:12]
+                    cheap_cands = found[:6]
                     comfort_cands = sorted(
                         found,
                         key=lambda o: (
@@ -221,14 +223,14 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
                             cat.hotels[o.item_id].dist_center_km,
                             o.total_rub,
                         ),
-                    )[:12]
+                    )[:6]
                     flex_cands = sorted(
                         [o for o in found if o.variant.get("refundable")],
                         key=lambda o: (
                             -(cat.hotels[o.item_id].rating or 0),
                             o.total_rub,
                         ),
-                    )[:8]
+                    )[:4]
                     seen_off_ids = set()
                     pool = []
                     for o in cheap_cands + comfort_cands + flex_cands:
@@ -241,9 +243,6 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
         hotels = [h for c in checkins for h in hotels_by_checkin[c]]
         for hotel in hotels:
             for back in backs:
-                # Every objective is the total plus a non-negative penalty: the total is a lower bound.
-                if out.total_rub + hotel.total_rub + back.total_rub >= max(t.bound for t in tops.values()):
-                    break  # backs are sorted: nothing better further on
                 items, checks = _assemble(cat, q, out, hotel, back)
                 total = sum(o.total_rub for o in items)
                 blocked = [c for c in checks if c.status == "block"]
@@ -255,8 +254,20 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
                 cand = _Candidate(total, items, checks)
                 tops["cheap"].push(total, cand)
                 if variants > 1:
-                    tops["comfort"].push(total + comfort_penalty(cat, items, checks, q.party, q), cand)
-                    tops["flex"].push(total + FLEX_WEIGHT * cancel_loss(items), cand)
+                    h_obj = cat.hotels.get(hotel.item_id)
+                    stars = (h_obj.stars or 3) if h_obj else 3
+                    pen = comfort_penalty(cat, items, checks, q.party, q)
+                    tops["comfort"].push(total + pen, cand)
+                    if stars >= 5:
+                        tops["luxury"].push(total, cand)
+                    if hotel.variant.get("refundable"):
+                        tops["flex"].push(total + FLEX_WEIGHT * cancel_loss(items), cand)
+                elif len(tops["cheap"].items) >= 1:
+                    break
+            if variants == 1 and len(tops["cheap"].items) >= 1:
+                break
+        if variants == 1 and len(tops["cheap"].items) >= 1:
+            break
     if not any(hotels_by_checkin.values()):
         extra = []
         if q.party.pets:
@@ -278,18 +289,41 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
             notes.append(f"Ни одно сочетание транспорта и отеля не прошло проверку ({reasons}).")
         return BuildResult([], notes, cheapest_total_rub=cheapest_any)
 
+    def _hotel_id_of(c: _Candidate) -> str | None:
+        return next((i.item_id for i in c.items if i.kind == "hotel"), None)
+
+    # Bundle 1: cheapest/value
+    h1 = _hotel_id_of(cheapest)
     bundles = [_bundle("b1", "дешевле", cheapest, cheapest_phrase(cheapest.items))]
     taken = {cheapest.key}
+    taken_hotels = {h1} if h1 else set()
+
     if variants > 1:
-        comfortable = tops["comfort"].first_not_in(taken)
-        if comfortable is not None:
-            label = comfort_label(q.party, q.max_stops == 0, q)
-            bundles.append(_bundle("b2", label, comfortable, comfort_phrase(cat, comfortable.items, cheapest.items)))
+        # Bundle 2: Comfort (guaranteed different hotel, preferably 4★ or higher)
+        comfort_pool = [c for _, c in tops["comfort"].items if c.key not in taken and _hotel_id_of(c) not in taken_hotels]
+        comfortable = comfort_pool[0] if comfort_pool else tops["comfort"].first_not_in(taken)
+        if comfortable is not None and comfortable.key not in taken:
+            h2 = _hotel_id_of(comfortable)
+            b2_label = "удобнее с ребёнком" if q.party.children_ages else "удобнее"
+            bundles.append(_bundle("b2", b2_label, comfortable, comfort_phrase(cat, comfortable.items, cheapest.items)))
             taken.add(comfortable.key)
-        flexible = tops["flex"].first_not_in(taken)
-        if flexible is not None and cancel_loss(flexible.items) < cancel_loss(cheapest.items):
-            bundles.append(_bundle(f"b{len(bundles) + 1}", "гибче отмена", flexible,
-                                   flex_phrase(flexible.items, cheapest.items)))
+            if h2:
+                taken_hotels.add(h2)
+
+        # Bundle 3: Luxury or Flex (guaranteed third distinct hotel)
+        lux_pool = [c for _, c in tops["luxury"].items if c.key not in taken and _hotel_id_of(c) not in taken_hotels]
+        flex_pool = [c for _, c in tops["flex"].items if c.key not in taken and _hotel_id_of(c) not in taken_hotels]
+        other_pool = [c for _, c in tops["cheap"].items if c.key not in taken and _hotel_id_of(c) not in taken_hotels]
+
+        third = lux_pool[0] if lux_pool else (flex_pool[0] if flex_pool else (other_pool[0] if other_pool else tops["flex"].first_not_in(taken)))
+        if third is None:
+            third = tops["cheap"].first_not_in(taken)
+
+        if third is not None and third.key not in taken:
+            h3 = _hotel_id_of(third)
+            b3_label = "гибче отмена" if cancel_loss(third.items) < cancel_loss(cheapest.items) else "альтернатива"
+            bundles.append(_bundle(f"b{len(bundles) + 1}", b3_label, third,
+                                   flex_phrase(third.items, cheapest.items)))
     return BuildResult(bundles, notes, cheapest_total_rub=cheapest.total)
 
 

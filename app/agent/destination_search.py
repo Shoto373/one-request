@@ -22,8 +22,8 @@ class ConfirmedAlternative(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: str
     label: str
-    confirmed: bool
-    changes: list[AlternativeChange] = Field(min_length=1)
+    confirmed: bool = False
+    changes: list[AlternativeChange] = Field(default_factory=list)
     refs: list[str] = Field(default_factory=list)
     evidence: list[dict[str, Any]] = Field(default_factory=list)
 

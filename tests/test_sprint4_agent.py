@@ -82,7 +82,8 @@ def test_english_budget_reduction_without_amount_asks_instead_of_guessing():
 
 
 @pytest.mark.asyncio
-async def test_anywhere_keeps_configured_sochi_destination_and_asks_for_origin():
+async def test_anywhere_keeps_configured_sochi_destination_and_asks_for_origin(monkeypatch):
+    monkeypatch.setenv("WORLDWIDE_MODE", "false")
     parsed = ParsedRequest(requirements=[
         Requirement(key="travel_month", value=11, kind="hard", source="user_text", quote="November"),
         Requirement(key="budget_preference", value="low_cost", kind="soft", source="user_text", quote="cheap"),

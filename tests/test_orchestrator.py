@@ -37,7 +37,8 @@ def bundle():
 
 
 @pytest.mark.asyncio
-async def test_product_destination_scope_rejects_text_and_ui_commands():
+async def test_product_destination_scope_rejects_text_and_ui_commands(monkeypatch):
+    monkeypatch.setenv("WORLDWIDE_MODE", "false")
     calls = []
     def builder(requirements, _state):
         calls.append(requirements)

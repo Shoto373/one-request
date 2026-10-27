@@ -178,7 +178,8 @@ async def test_accepting_confirmed_alternative_applies_exact_change_and_searches
 
 
 @pytest.mark.asyncio
-async def test_destination_outside_configured_coverage_is_rejected_even_if_alternative_exists():
+async def test_destination_outside_configured_coverage_is_rejected_even_if_alternative_exists(monkeypatch):
+    monkeypatch.setenv("WORLDWIDE_MODE", "false")
     text = "Из Москвы в Дубай 10–17 ноября 2026, трое взрослых, строго 30 000 рублей на всю поездку."
     parsed = ParsedRequest(requirements=[
         req("origin", "Москва", quote="Из Москвы"), req("destination", "Дубай", quote="в Дубай"),

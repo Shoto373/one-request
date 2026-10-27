@@ -328,6 +328,24 @@ def _same_offer(a: Offer, b: Offer) -> bool:
 def current_offer(cat: Catalog, o: Offer, party: Party) -> Offer | None:
     """The same offer priced again from the catalog now (None if it no longer exists)."""
     if o.kind == "flight":
+        if o.variant.get("intermodal"):
+            from app.planning.intermodal import find_nearest_hub, make_intermodal_outbound, make_intermodal_inbound
+            f = cat.flights.get(o.item_id)
+            if f is None:
+                return None
+            base_cands = flight_offers(f, party)
+            base_offer = next((c for c in base_cands if c.variant.get("fare") == o.variant.get("fare")), None)
+            if base_offer is None:
+                base_offer = base_cands[0] if base_cands else None
+            if base_offer is None:
+                return None
+            is_out = "out" in o.offer_id
+            hub_conn = find_nearest_hub(cat, o.origin_city if is_out else o.destination_city)
+            if is_out:
+                cand = make_intermodal_outbound(base_offer, hub_conn, party, o.origin_city, o.destination_city)
+            else:
+                cand = make_intermodal_inbound(base_offer, hub_conn, party, o.origin_city, o.destination_city)
+            return cand
         f = cat.flights.get(o.item_id)
         cands = flight_offers(f, party) if f else []
     elif o.kind == "train":

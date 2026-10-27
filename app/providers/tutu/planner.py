@@ -165,7 +165,8 @@ def _origin_for_provider(requirements: dict[str, Any]) -> str:
     city_id = resolve_city(cat, raw)
     if city_id in cat.cities:
         city = cat.cities[city_id]
-        if city.country_code != "RU":
+        is_cyrillic = bool(re.search(r"[а-яё]", city.name.lower()))
+        if city.country_code and city.country_code not in ("RU", "XX") and not is_cyrillic:
             raise TutuOriginOutsideRussia(
                 f"Город отправления «{city.name}» находится вне России. В прототипе можно указать город отправления в России."
             )

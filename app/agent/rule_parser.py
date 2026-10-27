@@ -29,6 +29,11 @@ CITIES: dict[str, tuple[str, ...]] = {
     "Шарм-эль-Шейх": ("шарм", "sharm"),
     "Дубай": ("дубай", "дубае", "дубая", "dubai"),
     "Ереван": ("ереван", "yerevan"),
+    "Париж": ("париж", "paris"),
+    "Прага": ("праг", "prague", "praha"),
+    "Рим": ("рим", "rome", "roma"),
+    "Инсбрук": ("инсбрук", "innsbruck"),
+    "Рязань": ("рязан", "ryazan"),
 }
 # places the user may name that are not in the catalog: kept as destination so the agent answers honestly
 FOREIGN_HINT = re.compile(r"(?:\bв|\bto)\s+([A-ZА-ЯЁ][\w\-ёЁ]+)")
@@ -70,14 +75,22 @@ def _req(key: str, value, kind: str, quote: str | None, label: str | None = None
 
 
 NON_CITY_WORDS = re.compile(
-    r"^(?:\d|ноч|дн|сут|недел|выходн|weekend|человек|взросл|ребен|дет|двоих|троих|руб|тыс|бюджет|январ|феврал|март|апрел|ма[йея]|июн|июл|август|сентябр|октябр|ноябр|декабр|поездк|отпуск|тур|билет|отел)",
+    r"^(?:\d|центр|ноч|дн|сут|недел|выходн|weekend|человек|взросл|ребен|дет|двоих|троих|руб|тыс|бюджет|январ|феврал|март|апрел|ма[йея]|июн|июл|август|сентябр|октябр|ноябр|декабр|поездк|отпуск|тур|билет|отел)",
+    re.I,
+)
+
+
+COMMAND_WORDS = re.compile(
+    r"\b(предложи|покажи|найди|выбери|давай|ищу|нужен|нужно|можно|вариант\w*|отел\w*|комнаты?|номер\w*|разны\w*|лучш\w*|дешев\w*|дорог\w*)\b",
     re.I,
 )
 
 
 def _find_city(fragment: str) -> str | None:
     f = fragment.lower().strip()
-    if not f or NON_CITY_WORDS.search(f) or "," in fragment:
+    if not f or NON_CITY_WORDS.search(f) or COMMAND_WORDS.search(f) or "," in fragment:
+        return None
+    if len(f.split()) > 2:
         return None
     from app.planning.landmarks import resolve_landmark
     lm = resolve_landmark(f)
@@ -147,17 +160,55 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
     if lm:
         put(_req("destination", lm["city"], "hard", lm["quote"], label=f"{lm['city']} ({lm['landmark']})"))
 
-    for m in re.finditer(r"(?:\bв|\bво|\bна|\bдо|\bto)\s+([\w\-ёЁ.]+(?:\s+[\w\-ёЁ.]+)?)", text, re.I):
+    neg_prefix_pat = re.compile(
+        r"(?:\bне\s+(?:хочу|буду|поеду|полечу|еду|надо|хотим|собираюсь|планирую)\s*|\bне\s+|\bвместо\s+)$",
+        re.I,
+    )
+    pos_dest = None
+    neg_dests = set()
+    PREP_VERBS = {"в", "во", "на", "до", "из", "от", "с", "со", "к", "to", "хочу", "еду", "лечу", "буду"}
+    # Check "в центре <города>" (e.g. "в центре Парижа", "в центре Рима", "в центре Сочи")
+    m_centre_city = re.search(r"в\s+центр\w*\s+([A-Za-zА-Яа-яЁё\-]+)", text, re.I)
+    if m_centre_city:
+        c_city = _find_city(m_centre_city.group(1))
+        if c_city and c_city != (reqs.get("origin").value if "origin" in reqs else None):
+            pos_dest = (c_city, m_centre_city.group(0))
+
+    # 1. First check 2-word compound cities (e.g. Нижний Новгород, Великий Новгород, Красная Поляна)
+    for m in re.finditer(r"(?:\bв|\bво|\bна|\bдо|\bto)\s+([A-Za-zА-Яа-яЁё\-]+)\s+([A-Za-zА-Яа-яЁё\-]+)", text, re.I):
+        if m.group(2).lower() not in PREP_VERBS:
+            compound = f"{m.group(1)} {m.group(2)}"
+            city = _find_city(compound)
+            if city and city != (reqs.get("origin").value if "origin" in reqs else None):
+                prefix = text[:m.start()].strip()
+                if bool(neg_prefix_pat.search(prefix)):
+                    neg_dests.add(city)
+                else:
+                    pos_dest = (city, m.group(0))
+
+    # 2. Check 1-word cities (never swallowing the next preposition or verb)
+    for m in re.finditer(r"(?:\bв|\bво|\bна|\bдо|\bto)\s+([A-Za-zА-Яа-яЁё\-]+)", text, re.I):
         city = _find_city(m.group(1))
         if city and city != (reqs.get("origin").value if "origin" in reqs else None):
-            put(_req("destination", city, "hard", m.group(0)))
-            break
+            prefix = text[:m.start()].strip()
+            if bool(neg_prefix_pat.search(prefix)):
+                neg_dests.add(city)
+            else:
+                pos_dest = (city, m.group(0))
+
+    if pos_dest:
+        reqs["destination"] = _req("destination", pos_dest[0], "hard", pos_dest[1])
+    elif "destination" in reqs and reqs["destination"].value in neg_dests:
+        del reqs["destination"]
+
     if "destination" not in reqs and not re.search(r"куда\s+(?:угодно|нибудь)|anywhere|somewhere", low):
         # a capitalized place after «в/to» that the catalog does not know: keep it, the agent will say there is no data
         for m in FOREIGN_HINT.finditer(text):
             word = m.group(1)
-            if not _find_city(word) and not re.match(r"(ноябр|декабр|январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр)", word.lower()):
-                put(_req("destination", word, "hard", m.group(0)))
+            prefix = text[:m.start()].strip()
+            is_negated = bool(neg_prefix_pat.search(prefix))
+            if not is_negated and not _find_city(word) and not re.match(r"(ноябр|декабр|январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр)", word.lower()):
+                reqs["destination"] = _req("destination", word, "hard", m.group(0))
                 break
 
     if "destination" not in reqs and not re.search(r"куда\s+(?:угодно|нибудь)|anywhere|somewhere", low):
@@ -218,14 +269,23 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
                     put(_req("travel_start_date", start.isoformat(), "hard", text[single.start():single.end()]))
                 except ValueError:
                     pass
+    remove_keys: list[str] = []
+    if re.search(r"разны\w*.*(?:отел|вари[а-я]*нт)|один\s+5.*один\s+4|разн\w+\s+по\s+звезд", low):
+        remove_keys.extend(["lodging_stars", "room_preference"])
+
     if "dates" not in reqs:
-        m = re.search(MONTH_IN, low)
-        if m:
-            word = m.group(1) or m.group(2)
-            put(_req("travel_month", _month(word), "hard", text[m.start():m.end()]))
-        elif re.search(r"нов(?:ый|ого)\s+год|new\s+year", low):
-            q = re.search(r"нов(?:ый|ого)\s+год|new\s+year", text, re.I)
-            put(_req("travel_month", 12, "soft", q.group(0)))
+        m_xmas = re.search(r"рождеств\w*|christmas", low)
+        if m_xmas:
+            q_xmas = text[m_xmas.start():m_xmas.end()]
+            put(_req("dates", {"start": f"{now.year}-12-30", "end": f"{now.year + 1}-01-06"}, "soft", q_xmas, label="Рождественские праздники"))
+        else:
+            m = re.search(MONTH_IN, low)
+            if m:
+                word = m.group(1) or m.group(2)
+                put(_req("travel_month", _month(word), "hard", text[m.start():m.end()]))
+            elif re.search(r"нов(?:ый|ого)\s+год|new\s+year", low):
+                q = re.search(r"нов(?:ый|ого)\s+год|new\s+year", text, re.I)
+                put(_req("travel_month", 12, "soft", q.group(0)))
 
     # --- duration ---
     m = re.search(r"(\d{1,2})\s*(ноч|nights?|дн|days?|сут)", low)
@@ -284,14 +344,22 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
             quote = text[b.start():b.end()].strip()
             per_person = re.search(r"на\s+(?:человека|одного|каждого)|per\s+person", low)
             key = "budget_per_person_rub" if per_person else "budget_total_rub"
-            # «за 30 000» по-русски — предел бюджета, как и «до»; «примерно/около» — мягко
             strict = re.search(r"строго|не\s+дороже|максимум|\bдо\b|\bза\b|strictly|up\s+to|under", quote.lower()) \
                 and not re.search(r"примерно|около|желательно|about|around", low)
             put(_req(key, amount, "hard" if strict else "soft", quote))
             if re.search(r"на\s+(?:всю\s+)?поездку|на\s+всех|total|for\s+the\s+trip", low) and not per_person:
                 q = re.search(r"на\s+(?:всю\s+)?поездку|на\s+всех|total|for\s+the\s+trip", text, re.I)
                 put(_req("budget_scope", "trip", "hard", q.group(0)))
-    if (m := re.search(r"недорог\w*|дешев\w*|дёшев\w*|подешевле|бюджетн\w*|эконом\w*|cheap\w*|budget\s+trip|low[\s-]cost", low)):
+
+    if (m := re.search(r"версал\w*", low)):
+        put(_req("room_preference", "Версаль", "soft", text[m.start():m.end()], label="Рядом с Версалем"))
+    elif (m := re.search(r"в\s+центр\w*|центр\w*\s+париж|центр\w*\s+город", low)):
+        put(_req("room_preference", "центр", "soft", text[m.start():m.end()], label="В центре города"))
+
+    if re.search(r"дорог\w*|люкс|luxury|премиум|premium|элитн", low):
+        q = re.search(r"дорог\w*|люкс|luxury|премиум|premium|элитн\w*", text, re.I)
+        put(_req("budget_preference", "luxury", "soft", q.group(0)))
+    elif (m := re.search(r"недорог\w*|дешев\w*|дёшев\w*|подешевле|бюджетн\w*|эконом\w*|cheap\w*|budget\s+trip|low[\s-]cost", low)):
         put(_req("budget_preference", "low_cost", "soft", text[m.start():m.end()]))
 
     # --- transport and route preferences ---
@@ -301,15 +369,18 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
         put(_req("transport", "flight", "soft", text[m.start():m.end()]))
     if (m := re.search(r"без\s+пересад\w*|прям\w+\s+рейс\w*|только\s+прям\w*|direct|non[\s-]?stop", low)):
         put(_req("max_stops", 0, "hard" if "только" in m.group(0) else "soft", text[m.start():m.end()]))
+    elif (m := re.search(r"с\s+пересадк\w*|пересадк\w*|layover|connecting", low)):
+        put(_req("max_stops", 1, "soft", text[m.start():m.end()]))
     if (m := re.search(r"без\s+долг\w*\s+перел[её]т\w*|недолго\s+лететь|short\s+flight\w*|not\s+far", low)):
         put(_req("travel_time_preference", "short", "soft", text[m.start():m.end()]))
 
     # --- style, hotel ---
     if (m := re.search(r"т[её]пл\w*\s+мор\w*|\bмор[еяю]\w*|пляж\w*|warm\s+sea|beach|seaside|тепл\w*|warm", low)):
         put(_req("trip_style", "тёплое море" if re.search(r"мор|пляж|sea|beach", m.group(0)) else "тепло", "soft", text[m.start():m.end()]))
-    if (m := re.search(r"(\d)\s*(?:звезд\w*|звёзд\w*|\*|stars?)", low)):
-        put(_req("lodging_stars", int(m.group(1)), "hard" if re.search(r"строго|только|обязательно|strictly|only", low) else "soft",
-                 text[m.start():m.end()]))
+    if (m := re.search(r"(\d)\s*(?:зве[зд]{1,2}\w*|звё[зд]{1,2}\w*|\*|stars?)", low)):
+        if not re.search(r"разны|один\s+\d.*один\s+\d", low):
+            put(_req("lodging_stars", int(m.group(1)), "hard" if re.search(r"строго|только|обязательно|strictly|only", low) else "soft",
+                     text[m.start():m.end()]))
     if (m := re.search(r"вс[её]\s+включено|all[\s-]inclusive|ультра\s*вс", low)):
         put(_req("meal_preference", "all_inclusive", "hard" if re.search(r"обязательно|только|строго", low) else "soft",
                  text[m.start():m.end()]))
@@ -342,4 +413,4 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
             elif re.search(r"поездк|всех|trip|total", low):
                 put(_req("budget_scope", "trip", "hard", stripped))
 
-    return ParsedRequest(requirements=list(reqs.values()))
+    return ParsedRequest(requirements=list(reqs.values()), remove_keys=remove_keys)

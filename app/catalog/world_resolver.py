@@ -293,6 +293,31 @@ KNOWN_WORLD_DESTINATIONS: dict[str, dict[str, Any]] = {
         "base_hotel_rub": 10500,
         "aliases": ["барселона", "barcelona", "испания"],
     },
+    "PRG": {
+        "name": "Прага",
+        "name_en": "Prague",
+        "country_code": "CZ",
+        "country": "Чехия",
+        "timezone": "Europe/Prague",
+        "coord": {"lat": 50.0755, "lon": 14.4378},
+        "tags": ["city", "culture", "food", "romantic", "historic", "architecture"],
+        "currency": "CZK",
+        "visa": {
+            "regime": "visa_required",
+            "max_stay_days": 90,
+            "documents": ["загранпаспорт", "шенгенская виза"],
+            "note": "Нужна шенгенская виза.",
+            "checked_at": date(2026, 10, 23),
+        },
+        "description": "Сказочная Прага: рождественские ярмарки на Староместской площади, собор Святого Вита, Карлов мост и уютные пивницы.",
+        "hub_name": "Аэропорт Прага им. Вацлава Гавела (PRG)",
+        "air_day": 6.0,
+        "air_night": 0.0,
+        "sea": None,
+        "base_flight_rub": 34000,
+        "base_hotel_rub": 7500,
+        "aliases": ["прага", "прагу", "праге", "прагой", "prague", "чехия", "чехию", "чехии"],
+    },
 }
 
 _INITIALIZED = False
@@ -366,13 +391,33 @@ def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str,
         source_refs=["ref:world_resolver"],
     )
 
-    # Hotels: Budget 3*, Comfort 4*, Luxury 5*
+    # Hotels: Budget 3*, Comfort 4*, Luxury 5* + signature options
     h_base = int(data.get("base_hotel_rub", 8000))
-    hotel_specs = [
-        ("h_std", f"Отель {data['name']} Центр", 3, 8.4, 0.8, ["wifi"], "RO"),
-        ("h_comf", f"Resort & Spa {data['name']}", 4, 9.1, 1.2, ["wifi", "pool", "spa"], "BB"),
-        ("h_lux", f"Grand Hotel {data['name']}", 5, 9.6, 2.0, ["wifi", "pool", "spa", "gym"], "AI" if "beach" in data.get("tags", []) else "HB"),
-    ]
+    if city_id == "CDG":
+        hotel_specs = [
+            ("h_std", "Hôtel de Paris Montmartre 3★", 3, 8.6, 0.75, ["wifi"], "RO"),
+            ("h_comf", "Boutique Hôtel Saint-Germain & Spa 4★", 4, 9.2, 1.25, ["wifi", "pool", "spa"], "BB"),
+            ("h_lux", "Grand Hôtel Champs-Élysées 5★", 5, 9.7, 1.95, ["wifi", "pool", "spa", "gym"], "HB"),
+            ("h_ver", "Waldorf Astoria Versailles - Trianon Palace 5★", 5, 9.6, 1.80, ["wifi", "pool", "spa"], "BB"),
+        ]
+    elif city_id == "PRG":
+        hotel_specs = [
+            ("h_std", "Hotel Old Town Prague 3★", 3, 8.5, 0.75, ["wifi"], "RO"),
+            ("h_comf", "Boutique Hotel Charles Bridge & Spa 4★", 4, 9.3, 1.20, ["wifi", "pool", "spa"], "BB"),
+            ("h_lux", "Grand Hotel Bohemia Prague 5★", 5, 9.7, 1.90, ["wifi", "pool", "spa", "gym"], "HB"),
+        ]
+    elif city_id == "FCO":
+        hotel_specs = [
+            ("h_std", "Hotel Colosseum Forum 3★", 3, 8.6, 0.75, ["wifi"], "RO"),
+            ("h_comf", "Boutique Hotel Navona & Spa 4★", 4, 9.3, 1.20, ["wifi", "pool", "spa"], "BB"),
+            ("h_lux", "Grand Hotel Plaza Roma 5★", 5, 9.7, 1.90, ["wifi", "pool", "spa", "gym"], "HB"),
+        ]
+    else:
+        hotel_specs = [
+            ("h_std", f"Отель {data['name']} Центр 3★", 3, 8.5, 0.8, ["wifi"], "RO"),
+            ("h_comf", f"Resort & Spa {data['name']} 4★", 4, 9.2, 1.25, ["wifi", "pool", "spa"], "BB"),
+            ("h_lux", f"Grand Hotel {data['name']} 5★", 5, 9.7, 1.95, ["wifi", "pool", "spa", "gym"], "AI" if "beach" in data.get("tags", []) else "HB"),
+        ]
     for h_code, h_name, stars, rating, price_mult, amenities, meal in hotel_specs:
         h_id = f"hot_{city_id.lower()}_{h_code}"
         hotel_obj = Hotel(
@@ -682,6 +727,37 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
         cat.flights[fl_id] = fl_obj
         cat.flights_by_route_day[(orig_city, dest_city, target_date)].append(fl_obj)
 
+        # 1b. Outbound with layover via Istanbul (IST) - cheaper alternative with stop
+        conn_fl_id = f"fl_{orig_city}_{dest_city}_{target_date:%Y%m%d}_conn"
+        conn_base = int(f_base * 0.76)
+        conn_depart = datetime.combine(target_date, time(7, 30), ZoneInfo("Europe/Moscow"))
+        conn_min = 460
+        conn_arrive = conn_depart + timedelta(minutes=conn_min)
+        seg1 = FlightSegment(
+            flight_no="TK 414", carrier="TK", from_hub=orig_hub, to_hub="IST",
+            depart=conn_depart, arrive=conn_depart + timedelta(minutes=240), duration_min=240, aircraft="Airbus A321",
+        )
+        seg2 = FlightSegment(
+            flight_no="TK 1821", carrier="TK", from_hub="IST", to_hub=hub_id,
+            depart=conn_depart + timedelta(minutes=340), arrive=conn_arrive, duration_min=120, aircraft="Airbus A321",
+        )
+        fl_conn = Flight(
+            id=conn_fl_id, carrier="TK", carrier_name="Turkish Airlines (1 пересадка в Стамбуле IST, 1 ч 40 мин)",
+            flight_no="TK 414 + TK 1821", origin_city=orig_city, dest_city=dest_city, from_hub=orig_hub, to_hub=hub_id,
+            depart=conn_depart, arrive=conn_arrive, duration_min=conn_min, stops=1, segments=[seg1, seg2],
+            infant_free_age=2,
+            fares=[
+                Fare(code="light", name="Эконом Лайт (с пересадкой)", refundable=False, refund_fee_rub=None,
+                     baggage=Baggage(cabin_kg=8, checked_pieces=0, checked_kg=0), price_rub=conn_base, seats_left=9),
+                Fare(code="standard", name="Эконом Стандарт с багажом (с пересадкой)", refundable=True, refund_fee_rub=3000,
+                     baggage=Baggage(cabin_kg=8, checked_pieces=1, checked_kg=20), price_rub=int(conn_base * 1.25), seats_left=9),
+            ],
+            pets=TransportPets(cabin=True, cabin_max_kg=8.0, cabin_fee_rub=3500, hold=True, hold_fee_rub=6500),
+            international=True, synthetic=False, source_refs=["ref:world_resolver"],
+        )
+        cat.flights[conn_fl_id] = fl_conn
+        cat.flights_by_route_day[(orig_city, dest_city, target_date)].append(fl_conn)
+
     # 2. Inbound from world dest to Russian hub
     elif orig_data and dest_city in ("MOW", "LED", "SVX", "AER", "KZN"):
         f_base = int(orig_data.get("base_flight_rub", 35000))
@@ -715,6 +791,37 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
         )
         cat.flights[fl_id] = fl_obj
         cat.flights_by_route_day[(orig_city, dest_city, target_date)].append(fl_obj)
+
+        # 2b. Inbound with layover via Istanbul (IST)
+        conn_fl_id = f"fl_{orig_city}_{dest_city}_{target_date:%Y%m%d}_conn"
+        conn_base = int(f_base * 0.76)
+        conn_depart = datetime.combine(target_date, time(11, 0), ZoneInfo(orig_data["timezone"]))
+        conn_min = 470
+        conn_arrive = conn_depart + timedelta(minutes=conn_min)
+        seg1 = FlightSegment(
+            flight_no="TK 1822", carrier="TK", from_hub=hub_id, to_hub="IST",
+            depart=conn_depart, arrive=conn_depart + timedelta(minutes=210), duration_min=210, aircraft="Airbus A321",
+        )
+        seg2 = FlightSegment(
+            flight_no="TK 415", carrier="TK", from_hub="IST", to_hub=dest_hub,
+            depart=conn_depart + timedelta(minutes=310), arrive=conn_arrive, duration_min=160, aircraft="Airbus A321",
+        )
+        fl_conn = Flight(
+            id=conn_fl_id, carrier="TK", carrier_name="Turkish Airlines (1 пересадка в Стамбуле IST, 1 ч 40 мин)",
+            flight_no="TK 1822 + TK 415", origin_city=orig_city, dest_city=dest_city, from_hub=hub_id, to_hub=dest_hub,
+            depart=conn_depart, arrive=conn_arrive, duration_min=conn_min, stops=1, segments=[seg1, seg2],
+            infant_free_age=2,
+            fares=[
+                Fare(code="light", name="Эконом Лайт (с пересадкой)", refundable=False, refund_fee_rub=None,
+                     baggage=Baggage(cabin_kg=8, checked_pieces=0, checked_kg=0), price_rub=conn_base, seats_left=9),
+                Fare(code="standard", name="Эконом Стандарт с багажом (с пересадкой)", refundable=True, refund_fee_rub=3000,
+                     baggage=Baggage(cabin_kg=8, checked_pieces=1, checked_kg=20), price_rub=int(conn_base * 1.25), seats_left=9),
+            ],
+            pets=TransportPets(cabin=True, cabin_max_kg=8.0, cabin_fee_rub=3500, hold=True, hold_fee_rub=6500),
+            international=True, synthetic=False, source_refs=["ref:world_resolver"],
+        )
+        cat.flights[conn_fl_id] = fl_conn
+        cat.flights_by_route_day[(orig_city, dest_city, target_date)].append(fl_conn)
 
 
 RUSSIAN_HUB_HOTELS: dict[str, list[dict[str, Any]]] = {
@@ -998,13 +1105,38 @@ def resolve_world_city(cat: Catalog, text: str) -> str | None:
     if len(norm) >= 3 and not norm.isdigit() and not re.search(r"\d", norm):
         city_id = f"W_{hashlib.md5(norm.encode()).hexdigest()[:4].upper()}"
         capitalized = norm.capitalize()
+        country_code = "RU" if re.search(r"[а-яё]", norm) and not any(f in norm for f in ["париж", "рим", "праг", "берлин", "лондон", "вена", "мадрид", "токио", "версал"]) else "XX"
+        country_name = "Россия" if country_code == "RU" else "Мир"
+        lat, lon = (55.75, 37.61) if country_code == "RU" else (45.0, 15.0)
+
+        try:
+            import urllib.request, urllib.parse, json
+            q = urllib.parse.quote(capitalized)
+            req = urllib.request.Request(
+                f"https://nominatim.openstreetmap.org/search?q={q}&format=json&addressdetails=1&limit=1",
+                headers={"User-Agent": "OstrovokResolver/1.0"},
+            )
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                gdata = json.loads(resp.read().decode("utf-8"))
+                if gdata and isinstance(gdata, list):
+                    geo_info = gdata[0]
+                    lat = float(geo_info.get("lat", lat))
+                    lon = float(geo_info.get("lon", lon))
+                    addr = geo_info.get("address", {})
+                    cc = addr.get("country_code", "").upper()
+                    if cc:
+                        country_code = cc
+                        country_name = addr.get("country", country_name)
+        except Exception:
+            pass
+
         dynamic_data = {
             "name": capitalized,
             "name_en": capitalized,
-            "country_code": "XX",
-            "country": "Мир",
+            "country_code": country_code,
+            "country": country_name,
             "timezone": "Europe/Moscow",
-            "coord": {"lat": 45.0, "lon": 15.0},
+            "coord": {"lat": lat, "lon": lon},
             "tags": ["city", "culture", "resort"],
             "currency": "EUR",
             "visa": {

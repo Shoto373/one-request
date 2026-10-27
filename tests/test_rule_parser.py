@@ -94,3 +94,25 @@ def test_age_answer_wins_over_open_duration_question():
     state = TripState(session_id=uuid4(), open_questions=[OpenQuestion(key="duration_nights", question="?", why="")])
     r = parsed("5 лет", state)
     assert r["children_ages"].value == [5] and "duration_nights" not in r
+
+
+def test_negated_destination_selects_affirmative_destination():
+    r = parsed("не хочу в казань хочу на рождество в прагу")
+    assert r["destination"].value == "Прага"
+    assert r["dates"].value == {"start": "2026-12-30", "end": "2027-01-06"}
+
+
+def test_versailles_and_luxury_preferences():
+    r1 = parsed("хочу отель в версале")
+    assert r1["room_preference"].value == "Версаль"
+
+    r2 = parsed("ошибс хочу самый дорог 5 звездочный отель в центре парижа")
+    assert r2["destination"].value == "Париж"
+    assert r2["lodging_stars"].value == 5
+    assert r2["budget_preference"].value == "luxury"
+    assert r2["room_preference"].value == "центр"
+
+
+def test_diverse_hotels_removes_star_constraints():
+    p = rule_parse("предложи разные варинаты отелель", TripState(session_id=uuid4()), NOW)
+    assert "lodging_stars" in p.remove_keys
