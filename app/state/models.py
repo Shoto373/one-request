@@ -48,7 +48,7 @@ class Bundle(BaseModel):
 class OpenQuestion(BaseModel):
     key: str
     question: str
-    why: str
+    why: str = ""
     options: list[str] = Field(default_factory=list)
 
 

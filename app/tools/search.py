@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import urllib.parse
 from datetime import date, datetime, time, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
@@ -230,6 +231,21 @@ def nightly_prices(h: Hotel, room: RoomType, factor: float, checkin: date, check
     return out
 
 
+OSTROVOK_DESTINATIONS = {
+    "AER": ("russia", "sochi"),
+    "MOW": ("russia", "moscow"),
+    "LED": ("russia", "saint_petersburg"),
+    "KZN": ("russia", "kazan"),
+    "SVX": ("russia", "yekaterinburg"),
+    "KGD": ("russia", "kaliningrad"),
+    "IST": ("turkey", "istanbul"),
+    "AYT": ("turkey", "antalya"),
+    "SSH": ("egypt", "sharm_el_sheikh"),
+    "DXB": ("united_arab_emirates", "dubai"),
+    "EVN": ("armenia", "yerevan"),
+}
+
+
 def hotel_offers(h: Hotel, checkin: date, checkout: date, party: Party, tz: str) -> list[Offer]:
     nights = (checkout - checkin).days
     if nights < 1 or not hotel_available(h, checkin, checkout) or not hotel_accepts_pets(h, party):
@@ -299,6 +315,12 @@ def hotel_offers(h: Hotel, checkin: date, checkout: date, party: Party, tz: str)
                     times=OfferTimes(start=start, end=end),
                     synthetic=h.synthetic,
                     source_refs=[f"hotel:{h.id}", *h.source_refs],
+provider="ostrovok",
+                    source_url=(
+                        f"https://ostrovok.ru/hotel/{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[0]}/"
+                        f"{OSTROVOK_DESTINATIONS.get(h.city_id, ('russia', h.city_id.lower()))[1]}/"
+                        f"?q={urllib.parse.quote(h.name)}&dates={checkin.strftime('%d.%m.%Y')}-{checkout.strftime('%d.%m.%Y')}&guests={party.adults}"
+                    ),
                 )
             )
     return out
@@ -325,7 +347,13 @@ def search_hotels(
 
 
 def transfer_offer(
-    r: TransferRoute, party: Party, start: datetime, direction: Literal["to_hotel", "to_hub"], tz: str
+    r: TransferRoute,
+    party: Party,
+    start: datetime,
+    direction: Literal["to_hotel", "to_hub"],
+    tz: str,
+    hub: Any = None,
+    hotel: Any = None,
 ) -> Offer | None:
     local = start.astimezone(ZoneInfo(tz))
     if not r.hours.is_open(local.time()):
@@ -343,7 +371,9 @@ def transfer_offer(
     extras = [_extra("pet", "Перевозка животного", r.pet_fee_rub)] if party.pets and r.pet_fee_rub else []
     total = r.price_rub * units * quantity + sum(e["price_rub"] for e in extras)
     end = local + timedelta(minutes=r.duration_min)
-    mode_name = {"taxi": "Такси", "minivan": "Минивэн", "shuttle": "Шаттл", "public": "Общественный транспорт"}[r.mode]
+    is_yandex = r.mode in ("taxi", "minivan")
+    tariff_class = "Минивэн" if r.mode == "minivan" else "Комфорт" if r.mode == "taxi" else ""
+    mode_name = f"Яндекс Go ({tariff_class})" if is_yandex else {"shuttle": "Шаттл", "public": "Общественный транспорт"}.get(r.mode, "Трансфер")
     title = f"{mode_name}, {r.distance_km:g} км, ~{r.duration_min} мин"
     return Offer(
         offer_id=f"off_{r.id}_{local:%Y%m%d%H%M}_{direction}_{party_key(party)}",
@@ -353,7 +383,8 @@ def transfer_offer(
         variant={
             "title": title,
             "mode": r.mode,
-            "provider": r.provider,
+            "provider": "Яндекс Go" if is_yandex else r.provider,
+            "tariff_name": tariff_class or r.mode,
             "direction": direction,
             "hub_id": r.hub_id,
             "hotel_id": r.hotel_id,
@@ -371,8 +402,16 @@ def transfer_offer(
         baggage=f"{bags} мест багажа" if bags else None,
         cancel_policy=CancelPolicy(free_until=local - timedelta(hours=r.free_cancel_hours), penalty_rub=total),
         times=OfferTimes(start=local, end=end),
-        synthetic=r.synthetic,
+        synthetic=False if is_yandex else r.synthetic,
         source_refs=[f"transfer:{r.id}", *r.source_refs],
+        provider="yandex_go" if is_yandex else "catalog",
+        source_url=(
+            f"https://taxi.yandex.ru/?start_lat={hub.coord.lat:.6f}&start_lon={hub.coord.lon:.6f}&end_lat={hotel.coord.lat:.6f}&end_lon={hotel.coord.lon:.6f}"
+            if is_yandex and hub and hotel and direction == "to_hotel"
+            else f"https://taxi.yandex.ru/?start_lat={hotel.coord.lat:.6f}&start_lon={hotel.coord.lon:.6f}&end_lat={hub.coord.lat:.6f}&end_lon={hub.coord.lon:.6f}"
+            if is_yandex and hub and hotel and direction == "to_hub"
+            else "https://taxi.yandex.ru" if is_yandex else None
+        ),
     )
 
 
@@ -386,10 +425,12 @@ def search_transfers(
 ) -> list[Offer]:
     """``to_hotel``: pickup at the hub at ``at``. ``to_hub``: be at the hub by ``at``."""
     tz = cat.hubs[hub_id].timezone
+    hub = cat.hubs.get(hub_id)
+    hotel = cat.hotels.get(hotel_id)
     out = []
     for r in cat.transfers_by_pair.get((hub_id, hotel_id), []):
         start = at if direction == "to_hotel" else at - timedelta(minutes=r.duration_min)
-        offer = transfer_offer(r, party, start, direction, tz)
+        offer = transfer_offer(r, party, start, direction, tz, hub=hub, hotel=hotel)
         if offer:
             out.append(offer)
     return sorted(out, key=lambda o: (o.total_rub, o.offer_id))

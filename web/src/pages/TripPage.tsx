@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import Chat from '../components/Chat'
 import Icon from '../components/Icon'
-import Landing from '../components/Landing'
 import TracePanel from '../components/TracePanel'
 import TripCanvas from '../components/TripCanvas'
 import { reqLabel } from '../lib/format'
@@ -51,8 +50,16 @@ export default function TripPage({ freshStart = false }: { freshStart?: boolean 
 
   const found = (s.state?.bundles.length ?? 0) + (s.state?.destinations.length ?? 0)
   // пока диалога нет — стартовый экран в стиле ostrovok.ru, после первого сообщения — рабочее пространство
-  // догадки из памяти (source=memory) не в счёт: их показывает приветствие «С возвращением»
-  const landing = s.messages.length === 0 && !s.busy && !s.state?.requirements.some((r) => r.source !== 'memory')
+  const location = useLocation()
+  const initialSentRef = useRef(false)
+  useEffect(() => {
+    const q = (location.state as { initialQuery?: string } | null)?.initialQuery
+    if (q && !initialSentRef.current && s.sessionId && !s.connecting && s.messages.length === 0) {
+      initialSentRef.current = true
+      s.send(q)
+    }
+  }, [location.state, s.sessionId, s.connecting, s.messages.length, s.send])
+
   // мобильный: вариантов стало больше, чем пользователь видел на вкладке «Поездка» — подсказываем перейти
   const [seen, setSeen] = useState(0)
   useEffect(() => {
@@ -82,12 +89,6 @@ export default function TripPage({ freshStart = false }: { freshStart?: boolean 
         </div>
       )}
 
-      {landing ? (
-        <div className="min-h-0 flex-1">
-          <Landing disabled={!s.sessionId} connecting={s.connecting} onSend={s.send} />
-        </div>
-      ) : (
-      <>
       {/* мобильные вкладки */}
       <div className="flex gap-1 border-b border-black/[.06] bg-white p-1.5 text-sm font-semibold md:hidden">
         {(['chat', 'trip'] as const).map((t) => (
@@ -172,8 +173,6 @@ export default function TripPage({ freshStart = false }: { freshStart?: boolean 
           </div>
         )}
       </div>
-      </>
-      )}
     </div>
   )
 }

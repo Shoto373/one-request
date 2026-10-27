@@ -163,27 +163,22 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             log.warning("parse_request falls back to rules: %s", type(exc).__name__)
             self.last_parser = "rules"
             parsed = rule_parse(text, state, self.local_now())
-        # A valid but empty model response is still an extraction miss. Supplement
-        # date fields from deterministic parsing so short date answers are retained.
+        # Validate LLM output first; supplement any missing or dropped fields from rule parser
+        validated_llm = validate_extraction(parsed, text)
         rule_parsed = rule_parse(text, state, self.local_now())
-        rule_date_keys = {"dates", "travel_start_date", "travel_month", "duration_nights"}
-        existing = {r.key: r for r in parsed.requirements}
+        existing = {r.key: r for r in validated_llm.requirements}
         supplemented = False
         for item in rule_parsed.requirements:
             if item.key == "travel_start_date" and "dates" in existing and "dates" not in {
                 r.key for r in rule_parsed.requirements
             }:
-                # Models sometimes label a single calendar day as a full date range.
-                # Replace that incomplete value with an explicit departure-date field.
                 existing.pop("dates", None)
-            if item.key in rule_date_keys and item.key not in existing:
+            if item.key not in existing:
                 existing[item.key] = item
                 supplemented = True
-        if supplemented:
-            parsed = ParsedRequest(requirements=list(existing.values()), remove_keys=parsed.remove_keys)
-            if self.last_parser == "llm":
-                self.last_parser = "llm+rules"
-        return validate_extraction(parsed, text)
+        if supplemented and self.last_parser == "llm":
+            self.last_parser = "llm+rules"
+        return ParsedRequest(requirements=list(existing.values()), remove_keys=parsed.remove_keys)
 
     def _year_resolve(self, requirements: list[Requirement], suppressed: list[str] | tuple[str, ...] = ()) -> list[Requirement]:
         by_key = {r.key: r for r in requirements if not (r.kind == "assumption" and r.key in suppressed)}
@@ -208,7 +203,13 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             try:
                 start = date.fromisoformat(str(single_date_req.value))
                 duration_req = by_key.get("duration_nights")
-                duration = int(duration_req.value) if duration_req and duration_req.value is not None else 0
+                duration = 0
+                if duration_req and duration_req.value is not None:
+                    if isinstance(duration_req.value, int):
+                        duration = duration_req.value
+                    else:
+                        m = re.search(r"\d+", str(duration_req.value))
+                        duration = int(m.group(0)) if m else 0
                 if duration > 0:
                     end = date.fromordinal(start.toordinal() + duration)
                     by_key["dates"] = Requirement(
@@ -593,11 +594,16 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             for check in bundle.checks if check.status == "warn" and check.id
         )
         kinds = {item.kind for item in bundle.items}
-        composition = ", ".join(x for x in ("дорога" if kinds & {"flight", "train"} else None,
-                                                "отель" if "hotel" in kinds else None,
-                                                "трансфер" if "transfer" in kinds else None) if x)
+        parts = []
+        if kinds & {"flight", "train"}:
+            parts.append("дорога через Туту" if any(i.provider == "tutu" for i in bundle.items) else "билеты туда-обратно")
+        if "hotel" in kinds:
+            parts.append("отель на Островке")
+        if "transfer" in kinds:
+            parts.append("трансфер Яндекс Go")
+        composition = ", ".join(parts)
         if not bundle.advantages and offer_refs:
-            bundle.advantages = [Claim(text=f"Состав комплекта по предложениям: {composition or 'есть предложения каталога'}.", refs=sorted(offer_refs))]
+            bundle.advantages = [Claim(text=f"Состав комплекта: {composition or 'готовый сценарий поездки'}.", refs=sorted(offer_refs))]
             total = sum(item.total_rub for item in bundle.items)
             if total == bundle.total_rub:
                 bundle.advantages.append(Claim(

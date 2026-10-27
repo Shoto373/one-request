@@ -1,10 +1,11 @@
-"""Small async client for OpenAI-compatible chat completions APIs.
+"""Small async client for OpenAI-compatible chat completions APIs and Sber GigaChat.
 
 Provider differences handled here, so any ``LLM_BASE_URL`` works the same way:
+- GigaChat (Sber): automatic OAuth token exchange, Russian root CA handling, models GigaChat/GigaChat-Plus/Pro;
 - ``response_format: json_object`` unsupported (Ollama, some proxies) -> retried once without it,
   then remembered for the client; ``LLM_JSON_MODE=off`` disables it up front;
 - ``temperature`` rejected (reasoning models) -> retried once without it, then remembered;
-- assistant ``content`` as a list of parts, ``<think>…</think>`` preambles, code fences or prose
+- assistant ``content`` as a list of parts, ``<think>...</think>`` preambles, code fences or prose
   around the JSON object;
 - a base URL pasted with ``/chat/completions``;
 - local servers (localhost, host.docker.internal, ollama) need no API key.
@@ -17,13 +18,17 @@ import logging
 import os
 import re
 import time
+import uuid
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, TypeVar
 from urllib.parse import urlparse
 
 import httpx
+from dotenv import load_dotenv
 from pydantic import BaseModel, ValidationError
+
+load_dotenv()
 
 log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
@@ -50,15 +55,12 @@ class InvalidLLMJSONError(ValueError):
 
 
 class _UnsupportedParameter(Exception):
-    """HTTP 400 from the provider that names a request parameter it does not accept."""
-
     def __init__(self, parameter: str):
         self.parameter = parameter
 
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "host.docker.internal", "ollama"}
-NO_KEY_MESSAGE = ("Агенту не задан ключ LLM: впишите LLM_API_KEY (и при необходимости LLM_BASE_URL, LLM_MODEL) "
-                  "в .env и перезапустите app. Интерфейс, каталог и метрики работают без ключа.")
+NO_KEY_MESSAGE = ("Не задан API-ключ для LLM: укажите LLM_API_KEY в .env и перезапустите app.")
 _THINK = re.compile(r"<think>.*?</think>", re.S | re.I)
 
 
@@ -71,8 +73,12 @@ def is_local(url: str) -> bool:
     return (urlparse(url).hostname or "") in LOCAL_HOSTS
 
 
+def is_gigachat(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return "gigachat" in host or "sberbank" in host
+
+
 def extract_json_text(content: str) -> str:
-    """JSON object text from a reply that may carry think-tags, code fences or prose around it."""
     content = _THINK.sub("", content).strip()
     content = re.sub(r"\A```(?:json)?\s*|\s*```\Z", "", content, flags=re.I).strip()
     if content.startswith("{") or content.startswith("["):
@@ -98,19 +104,29 @@ class LLMClient:
         self.retries = max(0, min(retries, 3))
         self.format_retries = max(0, min(format_retries, 1))
         self.turn_attempt_budget = max(1, int(turn_attempt_budget))
-        # Learned provider capabilities; LLM_JSON_MODE=off skips response_format from the start.
+
         self.json_mode = os.getenv("LLM_JSON_MODE", "auto").lower() != "off"
         self.temperature_supported = True
+
+        self.is_gigachat = is_gigachat(self.base_url)
+        self._gigachat_token: str | None = None
+        self._gigachat_token_expires_at: float = 0
+        self._token_lock = asyncio.Lock()
 
     @property
     def configured(self) -> bool:
         return bool(self.model) and (bool(self.api_key) or is_local(self.base_url))
 
     def describe(self) -> dict[str, Any]:
-        """Safe status for logs and /api/status: never includes the key."""
-        return {"configured": self.configured, "provider_host": urlparse(self.base_url).hostname,
-                "model": self.model or None, "model_fast": self.model_fast or None,
-                "json_mode": self.json_mode, "key_required": not is_local(self.base_url)}
+        return {
+            "configured": self.configured,
+            "provider_host": urlparse(self.base_url).hostname,
+            "model": self.model or None,
+            "model_fast": self.model_fast or None,
+            "json_mode": self.json_mode,
+            "key_required": not is_local(self.base_url),
+            "is_gigachat": self.is_gigachat
+        }
 
     @contextmanager
     def request_budget(self, *, max_attempts: int | None = None):
@@ -125,12 +141,51 @@ class LLMClient:
         if not self.api_key and not is_local(self.base_url):
             raise LLMConfigurationError(NO_KEY_MESSAGE)
         if not model:
-            raise LLMConfigurationError("Не задана модель LLM: впишите LLM_MODEL в .env и перезапустите app.")
+            raise LLMConfigurationError("Не задана модель LLM: укажите LLM_MODEL в .env и перезапустите app.")
+
+    async def _get_auth_header(self, client: httpx.AsyncClient) -> str:
+        if not self.is_gigachat or (self.client is not None and not self._gigachat_token):
+            return f"Bearer {self.api_key}" if self.api_key else ""
+
+        now = time.monotonic()
+        if self._gigachat_token and now < self._gigachat_token_expires_at:
+            return f"Bearer {self._gigachat_token}"
+
+        async with self._token_lock:
+            if self._gigachat_token and time.monotonic() < self._gigachat_token_expires_at:
+                return f"Bearer {self._gigachat_token}"
+
+            oauth_url = os.getenv("GIGACHAT_OAUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth")
+            scope = os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
+            headers = {
+                "Authorization": f"Basic {self.api_key}",
+                "RqUID": str(uuid.uuid4()),
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+            log.info("requesting gigachat oauth token scope=%s", scope)
+            # Use separate client without mock transport if client was passed
+            auth_client = httpx.AsyncClient(verify=False, timeout=self.timeout_seconds) if self.client is not None else client
+            try:
+                oauth_resp = await auth_client.post(
+                    oauth_url,
+                    headers=headers,
+                    data={"scope": scope},
+                    timeout=self.timeout_seconds
+                )
+                oauth_resp.raise_for_status()
+                token_data = oauth_resp.json()
+                self._gigachat_token = token_data.get("access_token", "")
+                self._gigachat_token_expires_at = time.monotonic() + 1500
+                return f"Bearer {self._gigachat_token}"
+            finally:
+                if self.client is not None:
+                    await auth_client.aclose()
 
     async def _request(self, body: dict[str, Any], model: str, budget: _AttemptBudget | None = None) -> dict[str, Any]:
         self._require_config(model)
         own_client = self.client is None
-        client = self.client or httpx.AsyncClient(timeout=self.timeout_seconds)
+        ssl_verify = False if self.is_gigachat else True
+        client = self.client or httpx.AsyncClient(timeout=self.timeout_seconds, verify=ssl_verify)
         started = time.monotonic()
         budget = budget or _TURN_BUDGET.get() or _AttemptBudget(self.retries + 1)
         if budget.remaining <= 0:
@@ -140,8 +195,10 @@ class LLMClient:
                 budget.remaining -= 1
                 try:
                     headers = {"Content-Type": "application/json"}
-                    if self.api_key:
-                        headers["Authorization"] = f"Bearer {self.api_key}"
+                    auth_header = await self._get_auth_header(client)
+                    if auth_header:
+                        headers["Authorization"] = auth_header
+
                     response = await client.post(
                         f"{self.base_url}/chat/completions", headers=headers,
                         json={"model": model, **body}, timeout=self.timeout_seconds,
@@ -185,7 +242,6 @@ class LLMClient:
         return None
 
     async def _adaptive_request(self, body: dict[str, Any], model: str, budget: _AttemptBudget | None = None) -> dict[str, Any]:
-        """Send; on a named unsupported parameter drop it, remember that and retry (each at most once)."""
         body = dict(body)
         if not self.json_mode:
             body.pop("response_format", None)
@@ -210,7 +266,7 @@ class LLMClient:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMRequestError("LLM response has no assistant content") from exc
-        if isinstance(content, list):  # content parts: [{"type": "text", "text": "..."}]
+        if isinstance(content, list):
             content = "".join(p.get("text", "") for p in content if isinstance(p, dict))
         if not isinstance(content, str):
             raise LLMRequestError("LLM returned non-text assistant content")

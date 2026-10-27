@@ -52,7 +52,18 @@ def _canonical(req: Requirement) -> Requirement | None:
     key = ALIASES.get(req.key, req.key)
     if key not in REQUIREMENT_KEYS:
         return None
-    return req.model_copy(update={"key": key})
+    val = req.value
+    if key in ("duration_nights", "adults", "children_count", "lodging_stars", "max_stops"):
+        if isinstance(val, str):
+            m = re.search(r"\d+", val)
+            if m:
+                val = int(m.group(0))
+    elif key in ("budget_total_rub", "budget_per_person_rub"):
+        if isinstance(val, str):
+            clean = re.sub(r"[^\d]", "", val)
+            if clean:
+                val = int(clean)
+    return req.model_copy(update={"key": key, "value": val})
 
 
 def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
@@ -63,8 +74,20 @@ def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
         if req is None:
             continue
         if req.kind in {"hard", "soft"}:
+            if req.source in {"user", "client", "input", "message"}:
+                req = req.model_copy(update={"source": "user_text"})
+            if req.source == "user_text" and (not req.quote or req.quote not in text):
+                if isinstance(req.value, str) and req.value in text:
+                    req = req.model_copy(update={"quote": req.value})
+                elif str(req.value) in text:
+                    req = req.model_copy(update={"quote": str(req.value)})
+                elif len(text.strip().split()) <= 4:
+                    req = req.model_copy(update={"quote": text.strip()})
             if req.source != "user_text" or not req.quote or req.quote not in text:
-                continue
+                if len(text.strip().split()) <= 4:
+                    req = req.model_copy(update={"source": "user_text", "quote": text.strip()})
+                else:
+                    continue
             quote_l = req.quote.lower()
             if req.key in {"budget_total_rub", "budget_per_person_rub"} and not re.search(r"\d", quote_l):
                 continue
@@ -269,7 +292,10 @@ def next_questions(
                 elif not has_duration:
                     add("duration_nights")
         elif need == "dates" and not has_dates:
-            add("duration_nights" if has_start_date else "dates")
+            if not has_start_date:
+                add("dates")
+            elif not has_duration:
+                add("duration_nights")
         elif need in QUESTION_TEXT and need not in present:
             add(need)
     if "children_ages" in present and child_ages is None and children_count:

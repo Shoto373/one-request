@@ -52,7 +52,7 @@ export function offerTitle(o: Offer): string {
 const KIND_TINT: Record<Offer['kind'], string> = {
   flight: 'bg-brand-light text-brand',
   train: 'bg-brand-light text-brand',
-  transfer: 'bg-canvas text-ink-grey',
+  transfer: 'bg-amber-100 text-amber-900',
   hotel: 'bg-lime-soft text-[#2f6b0f]',
 }
 
@@ -72,7 +72,33 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
             <div className="flex flex-wrap items-center gap-1.5 text-[14px] font-semibold leading-snug">
               {offerTitle(o)}
               {markSynthetic && o.synthetic && <SyntheticBadge />}
-              {o.provider === 'tutu' && <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Tutu {o.data_mode === 'estimated' ? 'оценка' : 'live'}</span>}
+              {o.provider === 'tutu' && (
+                <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 border border-blue-200">
+                  Туту {o.kind === 'flight' ? 'Авиа' : 'ЖД'} {o.data_mode === 'estimated' ? 'оценка' : 'live'}
+                </span>
+              )}
+              {o.provider === 'ostrovok' && (
+                <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 border border-orange-200">
+                  Островок {o.variant?.rating ? `★ ${o.variant.rating}` : ''}
+                </span>
+              )}
+              {o.provider === 'yandex_go' && (
+                <span className="rounded-md bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-900 border border-yellow-300">
+                  Яндекс Go
+                </span>
+              )}
+              {o.source_url && (
+                <a
+                  href={o.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 text-[11px] text-brand hover:underline font-normal"
+                  title="Открыть на сайте поставщика"
+                >
+                  <span>на сайт</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+              )}
             </div>
             {legs.length > 0 ? (
               <div className="mt-0.5 space-y-0.5 text-[12px] text-ink-grey">
@@ -110,7 +136,15 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
           )}
           {providerTerms(o).map((fact) => <span key={fact}>{fact}</span>)}
           {o.provider === 'tutu' && o.fetched_at && <span>получено {new Date(o.fetched_at).toLocaleString('ru-RU')}</span>}
-          {o.source_url && <a className="text-brand underline" href={o.source_url} target="_blank" rel="noreferrer">ссылка Туту</a>}
+          {o.source_url && (
+            <a className="text-brand underline" href={o.source_url} target="_blank" rel="noreferrer">
+              {o.provider === 'ostrovok' || o.kind === 'hotel'
+                ? 'ссылка на Островок'
+                : o.provider === 'yandex_go' || o.kind === 'transfer'
+                  ? 'ссылка Яндекс Go'
+                  : 'ссылка Туту'}
+            </a>
+          )}
         </div>
         {checks.length > 0 && (
           <div className="mt-2 rounded-xl border border-black/[.05] bg-white p-2.5">

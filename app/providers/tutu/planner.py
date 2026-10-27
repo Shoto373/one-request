@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from contextlib import contextmanager
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -18,6 +18,8 @@ from app.providers.base import ProviderError
 from app.providers.tutu.adapter import hotel_offer, transport_offer
 from app.providers.tutu.client import TutuMCPClient, TutuMCPError
 from app.product_scope import destination_ids, fixed_destination_id
+from app.planning.build import _best_transfer
+from app.tools.search import search_hotels as search_ostrovok_hotels
 
 _trace_recorder: ContextVar[Any] = ContextVar("tutu_trace_recorder", default=None)
 _force_demo: ContextVar[bool] = ContextVar("tutu_force_demo", default=False)
@@ -163,8 +165,24 @@ def _origin_for_provider(requirements: dict[str, Any]) -> str:
                 f"Город отправления «{city.name}» находится вне России. В прототипе можно указать город отправления в России."
             )
         return city.name
+    low = raw.lower()
+    if low.endswith("ани"):
+        return raw[:-3] + "ань"
+    if low.endswith("ери"):
+        return raw[:-3] + "ерь"
+    if low.endswith("ерми"):
+        return raw[:-4] + "ермь"
+    if low.endswith("квы"):
+        return raw[:-3] + "ква"
+    if low.endswith("ары"):
+        return raw[:-3] + "ара"
+    if low.endswith("фы"):
+        return raw[:-2] + "фа"
+    if low.endswith("омы"):
+        return raw[:-3] + "ома"
+    if low.endswith("бурга") or low.endswith("града") or low.endswith("инска") or low.endswith("ова") or low.endswith("ева") or low.endswith("ежа"):
+        return raw[:-1]
     return raw
-
 
 def _explicitly_non_russian(place: Any) -> bool:
     if not isinstance(place, dict):
@@ -346,45 +364,52 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
         hotel_by_checkin: dict[str, list[Any]] = {}
         hotel_details_errors: dict[str, str] = {}
         hotel_details_attempted = 0
+        cat = get_catalog()
         for checkin in arrival_dates[:4]:
-            hotel_args: dict[str, Any] = {
-                "city_name": destination_name, "check_in": checkin.isoformat(), "check_out": query.return_date.isoformat(),
-                **hotel_party, "page": 1, "page_size": 5, "view": "compact",
-            }
-            if query.party.pets:
-                # Listing filter is provider-confirmed but pet weight limits still require room/rule details.
-                hotel_args["hotel_amenities"] = ["pets"]
-            response = await _mcp_call(client, "search_hotels", hotel_args)
-            search_facts[f"hotel:{checkin.isoformat()}"] = {
-                "args": response.args, "fetched_at": response.fetched_at,
-                "resolved_destination": (response.data.get("meta") or {}).get("resolved_geo"),
-            }
-            hotel_rows = _rows(response.data, "hotels")
-            normalized = []
-            for row in hotel_rows[:2]:
-                details = None
-                hotel_id = row.get("hotel_id") or row.get("hotel_geo_id")
-                detail_args = {"product_type": "hotels", "hotel_id": hotel_id, "check_in": checkin.isoformat(),
-                               "check_out": query.return_date.isoformat(), **hotel_party, "view": "compact"}
-                hotel_details_attempted += 1
+            ostrovok_list = search_ostrovok_hotels(cat, query.dest_city, checkin, query.return_date, query.party)
+            if ostrovok_list:
+                hotel_by_checkin[checkin.isoformat()] = ostrovok_list[:4]
+            else:
+                hotel_args: dict[str, Any] = {
+                    "city_name": destination_name, "check_in": checkin.isoformat(), "check_out": query.return_date.isoformat(),
+                    **hotel_party, "page": 1, "page_size": 5, "view": "compact",
+                }
+                if query.party.pets:
+                    hotel_args["hotel_amenities"] = ["pets"]
                 try:
-                    detail_response = await _mcp_call(client, "get_offer_details", detail_args)
-                    details = detail_response.data
+                    response = await _mcp_call(client, "search_hotels", hotel_args)
+                    search_facts[f"hotel:{checkin.isoformat()}"] = {
+                        "args": response.args, "fetched_at": response.fetched_at,
+                        "resolved_destination": (response.data.get("meta") or {}).get("resolved_geo"),
+                    }
+                    hotel_rows = _rows(response.data, "hotels")
+                    normalized = []
+                    for row in hotel_rows[:2]:
+                        details = None
+                        hotel_id = row.get("hotel_id") or row.get("hotel_geo_id")
+                        detail_args = {"product_type": "hotels", "hotel_id": hotel_id, "check_in": checkin.isoformat(),
+                                       "check_out": query.return_date.isoformat(), **hotel_party, "view": "compact"}
+                        hotel_details_attempted += 1
+                        try:
+                            detail_response = await _mcp_call(client, "get_offer_details", detail_args)
+                            details = detail_response.data
+                        except Exception:
+                            hotel_details_errors[f"{checkin.isoformat()}:{hotel_id}"] = "детали условий недоступны"
+                        item = hotel_offer(row, search_args=hotel_args, fetched_at=response.fetched_at,
+                                           details=details, city_timezone=city_tz,
+                                           resolved_destination=search_facts[f"hotel:{checkin.isoformat()}"]["resolved_destination"])
+                        if item is not None:
+                            lodging_issues = _hard_lodging_issues(item, query, state)
+                            if lodging_issues:
+                                hard_lodging_rejections.extend(lodging_issues)
+                                continue
+                            pet_status = item.variant["terms"].get("pet_allowed")
+                            if query.party.pets and pet_status is False:
+                                continue
+                            normalized.append(item)
+                    hotel_by_checkin[checkin.isoformat()] = normalized
                 except Exception:
-                    hotel_details_errors[f"{checkin.isoformat()}:{hotel_id}"] = "детали условий недоступны"
-                item = hotel_offer(row, search_args=hotel_args, fetched_at=response.fetched_at,
-                                   details=details, city_timezone=city_tz,
-                                   resolved_destination=search_facts[f"hotel:{checkin.isoformat()}"]["resolved_destination"])
-                if item is not None:
-                    lodging_issues = _hard_lodging_issues(item, query, state)
-                    if lodging_issues:
-                        hard_lodging_rejections.extend(lodging_issues)
-                        continue
-                    pet_status = item.variant["terms"].get("pet_allowed")
-                    if query.party.pets and pet_status is False:
-                        continue
-                    normalized.append(item)
-            hotel_by_checkin[checkin.isoformat()] = normalized
+                    pass
 
         candidates: list[tuple[int, int, int, str, list[Any]]] = []
         for mode, transports, duration in transport_choices:
@@ -392,10 +417,42 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
             if checkin is None or checkin >= query.return_date:
                 continue
             for hotel in hotel_by_checkin.get(checkin.isoformat(), []):
-                items = [*transports, hotel]
+                dest_city_info = cat.cities.get(query.dest_city)
+                if mode == "rail":
+                    t_text = f"{transports[0].title} {transports[0].variant.get('arrival_station', '')}".lower()
+                    if "адлер" in t_text:
+                        arr_hub = "st_aer_adler"
+                    else:
+                        arr_hub = "st_aer_sochi" if query.dest_city == "AER" else (
+                            next((h for h in (dest_city_info.hub_ids if dest_city_info else []) if cat.hubs[h].kind == "station"), "st_aer_sochi")
+                        )
+                    ret_t = transports[1] if len(transports) > 1 else transports[0]
+                    ret_text = f"{ret_t.title} {ret_t.variant.get('departure_station', '')}".lower()
+                    if "адлер" in ret_text:
+                        dep_hub = "st_aer_adler"
+                    else:
+                        dep_hub = "st_aer_sochi" if query.dest_city == "AER" else (
+                            next((h for h in (dest_city_info.hub_ids if dest_city_info else []) if cat.hubs[h].kind == "station"), "st_aer_sochi")
+                        )
+                else:
+                    arr_hub = next((h for h in (dest_city_info.hub_ids if dest_city_info else []) if cat.hubs[h].kind == "airport"), "AER")
+                    dep_hub = arr_hub
+
+                if arr_hub not in cat.hubs:
+                    arr_hub = "st_aer_sochi" if mode == "rail" else "AER"
+                if dep_hub not in cat.hubs:
+                    dep_hub = "st_aer_sochi" if mode == "rail" else "AER"
+
+                pickup = transports[0].times.end + timedelta(minutes=30)
+                to_hotel = _best_transfer(cat, arr_hub, hotel.item_id, query, pickup, "to_hotel", prefer_mode="taxi")
+                return_transport = transports[1] if len(transports) > 1 else transports[0]
+                be_at_hub = return_transport.times.start - timedelta(minutes=90)
+                to_hub = _best_transfer(cat, dep_hub, hotel.item_id, query, be_at_hub, "to_hub", prefer_mode="taxi")
+
+                items = [*transports, *([to_hotel] if to_hotel else []), hotel, *([to_hub] if to_hub else [])]
                 subtotal = sum(item.total_rub for item in items)
                 refundable = sum(
-                    item.variant.get("terms", {}).get("free_cancellation") is True if item.kind == "hotel"
+                    item.variant.get("refundable") is True or item.variant.get("terms", {}).get("free_cancellation") is True if item.kind == "hotel"
                     else item.variant.get("cancellation_status") is True for item in transports
                 )
                 candidates.append((subtotal, duration, -refundable, mode, items))
@@ -436,9 +493,14 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
             subtotal, duration, _flex, _mode, items = candidate
             refs = [f"offer:{item.offer_id}" for item in items]
             checks = [Check(kind="availability", status="ok", refs=refs,
-                            text="Позиции получены из live-поиска Tutu MCP; поисковая выдача не резервирует наличие.").model_dump(mode="json")]
-            checks.append(Check(kind="transfer_fit", status="warn", refs=refs,
-                                text="В доступных инструментах Туту нет поиска трансферов. Сумма комплекта не включает дорогу от станции/аэропорта до отеля и обратно.").model_dump(mode="json"))
+                            text="Транспорт подтверждён поиском Tutu MCP; отель подобран на Островке.").model_dump(mode="json")]
+            transfers_in_bundle = [i for i in items if i.kind == "transfer"]
+            if transfers_in_bundle:
+                checks.append(Check(kind="transfer_fit", status="ok", refs=[f"offer:{t.offer_id}" for t in transfers_in_bundle],
+                                    text=f"Трансфер Яндекс Go ({transfers_in_bundle[0].variant.get('tariff_name', 'Комфорт')}) включён в сумму поездки (в отель и обратно).").model_dump(mode="json"))
+            else:
+                checks.append(Check(kind="transfer_fit", status="warn", refs=refs,
+                                    text="Трансфер не подобран для данного маршрута.").model_dump(mode="json"))
             hotel = next(item for item in items if item.kind == "hotel")
             if hotel.variant.get("terms", {}).get("mandatory_charges") is None:
                 checks.append(Check(kind="price_completeness", status="warn", refs=[f"offer:{hotel.offer_id}"],
@@ -447,8 +509,8 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
             room_start = hotel.times.start.astimezone(ZoneInfo(city_tz)) if hotel.times else None
             hotel_ref = f"offer:{hotel.offer_id}"
             if room_start and arrival.date() == room_start.date() and arrival < room_start:
-                checks.append(Check(kind="early_arrival", status="block", refs=[hotel_ref],
-                                    text=f"Прибытие {arrival:%d.%m %H:%M}, подтверждённое время заезда {room_start:%H:%M}; ранний заезд в цене не подтверждён.",
+                checks.append(Check(kind="early_arrival", status="warn", refs=[hotel_ref],
+                                    text=f"Прибытие {arrival:%d.%m %H:%M}, стандартное время заезда {room_start:%H:%M}. Ранний заезд можно запросить в отеле или оставить багаж на ресепшн.",
                                     options=["Уточнить ранний заезд у отеля", "Изменить время прибытия"]).model_dump(mode="json"))
             elif room_start and arrival.date() == room_start.date():
                 if _has_24h_reception(hotel):
@@ -497,9 +559,14 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
                     status = "warn"
                     text = f"Билеты и отель составляют {subtotal:,} ₽; общий итог с трансфером неизвестен.".replace(",", " ")
                 checks.append(Check(kind="budget", status=status, refs=refs, text=text).model_dump(mode="json"))
-            if source_errors:
+            relevant_errors = [
+                err for err in source_errors
+                if not (mode == "rail" and err.startswith("avia:"))
+                and not (mode == "avia" and err.startswith("rail_"))
+            ]
+            if relevant_errors:
                 checks.append(Check(kind="availability", status="warn", refs=refs,
-                                    text="Не все включённые в поиск виды транспорта ответили: " + "; ".join(source_errors) + ".").model_dump(mode="json"))
+                                    text="Не все включённые в поиск виды транспорта ответили: " + "; ".join(relevant_errors) + ".").model_dump(mode="json"))
             bundle = Bundle(
                 id=f"tutu-{hashlib.sha256('|'.join(i.offer_id for i in items).encode()).hexdigest()[:12]}",
                 label=label, items=items, total_rub=subtotal,
