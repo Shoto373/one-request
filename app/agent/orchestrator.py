@@ -829,6 +829,14 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                 f"3. Какие пожелания к отелю: расположение (в центре / в тихом районе / рядом с парком), завтраки, спа или вид из окна?\n"
                 f"На основе ваших ответов я моментально отфильтрую предложения по реальным отзывам гостей с Островка и Google!"
             )
+            try:
+                from app.rag.service import build_sources_summary
+                sources_block = build_sources_summary(state)
+                if sources_block:
+                    msg += "\n\n" + sources_block
+            except Exception as e:
+                log.warning("Failed to append sources summary: %s", e)
+
             return state, msg
         notes: list[str] = []
         try:
@@ -922,6 +930,12 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             "input": {"text": text, "open_question_keys": [q.key for q in state.open_questions]},
             "output": parsed.model_dump(mode="json"), "status": "fallback" if rules else "ok",
         }]
+        if (state.bundles or any(r.key in {"destination", "dates", "origin"} for r in state.requirements)) and re.search(r"выдай|вывдай|ссылк|источник|откуда|где\s*ссылк", text, re.I):
+            from app.rag.service import build_sources_summary
+            candidate = state.model_copy(deep=True)
+            reply = "Вот прямые ссылки на бронирование и официальные источники данных по найденным предложениям:\n\n" + build_sources_summary(candidate)
+            trace.append(self._state_diff(before, candidate))
+            return candidate, reply, trace
         accepted, ambiguous = self._match_alternative(text, state.proposed_changes, parsed)
         if ambiguous:
             candidate = state.model_copy(deep=True)

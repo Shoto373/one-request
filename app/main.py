@@ -42,6 +42,17 @@ async def lifespan(app: FastAPI):
         seeded = load_seed(database_url)
         log.info("database initialized; seed entries processed=%d", seeded)
         app.state.store = StateStore(database_url)
+        try:
+            from app.rag.populator import populate_rag_database
+            import psycopg
+            with psycopg.connect(database_url) as conn:
+                row = conn.execute("SELECT count(*) FROM inventory_hotels").fetchone()
+                if not row or row[0] == 0:
+                    log.info("inventory_hotels is empty, populating 6-month travel inventory into PostgreSQL...")
+                    counts = populate_rag_database(database_url, days=180)
+                    log.info("PostgreSQL RAG inventory initialized: %s", counts)
+        except Exception as e:
+            log.warning("Could not auto-populate RAG inventory at startup: %s", e)
     else:
         log.warning("DATABASE_URL is not configured; health is available, session endpoints are disabled")
     app.state.llm = LLMClient()
