@@ -69,8 +69,16 @@ def _req(key: str, value, kind: str, quote: str | None, label: str | None = None
                        quote=None if kind == "assumption" else quote, label=label)
 
 
+NON_CITY_WORDS = re.compile(
+    r"^(?:\d|ноч|дн|сут|недел|выходн|weekend|человек|взросл|ребен|дет|двоих|троих|руб|тыс|бюджет|январ|феврал|март|апрел|ма[йея]|июн|июл|август|сентябр|октябр|ноябр|декабр|поездк|отпуск|тур|билет|отел)",
+    re.I,
+)
+
+
 def _find_city(fragment: str) -> str | None:
-    f = fragment.lower()
+    f = fragment.lower().strip()
+    if not f or NON_CITY_WORDS.search(f) or "," in fragment:
+        return None
     from app.planning.landmarks import resolve_landmark
     lm = resolve_landmark(f)
     if lm:
@@ -152,23 +160,50 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
                 put(_req("destination", word, "hard", m.group(0)))
                 break
 
+    if "destination" not in reqs and not re.search(r"куда\s+(?:угодно|нибудь)|anywhere|somewhere", low):
+        # User answering the destination question directly (e.g. clicking "Париж", "Дубай", "Сочи")
+        dest_ans = text.strip().strip(".!?;,: ")
+        if len(dest_ans.split()) <= 4 and dest_ans.lower() not in {"да", "нет", "yes", "no"}:
+            city = _find_city(dest_ans)
+            if city and city != (reqs.get("origin").value if "origin" in reqs else None):
+                put(_req("destination", city, "hard", text.strip()))
+
     # --- dates ---
-    m = re.search(rf"(?:с\s*)?(?P<d1>\d{{1,2}})\s*(?:[-–—]|по|to|until)\s*(?P<d2>\d{{1,2}})\s+(?P<month>{MONTH_WORD_NC})(?:\s+(?P<year>20\d\d))?", low)
-    m_en = re.search(rf"(?P<month>{MONTH_WORD_NC})\s+(?P<d1>\d{{1,2}})\s*(?:[-–—]|to|until)\s*(?P<d2>\d{{1,2}})(?:,?\s+(?P<year>20\d\d))?", low)
-    if m or m_en:
-        if m:
-            d1, d2, mon, year = int(m.group("d1")), int(m.group("d2")), _month(m.group("month")), m.group("year")
-            span = m.span()
-        else:
-            mon, d1, d2, year = _month(m_en.group("month")), int(m_en.group("d1")), int(m_en.group("d2")), m_en.group("year")
-            span = m_en.span()
-        if mon:
-            y = int(year) if year else _year_for(mon, d2, now)
+    # Cross-month ranges: e.g. "30 октября – 1 ноября", "30 декабря – 6 января", "с 28 ноября по 5 декабря"
+    m_cross = re.search(
+        rf"(?:с\s*)?(?P<d1>\d{{1,2}})\s+(?P<m1>{MONTH_WORD_NC})\s*(?:[-–—]|по|to|until)\s*(?P<d2>\d{{1,2}})\s+(?P<m2>{MONTH_WORD_NC})(?:\s+(?P<year>20\d\d))?",
+        low,
+    )
+    if m_cross:
+        d1, mon1 = int(m_cross.group("d1")), _month(m_cross.group("m1"))
+        d2, mon2 = int(m_cross.group("d2")), _month(m_cross.group("m2"))
+        year = m_cross.group("year")
+        if mon1 and mon2:
+            y1 = int(year) if year else _year_for(mon1, d1, now)
+            y2 = y1 + 1 if mon2 < mon1 else y1
             try:
-                start, end = date(y, mon, d1), date(y, mon, d2)
-                put(_req("dates", {"start": start.isoformat(), "end": end.isoformat()}, "hard", text[span[0]:span[1]]))
+                start, end = date(y1, mon1, d1), date(y2, mon2, d2)
+                put(_req("dates", {"start": start.isoformat(), "end": end.isoformat()}, "hard", text[m_cross.start():m_cross.end()]))
             except ValueError:
                 pass
+
+    if "dates" not in reqs:
+        m = re.search(rf"(?:с\s*)?(?P<d1>\d{{1,2}})\s*(?:[-–—]|по|to|until)\s*(?P<d2>\d{{1,2}})\s+(?P<month>{MONTH_WORD_NC})(?:\s+(?P<year>20\d\d))?", low)
+        m_en = re.search(rf"(?P<month>{MONTH_WORD_NC})\s+(?P<d1>\d{{1,2}})\s*(?:[-–—]|to|until)\s*(?P<d2>\d{{1,2}})(?:,?\s+(?P<year>20\d\d))?", low)
+        if m or m_en:
+            if m:
+                d1, d2, mon, year = int(m.group("d1")), int(m.group("d2")), _month(m.group("month")), m.group("year")
+                span = m.span()
+            else:
+                mon, d1, d2, year = _month(m_en.group("month")), int(m_en.group("d1")), int(m_en.group("d2")), m_en.group("year")
+                span = m_en.span()
+            if mon:
+                y = int(year) if year else _year_for(mon, d2, now)
+                try:
+                    start, end = date(y, mon, d1), date(y, mon, d2)
+                    put(_req("dates", {"start": start.isoformat(), "end": end.isoformat()}, "hard", text[span[0]:span[1]]))
+                except ValueError:
+                    pass
     # A single calendar date is a known departure date, not a complete trip window.
     # Keep it separately so the agent can ask for the return date/duration instead
     # of repeating the generic date question or inventing a trip length.

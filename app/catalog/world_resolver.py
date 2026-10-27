@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -985,8 +986,16 @@ def resolve_world_city(cat: Catalog, text: str) -> str | None:
             if alias in norm or norm in alias:
                 return city_id
 
+    # Filter out non-city terms (durations, party, dates, numbers, budget)
+    NON_CITY_STOPWORDS = re.compile(
+        r"^(?:\d|ноч|дн|сут|недел|выходн|weekend|человек|взросл|ребен|дет|двоих|троих|руб|тыс|бюджет|январ|феврал|март|апрел|ма[йея]|июн|июл|август|сентябр|октябр|ноябр|декабр|поездк|отпуск|тур|билет|отел)",
+        re.I,
+    )
+    if NON_CITY_STOPWORDS.search(norm):
+        return None
+
     # Dynamic registration for any other unknown city
-    if len(norm) >= 3 and not norm.isdigit():
+    if len(norm) >= 3 and not norm.isdigit() and not re.search(r"\d", norm):
         city_id = f"W_{hashlib.md5(norm.encode()).hexdigest()[:4].upper()}"
         capitalized = norm.capitalize()
         dynamic_data = {

@@ -29,13 +29,63 @@ ALIASES = {
     "transport_mode": "transport", "max_travel_time": "max_duration_min", "style": "trip_style",
     "stars": "lodging_stars", "meal": "meal_preference", "meals": "meal_preference",
 }
+MONTHS_RU_GEN = [
+    "", "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря",
+]
+
+
+def generate_date_options(ref_date: date | None = None) -> list[str]:
+    """Generate realistic, convenient, and complete date ranges for quick selection chips."""
+    d = ref_date or date.today()
+    options: list[str] = []
+
+    # 1. Ближайшие выходные (пт–вс)
+    days_to_fri = (4 - d.weekday()) % 7
+    if days_to_fri < 3:
+        days_to_fri += 7
+    fri = d + timedelta(days=days_to_fri)
+    sun = fri + timedelta(days=2)
+    if fri.month == sun.month:
+        options.append(f"{fri.day}–{sun.day} {MONTHS_RU_GEN[fri.month]} (выходные)")
+    else:
+        options.append(f"{fri.day} {MONTHS_RU_GEN[fri.month]} – {sun.day} {MONTHS_RU_GEN[sun.month]} (выходные)")
+
+    # 2. Недельная поездка (7 ночей)
+    week_start = fri + timedelta(days=7)
+    week_end = week_start + timedelta(days=7)
+    if week_start.month == week_end.month:
+        options.append(f"{week_start.day}–{week_end.day} {MONTHS_RU_GEN[week_start.month]} (неделя)")
+    else:
+        options.append(f"{week_start.day} {MONTHS_RU_GEN[week_start.month]} – {week_end.day} {MONTHS_RU_GEN[week_end.month]} (неделя)")
+
+    # 3. Начало следующего месяца
+    next_m = 1 if d.month == 12 else d.month + 1
+    options.append(f"1–8 {MONTHS_RU_GEN[next_m]} (неделя)")
+
+    # 4. Сезонные праздники или отпуск на 2 недели
+    if d.month in (10, 11, 12):
+        options.append("30 декабря – 6 января")
+    elif d.month in (3, 4, 5):
+        options.append("1–9 мая (праздники)")
+    else:
+        two_w_start = week_start + timedelta(days=14)
+        two_w_end = two_w_start + timedelta(days=14)
+        if two_w_start.month == two_w_end.month:
+            options.append(f"{two_w_start.day}–{two_w_end.day} {MONTHS_RU_GEN[two_w_start.month]} (2 недели)")
+        else:
+            options.append(f"{two_w_start.day} {MONTHS_RU_GEN[two_w_start.month]} – {two_w_end.day} {MONTHS_RU_GEN[two_w_end.month]} (2 недели)")
+
+    return options
+
+
 QUESTION_TEXT = {
-    "origin": ("Откуда планируете выезжать?", "Город выезда нужен для точного подбора билетов Туту.", ["Москва", "Рязань", "Санкт-Петербург", "Казань"]),
-    "destination": ("В какой город или курорт хотите отправиться?", "Подберём лучшие отели и маршруты.", ["Сочи", "Санкт-Петербург", "Казань", "Калининград"]),
-    "dates": ("На какие даты или в каком месяце планируете поездку?", "Проверим реальное наличие мест на нужный период.", ["12 ноября", "В ноябре", "На 7 дней"]),
-    "duration_nights": ("На сколько ночей планируете отпуск?", "Рассчитаем проживание в отеле и обратные билеты.", ["на 5 ночей", "на 7 ночей", "на 10 ночей", "на 14 ночей"]),
+    "origin": ("Откуда планируете выезжать?", "Город выезда нужен для точного подбора билетов Туту.", ["Москва", "Санкт-Петербург", "Казань", "Екатеринбург"]),
+    "destination": ("В какой город или курорт хотите отправиться?", "Подберём лучшие отели и маршруты.", ["Сочи", "Санкт-Петербург", "Калининград", "Париж", "Дубай"]),
+    "dates": ("На какие даты или в каком месяце планируете поездку?", "Проверим реальное наличие мест на нужный период.", ["14–16 ноября (выходные)", "15–22 ноября (неделя)", "1–8 декабря (неделя)", "30 декабря – 6 января"]),
+    "duration_nights": ("На сколько ночей планируете отпуск?", "Рассчитаем проживание в отеле и обратные билеты.", ["На 3 ночи (выходные)", "На 7 ночей (неделя)", "На 10 ночей", "На 14 ночей (2 недели)"]),
     "adults": ("Сколько взрослых отправляется в поездку?", "Подберём подходящий номер и билеты на всех.", ["1 взрослый", "2 взрослых", "3 взрослых"]),
-    "children_ages": ("Подскажите возраст ребёнка?", "Для детей действуют льготные тарифы и скидки.", ["5 лет", "7 лет", "10 лет", "12 лет"]),
+    "children_ages": ("Подскажите возраст ребёнка?", "Для детей действуют льготные тарифы и скидки.", ["3 года", "7 лет", "10 лет", "14 лет"]),
     "children_count": ("Сколько детей едет и сколько им лет?", "Учтём детские тарифы и правила размещения.", ["1 ребёнок", "2 детей", "без детей"]),
     "budget_scope": ("Бюджет указан на всю поездку или на одного человека?", "Поможет точнее отфильтровать предложения.", ["На поездку", "На человека"]),
     "pet_weight_kg": ("Сколько весит питомец?", "Вес важен для правил перевозки и трансфера.", ["до 5 кг", "до 8 кг", "12 кг"]),
@@ -212,6 +262,7 @@ def normalize_contextual_changes(parsed: ParsedRequest, text: str, state: TripSt
         return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
             key="budget_total_rub", question="До какой суммы снизить бюджет?",
             why="Без суммы нельзя проверить, укладывается ли комплект в новый лимит.",
+            options=["до 50 000 ₽", "до 70 000 ₽", "до 100 000 ₽", "до 150 000 ₽"],
         )
 
     shift = re.search(r"на\s+(?P<n>\d+|один|одну|два|две|три|четыре)\s+д(?:ень|ня|ней)\s+(?P<dir>позже|раньше)", lower)
@@ -236,10 +287,12 @@ def normalize_contextual_changes(parsed: ParsedRequest, text: str, state: TripSt
             except (KeyError, TypeError, ValueError):
                 return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
                     key="dates", question="Какие даты поставить?", why="Не удалось однозначно сдвинуть текущий диапазон дат.",
+                    options=generate_date_options(),
                 )
         else:
             return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
                 key="dates", question="От каких дат отсчитать сдвиг?", why="В текущем плане нет точного диапазона дат.",
+                options=generate_date_options(),
             )
 
     pet_match = re.search(r"с\s+(?:нами\s+)?(?:собак\w*|п[её]с\w*|кош\w*|кот\w*)", lower)
@@ -256,6 +309,7 @@ def normalize_contextual_changes(parsed: ParsedRequest, text: str, state: TripSt
             return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), OpenQuestion(
                 key="pet_weight_kg", question="Сколько весит животное?",
                 why="Вес влияет на правила перевозчика и вместимость трансфера.",
+                options=QUESTION_TEXT["pet_weight_kg"][2],
             )
     return ParsedRequest(requirements=list(normalized.values()), remove_keys=parsed.remove_keys), None
 
@@ -303,6 +357,13 @@ def next_questions(
 
     def add(key: str) -> None:
         text, why, options = QUESTION_TEXT[key]
+        if key == "dates":
+            try:
+                dyn = generate_date_options()
+                if dyn:
+                    options = dyn
+            except Exception:
+                pass
         questions.append(OpenQuestion(key=key, question=text, why=why, options=options))
 
     for need in keys:
@@ -350,8 +411,13 @@ def missing_concrete_inputs(requirements: Iterable[Requirement]) -> list[OpenQue
         q = [item for item in q if item.key != "adults"] + [OpenQuestion(
             key="children_count", question="Сколько детей едет и сколько лет каждому?",
             why="Число и возраст детей влияют на тарифы и вместимость.",
+            options=QUESTION_TEXT["children_count"][2],
         )]
     if any(r.key == "children_count" and r.value and _present(reqs, "children_ages") is None for r in reqs):
         if not any(x.key == "children_ages" for x in q):
-            q.append(OpenQuestion(key="children_ages", question="Сколько лет каждому ребёнку?", why="Возраст влияет на цену билетов и размещение."))
+            q.append(OpenQuestion(
+                key="children_ages", question="Сколько лет каждому ребёнку?",
+                why="Возраст влияет на цену билетов и размещение.",
+                options=QUESTION_TEXT["children_ages"][2],
+            ))
     return q[:2]
