@@ -31,10 +31,9 @@ export default function ReplanDiff({ diff, onClose }: { diff: PlanDiff; onClose?
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-[17px] font-bold">Агент пересобрал план</h2>
-          <p className="text-sm text-ink-grey">
-            {diff.entry?.change ? `${diff.entry.change}. ` : ''}
-            Перепроверил все зависимые части, заменил только то, что перестало подходить.
-          </p>
+          {diff.entry?.change && (
+            <p className="text-sm text-ink-grey">{diff.entry.change}</p>
+          )}
         </div>
         <div className="shrink-0 text-right">
           <div className="text-[11px] text-ink-muted">итого</div>

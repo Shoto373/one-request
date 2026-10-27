@@ -22,8 +22,8 @@ from psycopg.types.json import Jsonb
 
 log = logging.getLogger(__name__)
 
-# Target date horizon: 6 months (180 days) starting from November 1, 2026 to May 1, 2027
-HORIZON_DAYS = 180
+# Target date horizon: 1 full year (365 days) starting from November 1, 2026 to November 1, 2027
+HORIZON_DAYS = 365
 START_DATE = date(2026, 11, 1)
 
 # All supported destinations
@@ -192,8 +192,15 @@ def populate_rag_database(
             # 1. Populate Hotels
             log.info("Populating RAG hotels from catalog and live inventory...")
             from app.catalog.store import get_catalog
-            from app.catalog.ostrovok_live import get_hotel_slug
+            from app.catalog.world_resolver import init_world_catalog
+            from app.catalog.ostrovok_live import ensure_ostrovok_hotels, get_hotel_slug
             cat = get_catalog()
+            init_world_catalog(cat)
+            for c_id in CITIES:
+                try:
+                    ensure_ostrovok_hotels(cat, c_id)
+                except Exception:
+                    pass
             
             for h in cat.hotels.values():
                 slug = get_hotel_slug(h)

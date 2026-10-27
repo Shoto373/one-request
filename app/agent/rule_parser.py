@@ -381,11 +381,17 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
         if not re.search(r"разны|один\s+\d.*один\s+\d", low):
             put(_req("lodging_stars", int(m.group(1)), "hard" if re.search(r"строго|только|обязательно|strictly|only", low) else "soft",
                      text[m.start():m.end()]))
-    if (m := re.search(r"вс[её]\s+включено|all[\s-]inclusive|ультра\s*вс", low)):
+    if (m := re.search(r"вс[её]\s+включено|all[\s-]inclusive|ультра\s*вс|\bai\b", low)):
         put(_req("meal_preference", "all_inclusive", "hard" if re.search(r"обязательно|только|строго", low) else "soft",
                  text[m.start():m.end()]))
-    elif (m := re.search(r"с\s+завтрак\w*|breakfast", low)):
+    elif (m := re.search(r"полупансион|завтрак\s*\+\s*ужин|\bhb\b", low)):
+        put(_req("meal_preference", "half_board", "soft", text[m.start():m.end()]))
+    elif (m := re.search(r"полный\s+пансион|\bfb\b", low)):
+        put(_req("meal_preference", "full_board", "soft", text[m.start():m.end()]))
+    elif (m := re.search(r"с\s+завтрак\w*|завтрак|\bbb\b|breakfast", low)):
         put(_req("meal_preference", "breakfast", "soft", text[m.start():m.end()]))
+    elif (m := re.search(r"без\s+питания|\bro\b|room\s*only", low)):
+        put(_req("meal_preference", "none", "soft", text[m.start():m.end()]))
 
     # --- short answers to the open question ---
     stripped = text.strip()
@@ -403,6 +409,17 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
             put(_req("adults", n, "hard", text[m.start():m.end()]))
         elif key in ("children_ages", "children_count") and (nums := re.findall(r"\d{1,2}", low)):
             put(_req("children_ages", [int(x) for x in nums], "hard", stripped))
+        elif key in ("meal_preference", "meal"):
+            if re.search(r"вс[её]\s+включено|all|\bai\b", low):
+                put(_req("meal_preference", "all_inclusive", "soft", stripped))
+            elif re.search(r"полупансион|ужин|\bhb\b", low):
+                put(_req("meal_preference", "half_board", "soft", stripped))
+            elif re.search(r"полный|\bfb\b", low):
+                put(_req("meal_preference", "full_board", "soft", stripped))
+            elif re.search(r"завтрак|\bbb\b", low):
+                put(_req("meal_preference", "breakfast", "soft", stripped))
+            elif re.search(r"без\s*питан|\bro\b", low):
+                put(_req("meal_preference", "none", "soft", stripped))
         elif key == "pet_weight_kg" and (m := re.search(r"\d+(?:[.,]\d+)?", low)):
             put(_req("pet_weight_kg", float(m.group(0).replace(",", ".")), "hard", stripped if re.search(r"кг|kg", low) else text[m.start():m.end()] + ""))
         elif key == "duration_nights" and not ages and (m := re.search(r"\d{1,2}", low)):

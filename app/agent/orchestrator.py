@@ -794,7 +794,15 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                     f"• ✈️ Перелёт: {hub} ➔ {im0.destination_city} (~{f_dur_str}) — {f_price_str}\n"
                 )
 
-            msg += "Все детали и прямые ссылки на отели Островка — в карточках предложений ниже. Если хотите изменить отель, даты или бюджет — просто напишите!"
+            msg += "Все детали и прямые ссылки на отели Островка — в карточках предложений ниже."
+            has_meal = any(r.key in {"meal_preference", "meal", "meals"} and r.value for r in state.requirements)
+            if not has_meal:
+                msg += (
+                    "\n\n🍽️ Подскажите, какое питание в отеле вам больше подходит (только завтраки, всё включено или без питания)? "
+                    "Также напишите, если для вас важны спа/бассейн, первая линия пляжа или тихий район."
+                )
+            else:
+                msg += " Если хотите изменить отель, даты или бюджет — просто напишите!"
             return state, msg
         notes: list[str] = []
         try:

@@ -81,9 +81,9 @@ def flight_offers(f: Flight, party: Party) -> list[Offer]:
         if fare.seats_left < seats:
             continue
         total = fare.price_rub * seats + sum(e["price_rub"] for e in extras)
-        included = [f"cabin_bag_{fare.baggage.cabin_kg}kg"]
+        included = [f"ручная кладь {fare.baggage.cabin_kg} кг"]
         if fare.baggage.checked_pieces:
-            included.append(f"checked_bag_{fare.baggage.checked_pieces}x{fare.baggage.checked_kg}kg")
+            included.append(f"багаж {fare.baggage.checked_pieces}×{fare.baggage.checked_kg} кг")
         penalty = (fare.refund_fee_rub or 0) * seats if fare.refundable else total
         title = f"{f.carrier_name} {f.flight_no}"
         bag = f"{fare.baggage.cabin_kg} кг ручной клади"

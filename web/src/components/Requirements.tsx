@@ -54,17 +54,57 @@ function valueText(r: Requirement, configuredDestinations: Record<string, string
   if (r.key === 'pet_weight_kg') return `${value} кг`
   if (r.key.includes('rub') && typeof value === 'number') return rub(value)
   if (r.key === 'budget_scope') return value === 'trip' ? 'На всю поездку' : value === 'person' ? 'На человека' : String(value)
+  if (r.key === 'budget_preference') {
+    if (value === 'low_cost') return 'Экономный'
+    if (value === 'balanced') return 'Оптимальный'
+    if (value === 'premium') return 'Премиум / Комфорт'
+    if (value === 'flexible') return 'Гибкий'
+  }
+  if (r.key === 'travel_time_preference') {
+    if (value === 'short') return 'Быстрее всего'
+    if (value === 'comfort') return 'Комфортное'
+    if (value === 'balanced') return 'Оптимальное'
+  }
+  if (r.key === 'meal_preference' || r.key === 'meal') {
+    if (value === 'all_inclusive' || value === 'AI') return 'Всё включено'
+    if (value === 'breakfast' || value === 'BB') return 'Завтрак включён'
+    if (value === 'half_board' || value === 'HB') return 'Полупансион (завтрак + ужин)'
+    if (value === 'full_board' || value === 'FB') return 'Полный пансион'
+    if (value === 'none' || value === 'RO') return 'Без питания'
+  }
+  if (r.key === 'trip_style') {
+    if (value === 'beach') return 'Пляжный отдых'
+    if (value === 'sightseeing') return 'Экскурсионный'
+    if (value === 'nature') return 'Природа и горы'
+    if (value === 'romantic') return 'Романтический'
+    if (value === 'family') return 'Семейный отдых'
+  }
+  if (r.key === 'lodging_stars' && typeof value === 'number') {
+    return `${value}★`
+  }
   if (r.key === 'transport') return value === 'train' ? 'Поезд' : value === 'flight' ? 'Самолёт' : String(value)
   if (r.key === 'duration_nights' && typeof value === 'number') return `${value} ${value === 1 ? 'ночь' : value >= 2 && value <= 4 ? 'ночи' : 'ночей'}`
   if (r.key === 'max_duration_min' && typeof value === 'number') return `${Math.floor(value / 60)} ч ${value % 60 ? `${value % 60} мин` : ''}`.trim()
   if (typeof value === 'boolean') return value ? 'Да' : 'Нет'
   if (Array.isArray(value)) return value.join(', ')
   if (typeof value === 'object') return Object.values(value as Record<string, unknown>).map(shortDate).join(' — ')
-  return String(value)
+  const str = String(value)
+  const translations: Record<string, string> = {
+    low_cost: 'Экономный',
+    short: 'Быстрее всего',
+    comfort: 'Комфортный',
+    balanced: 'Оптимальный',
+    premium: 'Премиум',
+    standard: 'Стандартный',
+    all_inclusive: 'Всё включено',
+    breakfast: 'Завтрак',
+    none: 'Без питания',
+  }
+  return translations[str.toLowerCase()] ?? str
 }
 
 function sourceText(r: Requirement): string {
-  if (r.kind === 'assumption') return r.label || 'Предположение агента'
+  if (r.kind === 'assumption') return r.label || 'Предположение'
   if (r.source === 'user_text') return 'Из вашего сообщения'
   if (r.source === 'user_edit') return 'Исправлено вами'
   if (r.source === 'memory') return 'Из прошлой поездки'
@@ -78,21 +118,11 @@ export default function Requirements({ requirements, busy, onEdit, onRemove, onC
   const configuredDestinations = Object.fromEntries((status?.product_coverage?.destinations ?? []).map((city) => [city.id, city.name]))
   const [editing, setEditing] = useState<string | null>(null)
   const sorted = [...requirements].sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind))
-  const assumptions = requirements.filter((r) => r.kind === 'assumption').length
+
+  if (!requirements.length) return null
 
   return (
     <section className="card overflow-hidden">
-      <div className="flex items-baseline justify-between gap-3 px-4 pb-3 pt-4 md:px-5">
-        <div>
-          <h2 className="text-[17px] font-bold">Что агент понял</h2>
-          <p className="mt-0.5 text-xs text-ink-muted">Проверьте значения и исправьте, если агент понял вас не так.</p>
-        </div>
-        {assumptions > 0 && <span className="shrink-0 text-xs font-medium text-[#8a4b00]">{assumptions} догадки — проверьте</span>}
-      </div>
-
-      {!requirements.length ? (
-        <p className="px-5 pb-5 text-sm text-ink-muted">Пока нет условий поездки.</p>
-      ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead className="bg-canvas/80 text-[11px] uppercase tracking-wide text-ink-muted">
@@ -149,15 +179,6 @@ export default function Requirements({ requirements, busy, onEdit, onRemove, onC
             </tbody>
           </table>
         </div>
-      )}
-
-      <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-black/[.06] px-5 py-2.5 text-[11px] text-ink-muted">
-        {(['hard', 'soft', 'assumption'] as const).map((k) => (
-          <span key={k} className="inline-flex items-center gap-1.5" title={REQ_KIND[k].hint}>
-            <span className={`h-2 w-2 rounded-full ${REQ_KIND[k].dot}`} />{REQ_KIND[k].label}
-          </span>
-        ))}
-      </div>
     </section>
   )
 }

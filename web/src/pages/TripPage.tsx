@@ -111,8 +111,8 @@ export default function TripPage({ freshStart = false }: { freshStart?: boolean 
                 <Icon name="list" className="h-4 w-4" /> Шаги агента
                 {s.trace.length > 0 && <span className="rounded-full bg-brand px-1.5 text-[10px] text-white">{s.trace.length}</span>}
               </button>
-              <button onClick={s.restart} disabled={s.busy} className="btn-ghost px-2.5 py-1.5 text-xs">
-                <Icon name="refresh" className="h-4 w-4" /> Заново
+              <button onClick={s.restart} disabled={s.busy} className="btn-ghost px-2.5 py-1.5 text-xs font-medium" title="Начать новый диалог">
+                <Icon name="plus" className="h-4 w-4" /> Новый чат
               </button>
             </div>
           </div>

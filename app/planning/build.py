@@ -174,7 +174,7 @@ class _TopK:
         return next((c for _, c in self.items if c.key not in taken), None)
 
 
-def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> BuildResult:
+def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 4) -> BuildResult:
     notes: list[str] = []
     if q.return_date <= q.depart_date:
         return BuildResult([], ["Дата обратной дороги должна быть позже даты отправления."])
@@ -194,7 +194,7 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
     if notes:
         return BuildResult([], notes)
 
-    k = 8 if variants > 1 else 1
+    k = 16 if variants > 1 else 1
     tops = {"cheap": _TopK(k)}
     if variants > 1:
         tops["comfort"] = _TopK(k)
@@ -321,9 +321,34 @@ def _build(cat: Catalog, q: TripQuery, limited: bool, variants: int = 3) -> Buil
 
         if third is not None and third.key not in taken:
             h3 = _hotel_id_of(third)
-            b3_label = "гибче отмена" if cancel_loss(third.items) < cancel_loss(cheapest.items) else "альтернатива"
+            b3_label = "премиум" if (lux_pool and third == lux_pool[0]) else ("гибче отмена" if cancel_loss(third.items) < cancel_loss(cheapest.items) else "альтернатива")
             bundles.append(_bundle(f"b{len(bundles) + 1}", b3_label, third,
                                    flex_phrase(third.items, cheapest.items)))
+            taken.add(third.key)
+            if h3:
+                taken_hotels.add(h3)
+
+        if variants >= 4:
+            # Bundle 4: Fourth distinct alternative
+            alt_pool = [c for _, c in tops["cheap"].items if c.key not in taken and _hotel_id_of(c) not in taken_hotels]
+            if not alt_pool:
+                alt_pool = [c for _, c in tops["comfort"].items if c.key not in taken and _hotel_id_of(c) not in taken_hotels]
+            if not alt_pool:
+                alt_pool = [c for _, c in tops["flex"].items if c.key not in taken and _hotel_id_of(c) not in taken_hotels]
+            if not alt_pool:
+                alt_pool = [c for _, c in tops["cheap"].items if c.key not in taken]
+            if not alt_pool:
+                alt_pool = [c for _, c in tops["comfort"].items if c.key not in taken]
+
+            fourth = alt_pool[0] if alt_pool else tops["cheap"].first_not_in(taken)
+            if fourth is not None and fourth.key not in taken:
+                h4 = _hotel_id_of(fourth)
+                b4_label = "баланс" if len(bundles) >= 3 else "альтернатива"
+                bundles.append(_bundle(f"b{len(bundles) + 1}", b4_label, fourth,
+                                       flex_phrase(fourth.items, cheapest.items)))
+                taken.add(fourth.key)
+                if h4:
+                    taken_hotels.add(h4)
     return BuildResult(bundles, notes, cheapest_total_rub=cheapest.total)
 
 
@@ -350,7 +375,7 @@ def build_bundles(requirements: dict[str, Any], state: Any = None) -> list[dict[
     if query is None:
         log.info("build_bundles: request not resolved: %s", problems)
         return []
-    result = build_trip_bundles(cat, query)
+    result = build_trip_bundles(cat, query, variants=4)
     if not result.bundles:
         log.info("build_bundles: no feasible bundle: %s", result.notes)
     return [bundle_to_wire(b) for b in result.bundles]

@@ -2,6 +2,33 @@ import type { Bundle, Check, Offer } from '../api/types'
 import { CHECK_STYLE, KIND_LABEL, PRICE_UNIT, localParts, rub, when } from '../lib/format'
 import Icon, { KIND_ICON } from './Icon'
 
+export function formatFact(fact: string): string {
+  if (!fact) return ''
+  const f = fact.trim()
+  const mCabin = f.match(/^cabin_bag_?(\d+)?(?:kg)?$/i)
+  if (mCabin) return mCabin[1] ? `ручная кладь ${mCabin[1]} кг` : 'ручная кладь'
+  const mBag = f.match(/^(?:checked_)?bag_?(\d+)?(?:kg)?$/i)
+  if (mBag) return mBag[1] ? `багаж ${mBag[1]} кг` : 'багаж'
+  const map: Record<string, string> = {
+    carry_on: 'ручная кладь',
+    checked_baggage: 'багаж',
+    no_baggage: 'без багажа',
+    wifi: 'Wi-Fi',
+    pool: 'бассейн',
+    spa: 'спа',
+    gym: 'спортзал',
+    beach: 'пляж',
+    breakfast: 'завтрак',
+    all_inclusive: 'всё включено',
+    half_board: 'полупансион',
+    full_board: 'полный пансион',
+    economy: 'эконом',
+    comfort: 'комфорт',
+    business: 'бизнес',
+  }
+  return map[f.toLowerCase()] ?? f
+}
+
 function providerTerms(o: Offer): string[] {
   const v = o.variant ?? {}
   const terms = (v.terms && typeof v.terms === 'object' ? v.terms : v) as Record<string, unknown>
@@ -14,8 +41,15 @@ function providerTerms(o: Offer): string[] {
   if (terms.check_out_time) facts.push(`выезд до ${terms.check_out_time}`)
   if (o.kind !== 'hotel' && terms.baggage && typeof terms.baggage === 'object') {
     const baggage = terms.baggage as Record<string, unknown>
-    const details = Object.entries(baggage).map(([key, value]) => `${key}: ${String(value)}`).join(', ')
-    if (details) facts.push(`багаж: ${details}`)
+    const bParts: string[] = []
+    if (baggage.carry_on_kg) bParts.push(`ручная кладь ${baggage.carry_on_kg} кг`)
+    if (baggage.checked_baggage_kg) bParts.push(`багаж ${baggage.checked_baggage_kg} кг`)
+    if (bParts.length) {
+      facts.push(bParts.join(', '))
+    } else {
+      const details = Object.entries(baggage).map(([key, value]) => `${formatFact(key)}: ${String(value)}`).join(', ')
+      if (details) facts.push(`багаж: ${details}`)
+    }
   }
   return facts
 }
@@ -72,19 +106,9 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
             <div className="flex flex-wrap items-center gap-1.5 text-[14px] font-semibold leading-snug">
               <span>{offerTitle(o)}</span>
               {markSynthetic && o.synthetic && <SyntheticBadge />}
-              {o.provider === 'tutu' && (
-                <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 border border-blue-200">
-                  Туту {o.kind === 'flight' ? 'Авиа' : 'ЖД'}
-                </span>
-              )}
-              {o.provider === 'ostrovok' && (
+              {o.kind === 'hotel' && o.provider === 'ostrovok' && (
                 <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 border border-orange-200">
-                  {o.kind === 'transfer' ? 'Островок Трансфер' : `Островок ${o.variant?.rating ? `★ ${o.variant.rating}` : ''}`}
-                </span>
-              )}
-              {o.provider === 'yandex_go' && (
-                <span className="rounded-md bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-yellow-900 border border-yellow-300">
-                  Яндекс Go
+                  {`Островок ${o.variant?.rating ? `★ ${o.variant.rating}` : ''}`}
                 </span>
               )}
               {o.kind === 'hotel' && o.source_url && (
@@ -107,7 +131,6 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                   const legPrice = typeof leg.price_rub === 'number' ? leg.price_rub : null
                   const legDur = typeof leg.duration_min === 'number' ? leg.duration_min : null
                   const legDist = typeof leg.distance_km === 'number' && leg.distance_km > 0 ? leg.distance_km : null
-                  const legUrl = typeof leg.source_url === 'string' ? leg.source_url : null
 
                   return (
                     <div
@@ -204,7 +227,7 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
           </span>
           {o.included?.length ? (
             <span className="rounded bg-black/[0.03] px-1.5 py-0.5 text-ink-grey">
-              {o.included.join(', ')}
+              {o.included.map(formatFact).join(', ')}
             </span>
           ) : null}
           {o.baggage ? (
