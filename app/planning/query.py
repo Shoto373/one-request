@@ -46,8 +46,18 @@ CITY_ALIASES = {
     "спб": "LED", "питер": "LED", "петербург": "LED", "санкт петербург": "LED", "ленинград": "LED",
     "st petersburg": "LED", "saint petersburg": "LED",
     "екб": "SVX", "екат": "SVX", "свердловск": "SVX",
-    "сочи": "AER", "адлер": "AER", "sochi": "AER",
+    "сочи": "AER", "адлер": "AER", "sochi": "AER", "красная поляна": "AER",
     "шарм": "SSH", "шарм эль шейх": "SSH", "шарм эш шейх": "SSH", "sharm": "SSH",
+    "альпы": "INN", "альпах": "INN", "alps": "INN", "инсбрук": "INN", "innsbruck": "INN",
+    "женева": "GVA", "geneva": "GVA", "куршевель": "GVA", "шамони": "GVA",
+    "банско": "SOF", "софия": "SOF", "bansko": "SOF",
+    "пхукет": "HKT", "phuket": "HKT", "тайланд": "HKT", "таиланд": "HKT",
+    "бали": "DPS", "bali": "DPS", "денпасар": "DPS",
+    "париж": "CDG", "paris": "CDG",
+    "рим": "FCO", "rome": "FCO",
+    "токио": "NRT", "tokyo": "NRT",
+    "мальдивы": "MLE", "мале": "MLE", "maldives": "MLE",
+    "барселона": "BCN", "barcelona": "BCN",
 }
 WORD_NUMBERS = {
     "один": 1, "одна": 1, "одного": 1, "два": 2, "две": 2, "двое": 2, "двоих": 2, "трое": 3, "три": 3, "троих": 3,
@@ -75,13 +85,26 @@ def resolve_city(cat: Catalog, value: Any) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
     raw = value.strip()
+    from app.planning.landmarks import resolve_landmark
+    lm = resolve_landmark(raw)
+    if lm:
+        cid = lm["city_id"]
+        if cid in cat.cities:
+            return cid
+        from app.catalog.world_resolver import resolve_world_city
+        return resolve_world_city(cat, cid) or cid
+
     if raw.upper() in cat.cities:
         return raw.upper()
     if raw.upper() in cat.hubs:
         return cat.hubs[raw.upper()].city_id
     text = _norm(raw)
     if text in CITY_ALIASES:
-        return CITY_ALIASES[text]
+        cid = CITY_ALIASES[text]
+        if cid in cat.cities:
+            return cid
+        from app.catalog.world_resolver import resolve_world_city
+        return resolve_world_city(cat, cid) or cid
     for city in cat.cities.values():
         for name in (_norm(city.name), _norm(city.name_en)):
             # Case endings: Москва/Москвы (-1), Анталья/Анталию (-2).
@@ -92,8 +115,14 @@ def resolve_city(cat: Catalog, value: Any) -> str | None:
                 return city.id
     for alias, cid in CITY_ALIASES.items():
         if text.startswith(alias):
-            return cid
-    return None
+            if cid in cat.cities:
+                return cid
+            from app.catalog.world_resolver import resolve_world_city
+            return resolve_world_city(cat, cid) or cid
+
+    from app.catalog.world_resolver import resolve_world_city
+    return resolve_world_city(cat, raw)
+
 
 
 def _to_date(value: Any) -> date | None:
@@ -314,6 +343,7 @@ def query_from_requirements(
     cat: Catalog, requirements: dict[str, Any], state: Any = None, *, allow_external_origin: bool = False,
 ) -> tuple[TripQuery | None, list[str]]:
     """Build TripQuery; returns (None, reasons) when a required field cannot be resolved."""
+    from app.product_scope import is_worldwide_enabled
     req, kinds_by_key = merged_requirements(requirements, state)
     problems = []
 
@@ -328,11 +358,13 @@ def query_from_requirements(
     if origin is None:
         problems.append(f"Город отправления не распознан: {req.get('origin')!r}.")
     elif origin in cat.cities and "origin" not in cat.cities[origin].roles and not allow_external_origin:
-        problems.append(f"Из {cat.cities[origin].name} в демо-каталоге нет отправлений.")
+        if not is_worldwide_enabled():
+            problems.append(f"Из {cat.cities[origin].name} в демо-каталоге нет отправлений.")
     if dest is None:
         problems.append(f"Направление не распознано или его нет в каталоге: {req.get('destination')!r}.")
     elif "destination" not in cat.cities[dest].roles:
-        problems.append(f"{cat.cities[dest].name} пока не направление каталога.")
+        if not is_worldwide_enabled():
+            problems.append(f"{cat.cities[dest].name} пока не направление каталога.")
 
     dates_key, dates_value = _pick(req, "dates", "date_range", "trip_dates")
     dates = parse_dates(dates_value)

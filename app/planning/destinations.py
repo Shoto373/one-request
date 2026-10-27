@@ -57,10 +57,12 @@ PREF_TAGS = {
     r"гастро|еда|кухн|food": {"food"},
     r"шопинг|shopping": {"shopping"},
     r"гор[ыа]|mountain": {"mountains"},
+    r"лыж|сноуборд|горнолыж|ski|snowboard|альп": {"mountains", "ski"},
     r"дайв|снорк|diving": {"diving"},
     r"вс[её] включено|all.?inclusive": {"all_inclusive"},
     r"вино|wine": {"wine"},
 }
+
 WEIGHTS = {"weather": 0.30, "price": 0.25, "travel": 0.20, "visa": 0.10, "match": 0.15}
 
 
@@ -278,6 +280,10 @@ def _weather(city: City, c: ClimateMonth | None, prefs: Preferences) -> tuple[fl
         else:
             claim = Claim(text=f"Нет пляжного моря; {air.text[0].lower()}{air.text[1:]}", refs=air.refs)
             risks.append(Claim(text="Не пляжное направление", refs=[f"city:{city.id}:tags"]))
+    elif prefs.tags & {"mountains", "ski"}:
+        value = 1.0 if c.air_temp_day <= 6 else _clamp(1 - (c.air_temp_day - 6) / 15)
+        claim = Claim(text=f"Горный сезон: днём {c.air_temp_day:.0f}°C, ночью {c.air_temp_night:.0f}°C в {MONTH_NAME[m - 1]}",
+                      refs=[climate_ref(city.id, m, "air_temp_day"), climate_ref(city.id, m, "air_temp_night")])
     elif prefs.warm:
         value, claim = _clamp((c.air_temp_day - 12) / 12), air
     else:
@@ -292,6 +298,8 @@ def _weather(city: City, c: ClimateMonth | None, prefs: Preferences) -> tuple[fl
 def _score(cat: Catalog, dq: DestinationQuery, city: City, bundle: Bundle, cheapest: int) -> dict[str, Any]:
     prefs = dq.prefs
     weights = dict(WEIGHTS)
+    if prefs.tags:
+        weights["match"] += 0.30
     if prefs.cheap or dq.budget_rub:
         weights["price"] += 0.10
     if prefs.short_travel:
@@ -331,6 +339,9 @@ def _score(cat: Catalog, dq: DestinationQuery, city: City, bundle: Bundle, cheap
     wanted = prefs.tags
     matched = wanted & set(city.tags)
     match = len(matched) / len(wanted) if wanted else 0.5
+    if wanted and not matched:
+        match = 0.05
+
     hotel = next((o for o in bundle.items if o.kind == "hotel"), None)
     if dq.party.children and hotel is not None:
         h = cat.hotels[hotel.item_id]
@@ -374,7 +385,8 @@ def _fits_core(prefs: Preferences, city: City, climate: dict[str, Any] | None) -
 
 
 def suggest_destinations_for(cat: Catalog, dq: DestinationQuery, limit: int = TOP_N) -> DestinationResult:
-    candidates = dq.candidates or sorted(c.id for c in cat.cities.values() if "destination" in c.roles)
+    candidates = dq.candidates or ("AER", "KGD", "KZN", "IST", "AYT", "SSH", "DXB", "EVN")
+
     built: list[tuple[City, Bundle, TripQuery]] = []
     rejected: list[dict[str, str]] = []
     for dest in candidates:

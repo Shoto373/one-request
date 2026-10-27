@@ -63,6 +63,15 @@ def _canonical(req: Requirement) -> Requirement | None:
             clean = re.sub(r"[^\d]", "", val)
             if clean:
                 val = int(clean)
+    elif key == "destination" and isinstance(val, str) and val.strip():
+        from app.planning.landmarks import resolve_landmark
+        lm = resolve_landmark(val)
+        if lm:
+            return req.model_copy(update={
+                "key": key,
+                "value": lm["city"],
+                "label": f"{lm['city']} ({lm['landmark']})",
+            })
     return req.model_copy(update={"key": key, "value": val})
 
 
@@ -108,6 +117,20 @@ def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
             # модели присылают unknown без цитаты: None in str раньше ронял весь ход
             req = req.model_copy(update={"value": None, "quote": req.quote if req.quote and req.quote in text else None})
         valid[req.key] = req
+
+    # Detect landmarks and sights if destination is not yet resolved
+    if "destination" not in valid:
+        from app.planning.landmarks import resolve_landmark
+        lm = resolve_landmark(text)
+        if lm:
+            valid["destination"] = Requirement(
+                key="destination",
+                value=lm["city"],
+                kind="hard",
+                source="user_text",
+                quote=lm["quote"],
+                label=f"{lm['city']} ({lm['landmark']})",
+            )
 
     # Guard the common ambiguity rules even if the model returns an invalid parse.
     child_match = re.search(r"\bс\s+(?:реб[её]нком|детьми)\b|\bреб[её]н(?:ок|ком|ка|ку)\b|\bдет(?:и|ьми|ей)\b", text, re.I)

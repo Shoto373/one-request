@@ -29,7 +29,7 @@ from app.providers.base import ProviderError
 from app.providers.tutu.planner import (assert_tutu_scope, reset_trace_recorder,
                                        TutuPlaceResolutionError, TutuOriginUnavailable, TutuOriginOutsideRussia,
                                        tutu_live_enabled, use_trace_recorder)
-from app.product_scope import coverage_payload, destination_supported, fixed_destination_id
+from app.product_scope import coverage_payload, destination_supported, fixed_destination_id, is_worldwide_enabled
 from app.state.models import Bundle as StateBundle
 from app.state.models import Check, Claim, HistoryEntry, OpenQuestion, PendingReplan, Requirement, TripState
 
@@ -119,13 +119,14 @@ class Orchestrator:
         known = [r.model_dump(mode="json") for r in state.requirements]
         questions = [q.model_dump(mode="json") for q in state.open_questions]
         suppressed = list(state.suppressed_assumptions)
+        cov_info = "worldwide: True" if is_worldwide_enabled() else str(coverage_payload()['destinations'])
         system = f"""You extract a typed delta from one travel-chat message. Return JSON:
 {{"requirements":[{{"key":"...","value":null,"kind":"hard|soft|assumption|unknown","source":"user_text|agent","quote":null,"label":null}}],"remove_keys":[]}}
 Local reference time: {self.local_now().isoformat()} (timezone {self.timezone.key}).
 Current requirements: {known}
 Open questions, in priority order: {questions}
 Assumption keys the user removed; do not restore them: {suppressed}
-Product coverage: {coverage_payload()['destinations']}. The current single destination is a product limit, not a user quote. The user chooses the origin city; never assume Moscow. If the origin is missing, ask for it. Preserve a named origin outside demo fixtures as written for Tutu's search resolver. If the user names a destination outside the configured coverage, explain the currently available destination(s) and ask whether to continue with one; never change it silently.
+Product coverage: {cov_info}. All destinations worldwide are supported (ski resorts, Alps, seaside, cities, etc.). The user chooses the origin city; never assume Moscow. If the origin is missing, ask for it. If the user names a destination, region or place (e.g. "Альпы", "Инсбрук", "Париж", "Пхукет", "Сочи"), extract it as destination and/or trip_style. If the user names a famous landmark, sight, or attraction (e.g. "Триумфальная арка" / "триуфальную арку" / "Эйфелева башня" / "Лувр" -> Париж; "Колизей" / "Ватикан" -> Рим; "Саграда Фамилия" -> Барселона; "Биг Бен" -> Лондон; "Эрмитаж" / "Петергоф" -> Санкт-Петербург; "Бурдж-Халифа" -> Дубай; "Красная площадь" / "Кремль" -> Москва; "Кул Шариф" -> Казань), recognize the city where this landmark is located and set "destination" to that city (e.g. value: "Париж", quote: exact substring from text like "триуфальную арку").
 
 Supported keys and value formats: origin and destination (city name as written), dates ({{start,end}} ISO dates when
 explicit), travel_start_date (one explicit departure date, ISO), travel_month (1..12), duration_nights (int), date_flex_days (int), adults (int), children_count (int),
@@ -265,6 +266,8 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
 
     @staticmethod
     def _destination_scope_prompt(state: TripState) -> str | None:
+        if is_worldwide_enabled():
+            return None
         requirement = next((r for r in state.requirements if r.key == "destination" and r.value not in (None, "")), None)
         if requirement is None or destination_supported(requirement.value):
             return None
@@ -349,7 +352,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         # User-provided origins remain intact; only the destination is fixed.
         requirements = [r for r in requirements if not (r.key == "origin" and r.source == "product_scope")]
         current_destination = next((r for r in requirements if r.key == "destination" and r.value not in (None, "")), None)
-        if current_destination is None:
+        if current_destination is None and not is_worldwide_enabled():
             destination_id = fixed_destination_id()
             requirements.append(Requirement(key="destination", value=destination_id, kind="hard",
                                             source="product_scope", quote=None,
@@ -778,8 +781,6 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         return state, msg + " Подтверждённых альтернатив нет; жёсткие требования сохранены. вымышленные предложения не показываю."
 
     async def _continue(self, state: TripState, trace: list[dict[str, Any]]) -> tuple[TripState, str]:
-        if tutu_live_enabled():
-            return await self._build(state, trace)
         destination = self._destination_requirement(state)
         if destination is not None:
             return await self._build(state, trace)

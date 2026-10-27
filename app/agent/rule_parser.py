@@ -71,6 +71,10 @@ def _req(key: str, value, kind: str, quote: str | None, label: str | None = None
 
 def _find_city(fragment: str) -> str | None:
     f = fragment.lower()
+    from app.planning.landmarks import resolve_landmark
+    lm = resolve_landmark(f)
+    if lm:
+        return lm["city"]
     for name, spellings in CITIES.items():
         if any(s in f for s in spellings):
             return name
@@ -129,6 +133,12 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
         destination_id = fixed_destination_id()
         put(Requirement(key="destination", value=destination_id, kind="hard", source="user_edit", quote=None,
                         label="Пользователь согласился на доступное направление"))
+    # Landmark and attraction detection (e.g. "увидеть триумфальную арку" -> Париж)
+    from app.planning.landmarks import resolve_landmark
+    lm = resolve_landmark(text)
+    if lm:
+        put(_req("destination", lm["city"], "hard", lm["quote"], label=f"{lm['city']} ({lm['landmark']})"))
+
     for m in re.finditer(r"(?:\bв|\bво|\bна|\bдо|\bto)\s+([\w\-ёЁ.]+(?:\s+[\w\-ёЁ.]+)?)", text, re.I):
         city = _find_city(m.group(1))
         if city and city != (reqs.get("origin").value if "origin" in reqs else None):
