@@ -180,40 +180,26 @@ def find_nearest_hub(cat: Catalog, city_id_or_name: str) -> dict[str, Any]:
             "price_rub": 0,
         }
 
-    # 2. Check if international city in catalog
+    # 2. Check if known international city outside Russia
     from app.catalog.world_resolver import KNOWN_WORLD_DESTINATIONS
-    if city_id_or_name.upper() in KNOWN_WORLD_DESTINATIONS:
+    if city_id_or_name.upper() in KNOWN_WORLD_DESTINATIONS and city_id_or_name.upper() not in MAJOR_HUBS:
         wdata = KNOWN_WORLD_DESTINATIONS[city_id_or_name.upper()]
-        return {
-            "hub_city": city_id_or_name.upper(),
-            "hub_code": wdata.get("hub_id", f"HUB_{city_id_or_name.upper()}"),
-            "hub_name": wdata.get("hub_name", f"Аэропорт {wdata['name']}"),
-            "origin_name": wdata["name"],
-            "distance_km": 0,
-            "duration_min": 0,
-            "price_rub": 0,
-        }
+        if wdata.get("country_code") not in ("RU", "XX", None):
+            return {
+                "hub_city": city_id_or_name.upper(),
+                "hub_code": wdata.get("hub_id", f"HUB_{city_id_or_name.upper()}"),
+                "hub_name": wdata.get("hub_name", f"Аэропорт {wdata['name']}"),
+                "origin_name": wdata["name"],
+                "distance_km": 0,
+                "duration_min": 0,
+                "price_rub": 0,
+            }
 
-    # 3. If city has its own hub in catalog
-    city_hubs = [h for h in cat.hubs.values() if h.city_id == city_id_or_name]
-    if city_hubs:
-        h0 = city_hubs[0]
-        return {
-            "hub_city": city_id_or_name,
-            "hub_code": h0.id,
-            "hub_name": h0.name,
-            "origin_name": origin_display_name,
-            "distance_km": 0,
-            "duration_min": 0,
-            "price_rub": 0,
-        }
-
-    # 4. Dynamic coordinate resolution (from catalog or geocoding)
-    coords = None
-    if city_obj and getattr(city_obj, "coord", None):
-        coords = (city_obj.coord.lat, city_obj.coord.lon)
-    if coords is None:
-        coords = geocode_city_coords(origin_display_name)
+    # 3. Dynamic geocoding by city name
+    coords = geocode_city_coords(origin_display_name)
+    if coords is None and city_obj and getattr(city_obj, "coord", None):
+        if not city_obj.id.startswith("W_"):
+            coords = (city_obj.coord.lat, city_obj.coord.lon)
 
     if coords:
         clat, clon = coords
