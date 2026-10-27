@@ -59,8 +59,10 @@ def generate_date_options(ref_date: date | None = None) -> list[str]:
     else:
         options.append(f"{week_start.day} {MONTHS_RU_GEN[week_start.month]} – {week_end.day} {MONTHS_RU_GEN[week_end.month]} (неделя)")
 
-    # 3. Начало следующего месяца
-    next_m = 1 if d.month == 12 else d.month + 1
+    # 3. Начало следующего месяца (или через месяц, если конец текущего)
+    next_m = 1 if d.month == 12 else (d.month + 2 if d.day > 20 and d.month <= 10 else d.month + 1)
+    if next_m > 12:
+        next_m -= 12
     options.append(f"1–8 {MONTHS_RU_GEN[next_m]} (неделя)")
 
     # 4. Сезонные праздники или отпуск на 2 недели
