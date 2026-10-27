@@ -278,11 +278,38 @@ def build_sources_summary(state: Any) -> str:
     # 1. Links from current state bundles
     for b in getattr(state, "bundles", []):
         for it in getattr(b, "items", []):
-            s_url = getattr(it, "source_url", None) or (it.variant.get("booking_url") if isinstance(it.variant, dict) else None)
+            v = it.variant if isinstance(it.variant, dict) else {}
+            legs = v.get("legs", [])
+            if legs:
+                for leg in legs:
+                    leg_url = leg.get("source_url")
+                    if leg.get("mode") == "transfer":
+                        t_from = leg.get("from", "Город")
+                        t_to = leg.get("to", "Хаб")
+                        t_price = leg.get("price_rub", 0)
+                        t_url = leg_url or "https://ostrovok.ru/transfers/"
+                        if t_url not in seen_source_urls:
+                            seen_source_urls.add(t_url)
+                            bundle_transfers.append(
+                                f"- [Островок Трансфер {t_from} ➔ {t_to} ({t_price:,.0f} ₽)]({t_url})\n"
+                                f"  *Источник тарифов: [Островок Трансфер API](https://ostrovok.ru/transfer/)*"
+                            )
+                    else:
+                        fl_carrier = leg.get("carrier", "Авиарейс")
+                        fl_no = leg.get("flight_no", "")
+                        fl_price = leg.get("price_rub", 0)
+                        fl_url = leg_url or getattr(it, "source_url", None)
+                        if fl_url and fl_url not in seen_source_urls:
+                            seen_source_urls.add(fl_url)
+                            bundle_flights.append(
+                                f"- [Рейс {fl_carrier} {fl_no} ({fl_price:,.0f} ₽)]({fl_url})\n"
+                                f"  *Источник расписания: [Туту.ру Авиа API](https://api.tutu.ru/avia/)*"
+                            )
+
+            s_url = getattr(it, "source_url", None) or (v.get("booking_url") if isinstance(v, dict) else None)
             if not s_url or s_url in seen_source_urls:
                 continue
             seen_source_urls.add(s_url)
-            v = it.variant if isinstance(it.variant, dict) else {}
             if it.kind == "hotel":
                 h_title = v.get("hotel_name") or (it.title.split(",")[0] if it.title else "Отель")
                 rating = v.get("rating", 9.0)

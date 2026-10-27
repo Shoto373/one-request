@@ -361,7 +361,7 @@ def make_intermodal_outbound(
         provider="ostrovok",
         currency="RUB",
         data_mode="live",
-        source_url="https://ostrovok.ru/transfers/",
+        source_url=flight_url,
     )
 
 
@@ -476,5 +476,5 @@ def make_intermodal_inbound(
         provider="ostrovok",
         currency="RUB",
         data_mode="live",
-        source_url="https://ostrovok.ru/transfers/",
+        source_url=flight_url,
     )
