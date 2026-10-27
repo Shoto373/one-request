@@ -712,9 +712,19 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             state.stage = "clarify"
             return state, (questions[0].question if len(questions) == 1 else "Уточните, пожалуйста: " + " ".join(q.question for q in questions))
         requirements = self._requirements_map(state, include_assumptions=False)
-        search_state = state.model_copy(deep=True, update={
-            "requirements": [r for r in state.requirements if r.kind not in {"unknown", "assumption"}],
-        })
+        for r in state.requirements:
+            if r.key in {"origin", "adults", "dates", "destination"} and r.kind != "unknown" and r.value not in (None, ""):
+                requirements.setdefault(r.key, r.value)
+        search_state_reqs = []
+        for r in state.requirements:
+            if r.kind == "unknown":
+                continue
+            if r.kind == "assumption":
+                if r.key in {"origin", "adults", "dates", "destination"} and r.value not in (None, ""):
+                    search_state_reqs.append(r.model_copy(update={"kind": "soft"}))
+                continue
+            search_state_reqs.append(r)
+        search_state = state.model_copy(deep=True, update={"requirements": search_state_reqs})
         self._record(trace, {"step_type": "tool", "name": "build_bundles", "input": requirements, "output": None, "status": "calling"})
         try:
             bundles = await self._call(self.bundle_builder, requirements, search_state, trace)

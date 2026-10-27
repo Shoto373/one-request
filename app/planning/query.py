@@ -130,7 +130,12 @@ def _to_date(value: Any) -> date | None:
         return value
     if isinstance(value, str):
         m = _ISO.search(value)
-        return date.fromisoformat(m.group(0)) if m else None
+        if m:
+            return date.fromisoformat(m.group(0))
+        m_dmy = re.search(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", value)
+        if m_dmy:
+            d, m_num, y = m_dmy.groups()
+            return date(int(y), int(m_num), int(d))
     return None
 
 
@@ -148,6 +153,11 @@ def parse_dates(value: Any) -> tuple[date, date] | None:
         found = _ISO.findall(value)
         if len(found) >= 2:
             return date.fromisoformat(found[0]), date.fromisoformat(found[1])
+        found_dmy = re.findall(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", value)
+        if len(found_dmy) >= 2:
+            d1, m1, y1 = found_dmy[0]
+            d2, m2, y2 = found_dmy[1]
+            return date(int(y1), int(m1), int(d1)), date(int(y2), int(m2), int(d2))
     return None
 
 
