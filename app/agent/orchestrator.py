@@ -789,54 +789,12 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                 f_price_str = f"{f_price:,.0f} ₽".replace(",", " ")
 
                 msg += (
-                    f" Построен составной интермодальный маршрут:\n"
+                    f" Построен составной маршрут:\n"
                     f"• 🚗 Трансфер Островок: {orig} ➔ {hub} (~{t_dur_str}{dist_str}) — {t_price_str}\n"
                     f"• ✈️ Перелёт: {hub} ➔ {im0.destination_city} (~{f_dur_str}) — {f_price_str}\n"
-                    f"Детализация каждого отрезка пути и прямые ссылки на трансфер Островка и авиабилеты доступны в карточках ниже."
                 )
 
-            # Showcase diverse hotels from bundles with Ostrovok review ratings
-            hotels_found = []
-            seen_hotel_ids = set()
-            for b in state.bundles:
-                for it in b.items:
-                    if it.kind == "hotel" and it.item_id not in seen_hotel_ids:
-                        seen_hotel_ids.add(it.item_id)
-                        h_name = it.title.split(",")[0].strip() if it.title else it.item_id
-                        h_cat = getattr(b, "label", None) or ("Эконом" if "3★" in it.title or "3*" in it.title else "Комфорт" if "4★" in it.title else "Люкс")
-                        rating = it.variant.get("rating", 9.1) if isinstance(it.variant, dict) else 9.1
-                        hotels_found.append(f"• {h_cat}: {h_name} (Рейтинг Островок ★ {rating})")
-
-            if hotels_found:
-                msg += "\n\n🏨 Разные отели в подобранных вариантах:\n" + "\n".join(hotels_found)
-
-            flights = [it for b in state.bundles for it in b.items if it.kind == "flight"]
-            has_layover = any(
-                isinstance(it.variant, dict) and (it.variant.get("stops", 0) > 0 or "пересад" in (it.title or "").lower())
-                for it in flights
-            )
-            if has_layover:
-                msg += "\n\n✈️ Маршруты включают как прямые рейсы, так и варианты с удобной пересадкой (позволяют сэкономить до 25% бюджета)."
-
-            dest_name = (
-                next((r.value for r in state.requirements if r.key == "destination"), None)
-                or (im_items[0].destination_city if im_items else "городе поездки")
-            )
-            msg += (
-                f"\n\n✨ Чтобы я помог подобрать идеальный вариант под ваши планы, расскажите:\n"
-                f"1. Какие достопримечательности и места в {dest_name} хотите посетить в первую очередь?\n"
-                f"2. Какая цель поездки и формат: романтический отдых, насыщенные экскурсии, гастро-тур или шопинг?\n"
-                f"3. Какие пожелания к отелю: расположение (в центре / в тихом районе / рядом с парком), завтраки, спа или вид из окна?\n"
-                f"На основе ваших ответов я моментально отфильтрую предложения по реальным отзывам гостей с Островка и Google!"
-            )
-            try:
-                from app.rag.service import build_sources_summary
-                sources_block = build_sources_summary(state)
-                if sources_block:
-                    msg += "\n\n" + sources_block
-            except Exception as e:
-                log.warning("Failed to append sources summary: %s", e)
-
+            msg += "Все детали, прямые ссылки на отели Островка и авиабилеты Туту — в карточках ниже. Если хотите изменить отель, даты или бюджет — просто напишите!"
             return state, msg
         notes: list[str] = []
         try:
@@ -930,10 +888,14 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             "input": {"text": text, "open_question_keys": [q.key for q in state.open_questions]},
             "output": parsed.model_dump(mode="json"), "status": "fallback" if rules else "ok",
         }]
-        if (state.bundles or any(r.key in {"destination", "dates", "origin"} for r in state.requirements)) and re.search(r"выдай|вывдай|ссылк|источник|откуда|где\s*ссылк", text, re.I):
+        is_asking_sources = (
+            bool(re.search(r"(?:выдай|дай|покажи|скинь|где)\s+(?:их|ссылк|источник|рейс|отел)|откуда.*(?:данн|взял)|^(?:ссылки|источники|где ссылки|выдай их)[.!?]?$", text, re.I))
+            and not bool(re.search(r"не\s+(?:выдавай|выдавать|выдавал|надо|нужно|пиши|делай|показывай)", text, re.I))
+        )
+        if (state.bundles or any(r.key in {"destination", "dates", "origin"} for r in state.requirements)) and is_asking_sources:
             from app.rag.service import build_sources_summary
             candidate = state.model_copy(deep=True)
-            reply = "Вот прямые ссылки на бронирование и официальные источники данных по найденным предложениям:\n\n" + build_sources_summary(candidate)
+            reply = "Прямые ссылки на бронирование и официальные источники данных:\n\n" + build_sources_summary(candidate)
             trace.append(self._state_diff(before, candidate))
             return candidate, reply, trace
         accepted, ambiguous = self._match_alternative(text, state.proposed_changes, parsed)

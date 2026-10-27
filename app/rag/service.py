@@ -267,9 +267,10 @@ def format_rag_sources_markdown(rag_data: dict[str, Any]) -> str:
 
 
 def build_sources_summary(state: Any) -> str:
-    """Collect direct booking links and source citations from state bundles and PostgreSQL RAG inventory."""
-    sources_section = ["### 🔗 Прямые ссылки на бронирование и источники данных:"]
-    seen_source_urls = set()
+    """Collect compact, deduplicated direct booking links and source citations."""
+    sources_section = ["### 🔗 Прямые ссылки на бронирование и источники:"]
+    seen_urls = set()
+    seen_titles = set()
     bundle_hotels = []
     bundle_flights = []
     bundle_trains = []
@@ -284,121 +285,82 @@ def build_sources_summary(state: Any) -> str:
                 for leg in legs:
                     leg_url = leg.get("source_url")
                     if leg.get("mode") == "transfer":
-                        t_from = leg.get("from", "Город")
-                        t_to = leg.get("to", "Хаб")
+                        t_from = leg.get("from")
+                        t_to = leg.get("to")
                         t_price = leg.get("price_rub", 0)
                         t_url = leg_url or "https://ostrovok.ru/transfers/"
-                        if t_url not in seen_source_urls:
-                            seen_source_urls.add(t_url)
+                        if t_from and t_to and str(t_from) != "None" and str(t_to) != "None" and t_url not in seen_urls:
+                            seen_urls.add(t_url)
                             bundle_transfers.append(
-                                f"- [Островок Трансфер {t_from} ➔ {t_to} ({t_price:,.0f} ₽)]({t_url})\n"
-                                f"  *Источник тарифов: [Островок Трансфер API](https://ostrovok.ru/transfer/)*"
+                                f"- [Трансфер {t_from} ➔ {t_to} ({t_price:,.0f} ₽)]({t_url}) *(Островок)*"
                             )
                     else:
                         fl_carrier = leg.get("carrier", "Авиарейс")
                         fl_no = leg.get("flight_no", "")
                         fl_price = leg.get("price_rub", 0)
                         fl_url = leg_url or getattr(it, "source_url", None)
-                        if fl_url and fl_url not in seen_source_urls:
-                            seen_source_urls.add(fl_url)
+                        fl_key = f"{fl_carrier}_{fl_no}"
+                        if fl_url and fl_url not in seen_urls and fl_key not in seen_titles:
+                            seen_urls.add(fl_url)
+                            seen_titles.add(fl_key)
                             bundle_flights.append(
-                                f"- [Рейс {fl_carrier} {fl_no} ({fl_price:,.0f} ₽)]({fl_url})\n"
-                                f"  *Источник расписания: [Туту.ру Авиа API](https://api.tutu.ru/avia/)*"
+                                f"- [Рейс {fl_carrier} {fl_no} ({fl_price:,.0f} ₽)]({fl_url}) *(Туту Авиа)*"
                             )
 
             s_url = getattr(it, "source_url", None) or (v.get("booking_url") if isinstance(v, dict) else None)
-            if not s_url or s_url in seen_source_urls:
+            if not s_url or s_url in seen_urls:
                 continue
-            seen_source_urls.add(s_url)
             if it.kind == "hotel":
                 h_title = v.get("hotel_name") or (it.title.split(",")[0] if it.title else "Отель")
+                h_norm = h_title.strip().lower()
+                if h_norm in seen_titles:
+                    continue
+                seen_titles.add(h_norm)
+                seen_urls.add(s_url)
                 rating = v.get("rating", 9.0)
                 stars = v.get("stars", 4)
                 bundle_hotels.append(
-                    f"- [{h_title} (★ {stars}, рейтинг {rating})]({s_url})\n"
-                    f"  *Источник данных: [Островок Live API](https://api.worldota.net/api/b2b/v3/hotel/info/)*"
+                    f"- [{h_title} (★ {stars}, рейтинг {rating})]({s_url}) *(Островок)*"
                 )
             elif it.kind == "flight":
                 f_no = v.get("flight_no", "")
                 c_name = v.get("carrier_name", "Авиарейс")
+                fl_key = f"{c_name}_{f_no}"
+                if fl_key in seen_titles:
+                    continue
+                seen_titles.add(fl_key)
+                seen_urls.add(s_url)
                 price = f"{it.total_rub:,.0f} ₽".replace(",", " ")
                 bundle_flights.append(
-                    f"- [Рейс {c_name} {f_no} ({price})]({s_url})\n"
-                    f"  *Источник расписания: [Туту.ру Авиа API](https://api.tutu.ru/avia/)*"
+                    f"- [Рейс {c_name} {f_no} ({price})]({s_url}) *(Туту Авиа)*"
                 )
             elif it.kind == "train":
                 t_no = v.get("train_no", "")
+                if t_no in seen_titles:
+                    continue
+                seen_titles.add(t_no)
+                seen_urls.add(s_url)
                 price = f"{it.total_rub:,.0f} ₽".replace(",", " ")
                 bundle_trains.append(
-                    f"- [Поезд {t_no} ({price})]({s_url})\n"
-                    f"  *Источник расписания: [Туту.ру Ж/Д API](https://api.tutu.ru/trains/)*"
+                    f"- [Поезд № {t_no} ({price})]({s_url}) *(Туту Ж/Д)*"
                 )
             elif it.kind == "transfer":
-                orig_c = v.get("origin_name", getattr(it, "origin_city", "Город"))
-                dest_c = v.get("hub_name", getattr(it, "destination_city", "Хаб"))
-                price = f"{it.total_rub:,.0f} ₽".replace(",", " ")
-                bundle_transfers.append(
-                    f"- [Островок Трансфер {orig_c} ➔ {dest_c} ({price})]({s_url})\n"
-                    f"  *Источник тарифов: [Островок Трансфер API](https://ostrovok.ru/transfer/)*"
-                )
-
-    # 2. Enrich from RAG PostgreSQL inventory
-    try:
-        from app.planning.query import parse_dates
-        requirements = {r.key: r.value for r in getattr(state, "requirements", [])}
-        dates_val = requirements.get("dates")
-        parsed_d = parse_dates(dates_val) if dates_val else None
-        dep_d = parsed_d[0] if parsed_d else date(2026, 12, 30)
-        ret_d = parsed_d[1] if parsed_d else date(2027, 1, 6)
-        orig_city = str(requirements.get("origin") or "Москва")
-        dest_city = str(requirements.get("destination") or "Казань")
-
-        rag_res = search_rag_inventory(
-            query=f"{dest_city} отель отдых",
-            origin_city=orig_city,
-            dest_city=dest_city,
-            depart_date=dep_d,
-            return_date=ret_d,
-            limit=4,
-        )
-        for h in rag_res.get("hotels", []):
-            if h.get("source_url") and h["source_url"] not in seen_source_urls:
-                seen_source_urls.add(h["source_url"])
-                bundle_hotels.append(
-                    f"- [{h['name']} (★ {h['stars']}, рейтинг {h['rating']})]({h['source_url']}) — {h.get('address', '')}\n"
-                    f"  *Источник данных: [{h['source_provider'].capitalize()} API]({h['source_raw_url']})*"
-                )
-        for fl in rag_res.get("flights", []):
-            if fl.get("source_url") and fl["source_url"] not in seen_source_urls:
-                seen_source_urls.add(fl["source_url"])
-                bundle_flights.append(
-                    f"- [Рейс {fl['flight_no']} ({fl['carrier_name']}): вылет {fl['depart_time']}, {fl['price_rub']} ₽]({fl['source_url']})\n"
-                    f"  *Источник расписания: [Туту API]({fl['source_raw_url']})*"
-                )
-        for tr in rag_res.get("trains", []):
-            if tr.get("source_url") and tr["source_url"] not in seen_source_urls:
-                seen_source_urls.add(tr["source_url"])
-                bundle_trains.append(
-                    f"- [Поезд № {tr['train_no']} ({tr['carrier']}): {tr['coach_type']}, {tr['price_rub']} ₽]({tr['source_url']})\n"
-                    f"  *Источник тарифов: [Туту Ж/Д]({tr['source_raw_url']})*"
-                )
-        for tf in rag_res.get("transfers", []):
-            if tf.get("source_url") and tf["source_url"] not in seen_source_urls:
-                seen_source_urls.add(tf["source_url"])
-                bundle_transfers.append(
-                    f"- [Островок Трансфер {tf['origin_city']} ➔ {tf['dest_city']} ({tf['distance_km']} км, {tf['price_rub']} ₽)]({tf['source_url']})\n"
-                    f"  *Источник тарифов: [{tf['source_provider'].capitalize()} API]({tf['source_raw_url']})*"
-                )
-    except Exception as e:
-        log.warning("RAG enrichment failed: %s", e)
+                orig_c = v.get("origin_name", getattr(it, "origin_city", None))
+                dest_c = v.get("hub_name", getattr(it, "destination_city", None))
+                if orig_c and dest_c and str(orig_c) != "None" and str(dest_c) != "None" and s_url not in seen_urls:
+                    seen_urls.add(s_url)
+                    price = f"{it.total_rub:,.0f} ₽".replace(",", " ")
+                    bundle_transfers.append(
+                        f"- [Трансфер {orig_c} ➔ {dest_c} ({price})]({s_url}) *(Островок)*"
+                    )
 
     if bundle_hotels:
-        sources_section.append("\n**🏨 Отели (Островок):**\n" + "\n".join(bundle_hotels[:5]))
+        sources_section.append("\n**🏨 Отели:**\n" + "\n".join(bundle_hotels[:3]))
     if bundle_flights:
-        sources_section.append("\n**✈️ Авиабилеты (Туту Авиа):**\n" + "\n".join(bundle_flights[:4]))
+        sources_section.append("\n**✈️ Авиабилеты:**\n" + "\n".join(bundle_flights[:2]))
     if bundle_trains:
-        sources_section.append("\n**🚆 Поезда (Туту Ж/Д):**\n" + "\n".join(bundle_trains[:3]))
+        sources_section.append("\n**🚆 Поезда:**\n" + "\n".join(bundle_trains[:2]))
     if bundle_transfers:
-        sources_section.append("\n**🚗 Трансферы (Островок Трансфер):**\n" + "\n".join(bundle_transfers[:3]))
+        sources_section.append("\n**🚗 Трансферы:**\n" + "\n".join(bundle_transfers[:1]))
 
     return "\n".join(sources_section)
