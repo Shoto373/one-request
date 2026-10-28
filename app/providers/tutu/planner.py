@@ -741,9 +741,10 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                     checks.append(Check(kind="transport_preference", status="warn", refs=refs,
                                         text="Пожелание к дороге не подтверждено: " + "; ".join(dict.fromkeys(limit_issues)) + ".").model_dump(mode="json"))
             if query.party.pets:
-                checks.append(Check(kind="pets", status="block", refs=refs,
-                                    text="Туту не подтвердил правила перевозки питомца на выбранном предложении и допустимый вес в отеле. Отельные результаты фильтровались по pet-friendly, но весовой лимит не вернулся.",
-                                    options=["Проверить правила выбранного перевозчика и отеля перед продолжением"]).model_dump(mode="json"))
+                checks.append(Check(kind="pets", status="warn", refs=refs,
+                                    text="Отели подобраны с пометкой «можно с животными», но допустимый вес питомца и правила "
+                                         "перевозки у авиакомпании поставщик не сообщает — уточните их перед поездкой.",
+                                    options=["Уточнить правила перевозки питомца у авиакомпании и отеля"]).model_dump(mode="json"))
             kinds = {r.key: r.kind for r in getattr(state, "requirements", [])}
             star_key = next((k for k in ("lodging_stars", "stars", "hotel_stars") if k in kinds), None)
             if query.min_stars and kinds.get(star_key) != "hard":

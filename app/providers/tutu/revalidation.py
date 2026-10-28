@@ -27,6 +27,13 @@ def _rub(amount: Any) -> str:
         return "новая цена"
 
 
+def _cheaper(actual: Any, expected: Any) -> bool:
+    try:
+        return float(actual) < float(expected)
+    except (TypeError, ValueError):
+        return False
+
+
 def _same_amount(actual: Any, expected: Any) -> bool:
     try:
         return abs(float(actual) - float(expected)) < 1
@@ -56,6 +63,7 @@ async def _validate_once(bundle: dict[str, Any]) -> list[dict[str, Any]]:
                 found = False
                 same_price = False
                 actual_amount = None
+                expected_amount = None
                 if offer.get("kind") == "hotel":
                     args = ref.get("args") or offer.get("variant", {}).get("terms", {}).get("details_ref")
                     if isinstance(args, dict):
@@ -63,7 +71,7 @@ async def _validate_once(bundle: dict[str, Any]) -> list[dict[str, Any]]:
                         terms = offer.get("variant", {}).get("terms", {})
                         expected_hash = terms.get("offerpack_hash")
                         expected_rate_id = terms.get("rate_id")
-                        expected_raw = terms.get("rate_price_amount") or terms.get("price_amount")
+                        expected_raw = expected_amount = terms.get("rate_price_amount") or terms.get("price_amount")
                         expected_room = str(terms.get("room_name") or "").strip().lower()
                         same_room: list[Any] = []
                         for room in data.get("rooms") or []:
@@ -106,7 +114,7 @@ async def _validate_once(bundle: dict[str, Any]) -> list[dict[str, Any]]:
                         found = True
                         current = (row.get("price") or {}) if offer.get("kind") == "flight" else (row.get("price_party") or {})
                         actual_amount = current.get("amount")
-                        expected = offer.get("variant", {}).get("price_amount")
+                        expected = expected_amount = offer.get("variant", {}).get("price_amount")
                         same_price = current.get("currency") == "RUB" and _same_amount(actual_amount, expected)
                         break
                 ref_id = f"offer:{offer.get('offer_id')}"
@@ -115,6 +123,9 @@ async def _validate_once(bundle: dict[str, Any]) -> list[dict[str, Any]]:
                     checks.append(Check(kind="availability", status="block", refs=[ref_id],
                                         text=f"{title}: этого предложения больше нет в продаже — пересоберите план.",
                                         options=["Пересобрать актуальный комплект"]).model_dump(mode="json"))
+                elif not same_price and _cheaper(actual_amount, expected_amount):
+                    checks.append(Check(kind="availability", status="warn", refs=[ref_id],
+                                        text=f"{title}: цена снизилась до {_rub(actual_amount)} — у поставщика оплата будет по новой цене.").model_dump(mode="json"))
                 elif not same_price:
                     checks.append(Check(kind="availability", status="block", refs=[ref_id],
                                         text=f"{title}: цена изменилась, сейчас {_rub(actual_amount)} — пересоберите план, чтобы подтвердить новую цену.",

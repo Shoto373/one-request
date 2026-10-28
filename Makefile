@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps reset test eval eval-deterministic eval-e2e rehearsal web-dev web-mock
+.PHONY: up down build logs ps reset seed test eval eval-deterministic eval-e2e rehearsal web-dev web-mock
 
 up:            ## собрать и поднять
 	@test -f .env || cp .env.example .env
@@ -18,6 +18,9 @@ ps:
 
 reset:         ## снести вместе с БД
 	docker compose down -v
+
+seed:          ## миграции + сид вручную (при старте app они применяются сами)
+	docker compose exec app python -c "import os; from app.db import apply_migrations, load_seed; u = os.environ['DATABASE_URL']; apply_migrations(u); print('seed entries:', load_seed(u))"
 
 test:          ## тесты бэкенда; интеграционные — на отдельной БД trip_test в контейнере db
 	-docker compose exec -T db sh -c 'createdb -U "$$POSTGRES_USER" trip_test 2>/dev/null'

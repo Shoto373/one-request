@@ -42,17 +42,22 @@ async def lifespan(app: FastAPI):
         seeded = load_seed(database_url)
         log.info("database initialized; seed entries processed=%d", seeded)
         app.state.store = StateStore(database_url)
-        try:
-            from app.rag.populator import populate_rag_database
-            import psycopg
-            with psycopg.connect(database_url) as conn:
-                row = conn.execute("SELECT count(*) FROM inventory_hotels").fetchone()
+        def populate_inventory() -> None:
+            try:
+                from app.rag.populator import populate_rag_database
+                import psycopg
+                with psycopg.connect(database_url) as conn:
+                    row = conn.execute("SELECT count(*) FROM inventory_hotels").fetchone()
                 if not row or row[0] == 0:
-                    log.info("inventory_hotels is empty, populating 6-month travel inventory into PostgreSQL...")
+                    log.info("inventory_hotels is empty, populating 6-month travel inventory in the background...")
                     counts = populate_rag_database(database_url, days=180)
                     log.info("PostgreSQL RAG inventory initialized: %s", counts)
-        except Exception as e:
-            log.warning("Could not auto-populate RAG inventory at startup: %s", e)
+            except Exception as e:
+                log.warning("Could not auto-populate RAG inventory: %s", e)
+
+        # The inventory only backs the «источники» summary: fill it after startup so a first
+        # `docker compose up` is healthy right away.
+        app.state.inventory_task = asyncio.create_task(asyncio.to_thread(populate_inventory))
     else:
         log.warning("DATABASE_URL is not configured; health is available, session endpoints are disabled")
     app.state.llm = LLMClient()

@@ -13,6 +13,71 @@
 - **Скринкаст:** _ссылка_
 - **Трек:** «О!дин запрос», хакатон Островка
 
+## Быстрый старт
+
+```bash
+git clone https://github.com/ostrovok-hackathon-2026/5-ukazatelei.git
+cd 5-ukazatelei
+cp .env.example .env          # необязательно: без .env берутся значения из .env.example
+docker compose up --build     # миграции и сид применяются автоматически, ~5 минут на первую сборку
+# открыть http://localhost:8080
+```
+
+Больше ничего ставить не нужно. Ключ LLM для жюри лежит в зашифрованном `secrets.env.age`: расшифруйте его в `.env` ключом организаторов. Без ключа агент тоже проходит весь путь: запрос разбирают правила.
+
+## Зависимости и переменные окружения
+
+Рекомендуемые ресурсы:
+- 2 CPU;
+- 4 GB RAM;
+- около 2 GB диска под образы.
+
+Сервисы в `docker-compose.yml`:
+- `app` — Python 3.12 + FastAPI + собранный React-фронт, порт 8080, один воркер, не от root;
+- `db` — PostgreSQL 16 (`postgres:16.6-alpine`), данные в volume `pgdata`.
+
+Кэша и очередей нет. Сетевой доступ нужен к Tutu MCP (без ключа) и к провайдеру LLM.
+
+**LLM.** Используется GigaChat (Сбер), модель `GigaChat-Max`, через OpenAI-совместимый API (`LLM_BASE_URL=https://gigachat.devices.sberbank.ru/api/v1`). Подойдёт любой OpenAI-совместимый провайдер: OpenAI, OpenRouter, DeepSeek, локальная Ollama.
+
+Все переменные с комментариями перечислены в [`.env.example`](.env.example). Compose сначала читает `.env.example` (рабочие значения по умолчанию), затем `.env`, если он есть.
+
+| Переменная | По умолчанию | Назначение |
+|---|---|---|
+| `APP_PORT` | `8080` | порт приложения в контейнере |
+| `DATABASE_URL` | `postgresql://app:app@db:5432/trip` | подключение к Postgres |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `app` / `app` / `trip` | инициализация Postgres |
+| `TRAVEL_DATA_PROVIDER` | `tutu` | `tutu` — живой поиск билетов и отелей, `demo` — офлайн-каталог без сети (для тестов) |
+| `LLM_BASE_URL` / `LLM_API_KEY` | OpenAI / пусто | OpenAI-совместимый API; без ключа работает разбор правилами |
+| `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | основная и быстрая модели |
+| `LLM_TIMEOUT_SECONDS` | `30` | таймаут запроса к LLM |
+| `LLM_JSON_MODE` | `auto` | JSON-режим, если провайдер его поддерживает |
+| `TUTU_MCP_ENDPOINT` | `https://mcp.tutu.ru/mcp` | официальный endpoint Tutu MCP |
+| `TUTU_TIMEOUT_SECONDS` | `25` | таймаут вызова MCP |
+| `TUTU_MAX_CALLS` / `TUTU_MAX_PARALLEL` | `18` / `2` | наши защитные лимиты на один поиск |
+| `LOG_LEVEL` | `INFO` | уровень логов (stdout, `docker compose logs app`) |
+
+## Сидирование
+
+Делать ничего не нужно. При старте `app`:
+1. применяются миграции `db/migrations/*.sql`;
+2. загружается сид `data/seed/*.json`;
+3. каталог (`data/seed/catalog/*.json`: города, аэропорты, климат, визы) читается в память;
+4. в фоне заполняется таблица источников для сводки «откуда данные».
+
+Повторный запуск ничего не дублирует. Начать с чистой БД: `make reset && make up` или `docker compose down -v && docker compose up --build`. Пересборка каталога из снимков открытых данных описана в [`pipeline/README.md`](pipeline/README.md).
+
+## Маршруты и доступ
+
+- `/` — чат с агентом и «холст поездки»: условия, направления, сравнение комплектов, таймлайн с проверками;
+- `/checkout/:cartId` — оформление (имитация оплаты);
+- `/orders/:id` — заказ: неизменяемый снимок, напоминания, ранний заезд, перенос дат;
+- `/metrics` — метрики по фиксированным сценариям, `/api/metrics` — то же в JSON;
+- `/health` — `200 {"status":"ok"}`; `/api/status` — режим LLM и данных;
+- `/api/*` — REST и SSE, контракт в разделе [Для разработчиков](#для-разработчиков).
+
+Учётных записей нет: сессия создаётся автоматически, кнопка «Новый чат» начинает новую. На оплате подходят любые имя и email, деньги не списываются.
+
 ## Как агент закрывает задачи кейса
 
 | Задача кейса | Что делает агент | Где в коде |
@@ -71,31 +136,6 @@ React (web/)  ──POST /api/sessions/{id}/messages──►  FastAPI (app/main
 - **Работает без ключа LLM.** Если ключа нет или провайдер не ответил, запрос разбирают правила, и весь путь до оплаты проходит.
 - **Прозрачность.** Каждый шаг агента (разбор, вызовы инструментов, результаты) сохраняется и виден в интерфейсе («Шаги агента») и через `GET /api/sessions/{id}/trace`.
 - **Надёжность.** У каждого изменения есть `request_id` (повтор не применяется дважды). Устаревшая версия плана даёт 409. Обрыв соединения не теряет уже принятый ход.
-
-## Быстрый старт
-
-```bash
-git clone https://github.com/ostrovok-hackathon-2026/5-ukazatelei.git
-cd 5-ukazatelei
-cp .env.example .env          # впишите LLM_API_KEY (любой OpenAI-совместимый провайдер), по желанию
-docker compose up --build     # миграции и сид применяются автоматически
-# открыть http://localhost:8080
-```
-
-Режим данных задаёт `TRAVEL_DATA_PROVIDER`:
-- `tutu` — живой поиск, так работает развёрнутый сервис;
-- `demo` — офлайн-каталог для разработки и тестов, без сети.
-
-Нужны только Docker и Docker Compose v2. Рекомендуется 2 CPU, 4 GB RAM и около 2 GB диска.
-
-| Переменная | По умолчанию | Назначение |
-|---|---|---|
-| `TRAVEL_DATA_PROVIDER` | `demo` | `tutu` — реальные билеты и отели, `demo` — офлайн-каталог |
-| `LLM_BASE_URL` / `LLM_API_KEY` | OpenAI / пусто | любой OpenAI-совместимый API; без ключа работает разбор правилами |
-| `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | основная и быстрая модели |
-| `DATABASE_URL` | `postgresql://app:app@db:5432/trip` | Postgres 16 |
-| `TUTU_MCP_ENDPOINT` | `https://mcp.tutu.ru/mcp` | официальный endpoint Tutu MCP |
-| `TUTU_MAX_CALLS` / `TUTU_MAX_PARALLEL` | `18` / `2` | наши защитные лимиты на один поиск |
 
 ## Как проверить за 5 минут
 

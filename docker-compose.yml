@@ -5,7 +5,11 @@ name: odin-zapros
 services:
   db:
     image: postgres:16.6-alpine
-    env_file: .env
+    env_file: &env
+      - path: .env.example   # working defaults, so `docker compose up --build` runs without extra steps
+        required: true
+      - path: .env           # your values (LLM key) override the defaults; optional
+        required: false
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +22,7 @@ services:
   app:
     build: .
     image: odin-zapros/app:dev
-    env_file: .env
+    env_file: *env
     ports:
       - "8080:8080"
     healthcheck:
