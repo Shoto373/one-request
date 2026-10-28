@@ -559,8 +559,40 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         if blocking:
             blocks = [c.text for b in bundles for c in b.checks if c.status == "block"]
             return state, "Пересборка вернула блокирующие проверки: " + "; ".join(blocks) + ". Исправьте условия и пересоберите план."
-        delta_text = f"{float(delta):+,.0f} ₽".replace(",", " ") if delta is not None else "не рассчитана инструментом"
-        return state, f"План пересобран под новые условия. Сохранено: {', '.join(kept) if kept else 'нет'}; заменено: {', '.join(replaced) if replaced else 'нет'}. Разница стоимости: {delta_text}. Выберите актуальный вариант."
+        return state, self._replan_reply(pending.source_bundle, selected or bundles[0], kept, replaced, delta)
+
+    @staticmethod
+    def _replan_reply(old: StateBundle, new: StateBundle, kept: list[str], replaced: list[str], delta: Any) -> str:
+        """«Сохранили отель …; заменили перелёты и трансферы на новые даты; дешевле на 5 040 ₽» — names, not ids."""
+        items = {f"offer:{i.offer_id}": i for i in [*old.items, *new.items]}
+        kind_name = {"flight": "перелёт", "train": "поезд", "hotel": "отель", "transfer": "трансфер"}
+
+        def names(refs: list[str]) -> list[str]:
+            out: list[str] = []
+            for ref in refs:
+                item = items.get(ref.split("→")[0].strip())
+                if item is None:
+                    continue
+                name = kind_name.get(item.kind, "позиция")
+                if item.kind == "hotel" and item.title:
+                    name += f" «{item.title.split(',')[0].split(' · ')[0]}»"
+                if name not in out:
+                    out.append(name)
+            return out
+
+        kept_names, replaced_names = names(kept), names(replaced)
+        parts = ["Пересобрал план под новые условия."]
+        if kept_names:
+            parts.append("Оставил: " + ", ".join(kept_names) + ".")
+        if replaced_names:
+            parts.append("Заменил: " + ", ".join(replaced_names) + ".")
+        if delta is not None and float(delta):
+            amount = f"{abs(float(delta)):,.0f} ₽".replace(",", " ")
+            parts.append(("Вышло дешевле на " if float(delta) < 0 else "Вышло дороже на ") + amount + ".")
+        elif delta is not None:
+            parts.append("Цена не изменилась.")
+        parts.append("Проверьте варианты ниже и выберите подходящий.")
+        return " ".join(parts)
 
     async def _continue_changed(self, state: TripState, trace: list[dict[str, Any]]) -> tuple[TripState, str]:
         return await self._replan(state, trace) if state.pending_replan else await self._continue(state, trace)
@@ -775,9 +807,10 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                 key="origin",
                 question=("Назовите город отправления в России."
                           if isinstance(exc, TutuOriginOutsideRussia)
-                          else f"Вы подтверждаете поиск из города «{exc.candidate}»? Напишите его название, чтобы я продолжил."
+                          else f"Искать билеты из города «{exc.candidate}»?"
                           if isinstance(exc, TutuOriginUnavailable) and exc.candidate
                           else "Уточните город отправления: добавьте область или район, если название встречается в нескольких местах."),
+                options=[exc.candidate] if isinstance(exc, TutuOriginUnavailable) and exc.candidate else [],
             )]
             state.stage = "clarify"
             return state, str(exc)

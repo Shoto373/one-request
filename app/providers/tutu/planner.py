@@ -1,4 +1,4 @@
-"""Bounded live planner for Russian origin cities to the fixed Sochi destination."""
+"""Live trip planner on the Tutu MCP: real fares and hotel rates for any Russian origin city."""
 from __future__ import annotations
 
 import asyncio
@@ -125,17 +125,18 @@ def _origin_resolution_error(error: Exception, origin_name: str) -> TutuPlaceRes
     if "could not resolve" in low:
         if "share this name" in low or "which one" in low:
             return TutuOriginAmbiguous(
-                f"Туту нашёл несколько городов с названием «{origin_name}». Уточните область или район отправления. {text}"
+                f"Нашёл несколько городов с названием «{origin_name}». Уточните область или район отправления."
             )
         return TutuOriginAmbiguous(
-            f"Туту не смог определить город отправления «{origin_name}». Уточните написание, область или район."
+            f"Не получилось найти город отправления «{origin_name}». Уточните написание, область или район."
         )
     if "no avia_id" in low or "no rail" in low or "no railway" in low or "no train" in low:
         match = re.search(r"(?:answers this wording with|suggests)\s+[«\"]([^»\"]+)[»\"]", text, re.I)
         candidate = match.group(1).strip() if match else None
-        suggestion = (f"Туту предлагает проверить город «{candidate}». " if candidate else "")
+        suggestion = (f"Ближайший город с вылетами — {candidate}: искать билеты оттуда? Напишите «{candidate}», "
+                      "и я продолжу. " if candidate else "Назовите ближайший город с вокзалом или аэропортом. ")
         return TutuOriginUnavailable(
-            f"Туту не подтвердил отправление из «{origin_name}». {suggestion}Город не меняю автоматически; если согласны, укажите его явно.",
+            f"Из «{origin_name}» нет подходящих рейсов и поездов на эти даты. {suggestion}Сам город не меняю.",
             candidate=candidate,
         )
     return None
@@ -518,13 +519,7 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                 duration = int(out.variant.get("duration_min") or 0) + int(back.variant.get("duration_min") or 0)
                 transport_choices.append(("rail", [out, back], duration))
         if not transport_choices:
-            if is_worldwide_enabled():
-                log.info("Tutu returned no transport for %s -> %s, falling back to worldwide catalog", origin_name, destination_name)
-                from app.planning.build import build_trip_bundles
-                from app.planning.models import bundle_to_wire
-                res = build_trip_bundles(catalog, query)
-                if res.bundles:
-                    return [bundle_to_wire(b) for b in res.bundles]
+            # No invented fallback: without real fares the agent asks or says so.
             if place_errors:
                 raise place_errors[0]
             failed = "; ".join(source_errors)
@@ -806,9 +801,8 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
 
 
 async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) -> list[dict[str, Any]]:
-    """Search with Tutu live MCP; seamlessly falls back to worldwide catalog when live search is unavailable or unsupported."""
-    query = _parse_query(requirements, state)
-    catalog = get_catalog()
+    """Search with Tutu live MCP: real fares and hotel rates only, one retry when the session drops."""
+    _parse_query(requirements, state)
     try:
         try:
             return await _search_tutu_core(requirements, state)
@@ -822,17 +816,13 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
                 raise
             log.warning("Tutu live search failed (%s), retrying once", type(exc).__name__)
             return await _search_tutu_core(requirements, state)
-    except TutuOriginOutsideRussia:
+    except ProviderError:
         raise
-    except BaseException as exc:
-        if is_worldwide_enabled():
-            log.warning("Tutu live search failed or unsupported for route (%s: %s). Falling back to worldwide catalog.", type(exc).__name__, exc)
-            from app.planning.build import build_trip_bundles
-            from app.planning.models import bundle_to_wire
-            res = build_trip_bundles(catalog, query)
-            if res.bundles:
-                return [bundle_to_wire(b) for b in res.bundles]
-        raise
+    except Exception as exc:
+        # Real prices only: a failed search is reported, never replaced by catalog prices.
+        log.warning("Tutu live search failed twice (%s: %s)", type(exc).__name__, exc)
+        raise TutuMCPError("Поиск билетов сейчас не ответил. Попробуйте ещё раз через минуту — "
+                           "придуманные цены вместо реальных я не показываю.") from exc
 
 
 async def replan_tutu(state: Any, changes: dict[str, Any]) -> dict[str, Any]:
