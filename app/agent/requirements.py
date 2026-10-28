@@ -168,6 +168,14 @@ def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
         elif req.kind == "unknown":
             # модели присылают unknown без цитаты: None in str раньше ронял весь ход
             req = req.model_copy(update={"value": None, "quote": req.quote if req.quote and req.quote in text else None})
+        if req.key in {"origin", "destination"} and isinstance(req.value, str):
+            # Show «Санкт-Петербург», not «Питер»: the quote keeps the user's own words.
+            from app.catalog.store import get_catalog
+            from app.planning.query import canonical_city_name
+
+            canonical = canonical_city_name(get_catalog(), req.value)
+            if canonical and canonical != req.value:
+                req = req.model_copy(update={"value": canonical})
         valid[req.key] = req
 
     # Detect landmarks and sights if destination is not yet resolved

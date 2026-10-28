@@ -125,6 +125,41 @@ def resolve_city(cat: Catalog, value: Any) -> str | None:
 
 
 
+def canonical_city_name(cat: Catalog, value: Any) -> str | None:
+    """Full city name for informal input («Питер» -> «Санкт-Петербург», «мск», «SVO», «Анталию»).
+
+    Uses only the catalog and fixed aliases: unlike ``resolve_city`` it never registers a new city
+    and never geocodes, so it is safe to call on every extracted requirement.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    from app.catalog.world_resolver import init_world_catalog
+
+    init_world_catalog(cat)
+    if raw.upper() in cat.cities:
+        return cat.cities[raw.upper()].name
+    if raw.upper() in cat.hubs:
+        return cat.cities[cat.hubs[raw.upper()].city_id].name
+    text = _norm(raw)
+    cid = CITY_ALIASES.get(text)
+    if cid is None:
+        for city in cat.cities.values():
+            if city.id.startswith("W_"):
+                continue
+            for name in (_norm(city.name), _norm(city.name_en)):
+                stems = [name[:-1]] if len(name) >= 5 else []
+                if len(name) >= 7:
+                    stems.append(name[:-2])
+                if text == name or any(text.startswith(s) for s in stems):
+                    cid = city.id
+                    break
+            if cid:
+                break
+    city = cat.cities.get(cid) if cid else None
+    return city.name if city else None
+
+
 def _to_date(value: Any) -> date | None:
     if isinstance(value, date):
         return value

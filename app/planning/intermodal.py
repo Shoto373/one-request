@@ -250,6 +250,24 @@ def find_nearest_hub(cat: Catalog, city_id_or_name: str) -> dict[str, Any]:
     }
 
 
+def _reserve_min(offer: Offer) -> int:
+    return 40 if offer.kind == "train" else 120
+
+
+def hub_station_name(offer: Offer, hub_conn: dict[str, Any]) -> str:
+    """Name of the hub point the main leg really uses (a station for trains, not the airport)."""
+    hub_id = offer.variant.get("from_hub") or offer.variant.get("to_hub")
+    try:
+        from app.catalog.store import get_catalog
+
+        hub = get_catalog().hubs.get(hub_id)
+        if hub is not None:
+            return hub.name
+    except Exception:  # noqa: BLE001 - naming only
+        pass
+    return hub_conn["hub_name"]
+
+
 def make_intermodal_outbound(
     base_flight: Offer,
     hub_conn: dict[str, Any],
@@ -257,9 +275,9 @@ def make_intermodal_outbound(
     origin_city: str,
     dest_city: str,
 ) -> Offer:
-    """Build an intermodal outbound offer combining Ostrovok Transfer and Flight with individual leg details."""
+    """Build an intermodal outbound offer: Ostrovok Transfer to the hub, then the flight or train from it."""
     origin_name = hub_conn["origin_name"]
-    hub_name = hub_conn["hub_name"]
+    hub_name = hub_station_name(base_flight, hub_conn) if base_flight.kind == "train" else hub_conn["hub_name"]
     transfer_dur = hub_conn["duration_min"]
     transfer_price = hub_conn["price_rub"]
     transfer_dist = hub_conn.get("distance_km", 0)
@@ -277,7 +295,8 @@ def make_intermodal_outbound(
     flight_url = base_flight.source_url or default_flight_url
 
     flight_start = base_flight.times.start
-    transfer_arrive = flight_start - timedelta(minutes=120)
+    # Be at the hub with the usual reserve: 2 h before a flight, 40 min before a train.
+    transfer_arrive = flight_start - timedelta(minutes=_reserve_min(base_flight))
     transfer_depart = transfer_arrive - timedelta(minutes=transfer_dur)
 
     leg_transfer = {
@@ -291,19 +310,20 @@ def make_intermodal_outbound(
         "price_rub": transfer_price,
         "distance_km": transfer_dist,
         "source_url": None,
-        "label": "Трансфер до авиахаба",
+        "label": "Трансфер до вокзала" if base_flight.kind == "train" else "Трансфер до авиахаба",
     }
     leg_flight = {
         "from": f"{hub_conn['hub_city']} ({hub_name})",
         "to": dest_name,
-        "carrier": base_flight.variant.get("carrier_name", "Авиарейс"),
+        "mode": base_flight.kind,
+        "carrier": base_flight.variant.get("carrier_name") or base_flight.title or "Авиарейс",
         "flight_no": base_flight.variant.get("flight_no", ""),
         "departure_at": flight_start.isoformat(),
         "arrival_at": base_flight.times.end.isoformat(),
         "duration_min": flight_dur,
         "price_rub": flight_price,
         "source_url": None,
-        "label": "Авиаперелёт",
+        "label": "Поезд" if base_flight.kind == "train" else "Авиаперелёт",
     }
 
     extras = list(base_flight.variant.get("extras", [])) + [
@@ -340,7 +360,7 @@ def make_intermodal_outbound(
 
     return Offer(
         offer_id=f"off_im_out_{origin_city}_{dest_city}_{base_flight.offer_id}",
-        kind="flight",
+        kind=base_flight.kind,
         item_id=base_flight.item_id,
         origin_city=origin_city,
         destination_city=dest_city,
@@ -372,9 +392,13 @@ def make_intermodal_inbound(
     origin_city: str,
     dest_city: str,
 ) -> Offer:
-    """Build an intermodal return offer combining Flight and Ostrovok Transfer with individual leg details."""
+    """Build an intermodal return offer: the flight or train to the hub, then Ostrovok Transfer home."""
     origin_name = hub_conn["origin_name"]
-    hub_name = hub_conn["hub_name"]
+    if base_flight.kind == "train":
+        to_hub = base_flight.variant.get("to_hub")
+        hub_name = hub_station_name(base_flight.model_copy(update={"variant": {"from_hub": to_hub}}), hub_conn)
+    else:
+        hub_name = hub_conn["hub_name"]
     transfer_dur = hub_conn["duration_min"]
     transfer_price = hub_conn["price_rub"]
     transfer_dist = hub_conn.get("distance_km", 0)
@@ -398,14 +422,15 @@ def make_intermodal_inbound(
     leg_flight = {
         "from": dest_name,
         "to": f"{hub_conn['hub_city']} ({hub_name})",
-        "carrier": base_flight.variant.get("carrier_name", "Авиарейс"),
+        "mode": base_flight.kind,
+        "carrier": base_flight.variant.get("carrier_name") or base_flight.title or "Авиарейс",
         "flight_no": base_flight.variant.get("flight_no", ""),
         "departure_at": base_flight.times.start.isoformat(),
         "arrival_at": flight_end.isoformat(),
         "duration_min": flight_dur,
         "price_rub": flight_price,
         "source_url": None,
-        "label": "Авиаперелёт",
+        "label": "Поезд" if base_flight.kind == "train" else "Авиаперелёт",
     }
     leg_transfer = {
         "from": f"{hub_conn['hub_city']} ({hub_name})",
@@ -418,7 +443,7 @@ def make_intermodal_inbound(
         "price_rub": transfer_price,
         "distance_km": transfer_dist,
         "source_url": None,
-        "label": "Трансфер из хаба домой",
+        "label": "Трансфер с вокзала домой" if base_flight.kind == "train" else "Трансфер из хаба домой",
     }
 
     extras = list(base_flight.variant.get("extras", [])) + [
@@ -455,7 +480,7 @@ def make_intermodal_inbound(
 
     return Offer(
         offer_id=f"off_im_back_{origin_city}_{dest_city}_{base_flight.offer_id}",
-        kind="flight",
+        kind=base_flight.kind,
         item_id=base_flight.item_id,
         origin_city=origin_city,
         destination_city=dest_city,

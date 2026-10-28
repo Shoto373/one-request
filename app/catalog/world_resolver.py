@@ -411,7 +411,8 @@ KNOWN_WORLD_DESTINATIONS: dict[str, dict[str, Any]] = {
 _INITIALIZED = False
 
 
-def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str, Any]) -> None:
+def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str, Any], *,
+                                     with_flights: bool = True) -> None:
     if city_id in cat.cities:
         return
 
@@ -625,6 +626,11 @@ def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str,
             cat.transfers_by_pair[(hub_id, h_id)].append(t_route)
 
 
+    if not with_flights:
+        # A city found only by name (e.g. Рязань) has no known airport: inventing direct flights to it
+        # produced nonsense routes. It is reached through the nearest hub (app.planning.intermodal).
+        return
+
     # Generate daily flights from major hubs (MOW, LED, SVX) for 2026/2027
     origins = [("MOW", "SVO"), ("LED", "LED"), ("SVX", "SVX")]
     f_base = int(data.get("base_flight_rub", 35000))
@@ -635,17 +641,17 @@ def _populate_destination_in_catalog(cat: Catalog, city_id: str, data: dict[str,
         for orig_city, orig_hub in origins:
             fl_id = f"fl_{orig_city}_{city_id}_{cur_date:%Y%m%d}"
             if fl_meta:
-                carrier = fl_meta["carrier"] if orig_city == "MOW" else "FZ"
-                carrier_name = fl_meta["carrier_name"] if orig_city == "MOW" else "Flydubai"
-                flight_no = fl_meta["flight_no"] if orig_city == "MOW" else f"FZ {700 + (day_offset % 200)}"
-                ret_flight_no = fl_meta["ret_flight_no"] if orig_city == "MOW" else f"FZ {800 + (day_offset % 200)}"
+                carrier = fl_meta["carrier"] if orig_city == "MOW" else "SU"
+                carrier_name = fl_meta["carrier_name"] if orig_city == "MOW" else "Аэрофлот"
+                flight_no = fl_meta["flight_no"] if orig_city == "MOW" else f"SU {1700 + (day_offset % 200)}"
+                ret_flight_no = fl_meta["ret_flight_no"] if orig_city == "MOW" else f"SU {1800 + (day_offset % 200)}"
                 aircraft = fl_meta.get("aircraft", "Boeing 737-800")
                 flight_min = fl_meta.get("duration_min", 280)
                 dep_t = fl_meta.get("dep_time", time(9, 30))
                 ret_dep_t = fl_meta.get("ret_dep_time", time(15, 0))
             else:
-                carrier = "SU" if orig_city == "MOW" else "FZ"
-                carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
+                carrier = "SU"
+                carrier_name = "Аэрофлот"
                 flight_no = f"{carrier} {200 + (day_offset % 300)}"
                 ret_flight_no = f"{carrier} {300 + (day_offset % 300)}"
                 aircraft = "Boeing 737-800"
@@ -818,15 +824,15 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
         fl_id = f"fl_{orig_city}_{dest_city}_{target_date:%Y%m%d}"
         fl_meta = REAL_FLIGHT_INFO.get(dest_city) or {}
         if fl_meta:
-            carrier = fl_meta["carrier"] if orig_city == "MOW" else "FZ"
-            carrier_name = fl_meta["carrier_name"] if orig_city == "MOW" else "Flydubai"
-            flight_no = fl_meta["flight_no"] if orig_city == "MOW" else "FZ 705"
+            carrier = fl_meta["carrier"] if orig_city == "MOW" else "SU"
+            carrier_name = fl_meta["carrier_name"] if orig_city == "MOW" else "Аэрофлот"
+            flight_no = fl_meta["flight_no"] if orig_city == "MOW" else "SU 1705"
             aircraft = fl_meta.get("aircraft", "Boeing 737-800")
             flight_min = fl_meta.get("duration_min", 280)
             dep_t = fl_meta.get("dep_time", time(9, 30))
         else:
-            carrier = "SU" if orig_city == "MOW" else "FZ"
-            carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
+            carrier = "SU"
+            carrier_name = "Аэрофлот"
             flight_no = f"{carrier} 296"
             aircraft = "Boeing 737-800"
             flight_min = 280
@@ -897,15 +903,15 @@ def ensure_flights_on_date(cat: Catalog, orig_city: str, dest_city: str, target_
         fl_id = f"fl_{orig_city}_{dest_city}_{target_date:%Y%m%d}"
         fl_meta = REAL_FLIGHT_INFO.get(orig_city) or {}
         if fl_meta:
-            carrier = fl_meta["carrier"] if dest_city == "MOW" else "FZ"
-            carrier_name = fl_meta["carrier_name"] if dest_city == "MOW" else "Flydubai"
-            flight_no = fl_meta.get("ret_flight_no", "SU 297") if dest_city == "MOW" else "FZ 706"
+            carrier = fl_meta["carrier"] if dest_city == "MOW" else "SU"
+            carrier_name = fl_meta["carrier_name"] if dest_city == "MOW" else "Аэрофлот"
+            flight_no = fl_meta.get("ret_flight_no", "SU 297") if dest_city == "MOW" else "SU 1706"
             aircraft = fl_meta.get("aircraft", "Boeing 737-800")
             flight_min = fl_meta.get("duration_min", 280)
             ret_dep_t = fl_meta.get("ret_dep_time", time(15, 0))
         else:
-            carrier = "SU" if dest_city == "MOW" else "FZ"
-            carrier_name = "Аэрофлот" if carrier == "SU" else "Flydubai"
+            carrier = "SU"
+            carrier_name = "Аэрофлот"
             flight_no = f"{carrier} 297"
             aircraft = "Boeing 737-800"
             flight_min = 280
@@ -1299,7 +1305,7 @@ def resolve_world_city(cat: Catalog, text: str) -> str | None:
             "base_flight_rub": 35000,
             "base_hotel_rub": 8500,
         }
-        _populate_destination_in_catalog(cat, city_id, dynamic_data)
+        _populate_destination_in_catalog(cat, city_id, dynamic_data, with_flights=False)
         log.info("Dynamically registered worldwide city: %s -> %s", capitalized, city_id)
         return city_id
 
