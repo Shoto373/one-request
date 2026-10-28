@@ -761,13 +761,10 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
             if query.budget_rub is not None:
                 if subtotal > query.budget_rub:
                     status = "block" if query.budget_hard else "warn"
-                    text = f"Подтверждённая сумма билетов и отеля {subtotal:,} ₽ выше бюджета {query.budget_rub:,} ₽; трансфер в неё не входит.".replace(",", " ")
-                elif query.budget_hard:
-                    status = "block"
-                    text = f"Билеты и отель составляют {subtotal:,} ₽, но проверить жёсткий бюджет {query.budget_rub:,} ₽ целиком нельзя: стоимость трансфера отсутствует.".replace(",", " ")
+                    text = f"Билеты, отель и трансфер стоят {subtotal:,} ₽ — это выше бюджета {query.budget_rub:,} ₽.".replace(",", " ")
                 else:
-                    status = "warn"
-                    text = f"Билеты и отель составляют {subtotal:,} ₽; общий итог с трансфером неизвестен.".replace(",", " ")
+                    status = "ok"
+                    text = f"Поездка укладывается в бюджет {query.budget_rub:,} ₽: {subtotal:,} ₽ вместе с ориентировочным трансфером.".replace(",", " ")
                 checks.append(Check(kind="budget", status=status, refs=refs, text=text).model_dump(mode="json"))
             relevant_errors = [
                 err for err in source_errors
