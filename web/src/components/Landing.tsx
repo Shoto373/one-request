@@ -5,9 +5,9 @@ import { profileId } from '../lib/profile'
 import Icon, { type IconName } from './Icon'
 
 const SCENARIOS = [
-  { title: 'Выдохнуть у моря', subtitle: 'Спокойная поездка вдвоём', image: '/sochi-coast.png', query: 'на неделю, двое взрослых' },
-  { title: 'На море с ребёнком', subtitle: 'Удобная дорога и время вместе', image: '/sochi-family.png', query: 'на неделю, двое взрослых и ребёнок 5 лет' },
-  { title: 'Взять друга с собой', subtitle: 'Проверим условия для питомца', image: '/sochi-dog.png', query: 'на неделю, двое взрослых и собака' },
+  { title: 'Выдохнуть у моря', subtitle: 'Анталья, Шарм, Пхукет — где теплее', image: '/sochi-coast.png', query: 'Хочу к тёплому морю на неделю, двое взрослых' },
+  { title: 'Путешествие с ребёнком', subtitle: 'Удобная дорога и время вместе', image: '/sochi-family.png', query: 'В Казань на выходные, двое взрослых и ребёнок 5 лет' },
+  { title: 'Взять друга с собой', subtitle: 'Проверим условия для питомца', image: '/sochi-dog.png', query: 'В Калининград на неделю, двое взрослых и собака' },
 ]
 
 const FEATURES: { icon: IconName; title: string; text: string }[] = [
@@ -25,8 +25,6 @@ export default function Landing({ disabled, connecting, onSend }: Props) {
   const qc = useQueryClient()
   const pid = profileId()
   const { data: profile } = useQuery({ queryKey: ['profile', pid], queryFn: () => api.getProfile(pid!), enabled: !!pid, retry: false })
-  const { data: appStatus } = useQuery({ queryKey: ['status'], queryFn: api.getStatus, staleTime: 60_000 })
-  const destination = appStatus?.product_coverage?.fixed_destination?.name ?? 'Сочи'
   const remembered = profile ? memoryWords(profile.prefs) : []
   const [text, setText] = useState('')
   const forget = async () => {
@@ -39,21 +37,21 @@ export default function Landing({ disabled, connecting, onSend }: Props) {
     if (!query || disabled) return
     onSend(query)
   }
-  const submitHero = () => submit(text.trim() || `Хочу поехать в ${destination}`)
+  const submitHero = () => submit(text.trim() || 'Хочу куда-нибудь на неделю')
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-white">
       <section className="shrink-0 bg-lime px-4 pb-10 pt-5 md:px-8 md:pb-14 md:pt-8">
         <div className="mx-auto max-w-[1120px]">
-          <div className="text-[11px] font-bold tracking-[.18em] text-ink">ВАШ ГОРОД <span className="px-1">→</span> {destination.toLocaleUpperCase('ru-RU')}</div>
+          <div className="text-[11px] font-bold tracking-[.18em] text-ink">ВАШ ГОРОД <span className="px-1">→</span> ЛЮБАЯ ТОЧКА МИРА</div>
           <h1 className="mt-5 max-w-[880px] font-display text-[34px] font-bold leading-[1.1] tracking-tight text-ink sm:text-[44px] md:mt-6 md:text-[56px]">
-            В {destination} — из вашего города
+            Куда угодно — из вашего города
           </h1>
           <form className="mt-5 flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); submitHero() }}>
             <label className="flex min-h-[64px] min-w-0 flex-1 flex-col justify-center rounded-2xl bg-white px-4 py-2 shadow-card">
               <span className="text-[11px] text-ink-muted">Расскажите о поездке</span>
               <input value={text} onChange={(e) => setText(e.target.value)} disabled={disabled}
-                placeholder={`Из Екатеринбурга в ${destination} на неделю, двое взрослых, до 100 тысяч рублей`}
+                placeholder="Из Екатеринбурга в Стамбул на неделю, двое взрослых, до 150 тысяч рублей"
                 className="w-full bg-transparent text-base text-ink outline-none placeholder:text-ink-muted/90 md:text-[17px]" />
             </label>
             <button type="submit" disabled={disabled} className="btn-primary h-14 shrink-0 px-8 text-base sm:h-16">
@@ -65,13 +63,13 @@ export default function Landing({ disabled, connecting, onSend }: Props) {
       </section>
 
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 pb-8 pt-8 md:px-8 md:pt-10">
-        <div className="text-[11px] font-bold tracking-[.18em] text-brand">ВАШ ГОРОД <span className="px-1 text-brand/50">→</span> {destination.toLocaleUpperCase('ru-RU')}</div>
-        <h2 className="mt-2 font-display text-[31px] font-bold leading-[1.1] tracking-tight text-ink md:text-[48px]">Поездка в {destination} начинается с вашей идеи.</h2>
+        <div className="text-[11px] font-bold tracking-[.18em] text-brand">МОРЕ <span className="px-1 text-brand/50">·</span> ГОРОДА <span className="px-1 text-brand/50">·</span> ГОРЫ</div>
+        <h2 className="mt-2 font-display text-[31px] font-bold leading-[1.1] tracking-tight text-ink md:text-[48px]">Поездка начинается с вашей идеи.</h2>
         <p className="mt-2 text-base text-ink-grey md:text-[19px]">Выберите настроение поездки — детали обсудим с агентом.</p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {SCENARIOS.map((scenario) => (
-            <button key={scenario.title} onClick={() => submit(`В ${destination} ${scenario.query}`)} disabled={disabled}
+            <button key={scenario.title} onClick={() => submit(scenario.query)} disabled={disabled}
               className="group relative isolate flex h-[238px] overflow-hidden rounded-[20px] text-left text-white shadow-card transition hover:-translate-y-1 hover:shadow-lift disabled:opacity-60 sm:h-[260px] md:h-[292px]">
               <img src={scenario.image} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
               <span className="absolute inset-0 -z-[1] bg-gradient-to-t from-[#10223f]/85 via-[#10223f]/10 to-transparent" />
@@ -119,11 +117,11 @@ export default function Landing({ disabled, connecting, onSend }: Props) {
           <button onClick={forget} className="font-semibold text-brand underline-offset-2 hover:underline">Забыть</button>
         </div>}
 
-        <p className="mt-5 text-[11px] text-ink-muted">Направление отдыха в прототипе — {destination}. Доступность дороги зависит от маршрутов Туту; в демо используются отдельные примеры. Оформление имитируется.</p>
+        <p className="mt-5 text-[11px] text-ink-muted">Билеты, поезда и отели ищутся в реальном времени через Туту и Островок. Оформление имитируется.</p>
 
         <section className="mt-7 rounded-2xl bg-[#eaf2ff] p-3 md:flex md:items-center md:gap-4 md:p-4">
           <h3 className="font-display text-lg font-bold md:shrink-0 md:text-[21px]">А какая поездка нужна вам?</h3>
-          <form className="mt-2 flex flex-1 flex-col gap-2 sm:flex-row md:mt-0" onSubmit={(e) => { e.preventDefault(); submit(text || `Хочу поехать в ${destination}`) }}>
+          <form className="mt-2 flex flex-1 flex-col gap-2 sm:flex-row md:mt-0" onSubmit={(e) => { e.preventDefault(); submit(text || 'Хочу куда-нибудь на неделю') }}>
             <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Расскажите о своих планах…" disabled={disabled}
               className="h-11 min-w-0 flex-1 rounded-xl border border-black/[.06] bg-white px-4 text-sm outline-none placeholder:text-ink-muted focus:border-brand/40 focus:ring-2 focus:ring-brand/10" />
             <button type="submit" disabled={disabled} className="btn-primary h-11 shrink-0 px-5 md:px-7">{connecting ? 'Подключаюсь…' : 'Открыть агента'} <Icon name="send" className="h-4 w-4" /></button>

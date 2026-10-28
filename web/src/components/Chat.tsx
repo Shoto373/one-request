@@ -10,8 +10,9 @@ import { api } from '../api/client'
 /** разные по типу запросы: размытый, точный, с животным, невыполнимый, на английском */
 const EXAMPLES = [
   { emoji: '🌊', text: 'Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов' },
-  { emoji: '🚆', text: 'Из Москвы в {destination} 10–17 ноября, двое взрослых' },
-  { emoji: '🐕', text: 'В {destination} на выходные с собакой 12 кг, до 40 000' },
+  { emoji: '🚆', text: 'Из Москвы в Санкт-Петербург на поезде 14–16 ноября, двое взрослых' },
+  { emoji: '✈️', text: 'Из Москвы в Париж 6–8 декабря вдвоём, бизнес туда, эконом обратно' },
+  { emoji: '🐕', text: 'В Калининград на выходные с собакой 12 кг, до 40 000' },
   { emoji: '🏙️', text: 'Неделя в Дубае на троих за 30 000' },
   { emoji: '🌍', text: 'Somewhere warm in December for two, budget 150k RUB' },
 ]
@@ -32,7 +33,7 @@ interface Props {
 
 export default function Chat({ messages, steps, questions, busy, disabled, connecting, onSend, onAnswer, onRetry }: Props) {
   const { data: appStatus } = useQuery({ queryKey: ['status'], queryFn: api.getStatus, staleTime: 60_000 })
-  const destination = appStatus?.product_coverage?.fixed_destination?.name ?? 'Сочи'
+  const destination = appStatus?.product_coverage?.fixed_destination?.name ?? ''
   const [text, setText] = useState('')
   // Free text is submitted through the shared composer, so only show the active
   // question. The next one arrives after the agent has processed this answer.
