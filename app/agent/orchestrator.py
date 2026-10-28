@@ -170,7 +170,33 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             parsed = rule_parse(text, state, self.local_now())
         if self.last_parser == "rules":
             return parsed
-        return validate_extraction(parsed, text)
+        validated = validate_extraction(parsed, text)
+        # Safety net: a model sometimes drops an explicit destination («Неделя в Дубае…»). If the text
+        # names a catalog destination (not after «из»), it is added only when the model returned none.
+        if any(r.key == "destination" for r in validated.requirements) or "destination" in validated.remove_keys:
+            return validated
+        place = self._named_destination(text)
+        if place is None:
+            return validated
+        name, quote = place
+        return validated.model_copy(update={"requirements": [*validated.requirements, Requirement(
+            key="destination", value=name, kind="hard", source="user_text", quote=quote)]})
+
+    @staticmethod
+    def _named_destination(text: str) -> tuple[str, str] | None:
+        """(city name, quoted word) of the first catalog destination named in the text."""
+        from app.catalog.store import get_catalog
+        from app.planning.query import resolve_city
+        cat = get_catalog()
+        for match in re.finditer(r"(?<![\wЁёА-Яа-я-])([А-ЯЁA-Z][\wЁёА-Яа-я-]+)", text):
+            before = text[:match.start()].rstrip().lower()
+            if before.endswith(("из", "от", "from")):
+                continue
+            city_id = resolve_city(cat, match.group(1))
+            city = cat.cities.get(city_id) if city_id else None
+            if city is not None and not city_id.startswith("W_") and "destination" in city.roles:
+                return city.name, match.group(1)
+        return None
 
     def _year_resolve(self, requirements: list[Requirement], suppressed: list[str] | tuple[str, ...] = ()) -> list[Requirement]:
         by_key = {r.key: r for r in requirements if not (r.kind == "assumption" and r.key in suppressed)}
@@ -834,6 +860,16 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         self._record(trace, {"step_type": "tool", "name": "build_bundles_result", "input": requirements,
                              "output": {"bundle_ids": [b.get("id") if isinstance(b, dict) else getattr(b, "id", None) for b in state.bundles]},
                              "status": "ok"})
+        blocked = [next(c for c in b.checks if c.status == "block") for b in state.bundles
+                   if any(c.status == "block" for c in b.checks)]
+        if state.bundles and len(blocked) == len(state.bundles):
+            # Every option breaks a hard condition: say so instead of «нашёл N комплектов».
+            cheapest = min(b.total_rub for b in state.bundles)
+            state.stage = "compare"
+            return state, (f"Под все ваши обязательные условия вариантов нет: {blocked[0].text.rstrip('.')}. "
+                           f"Самый дешёвый реальный вариант на эти даты — {cheapest:,.0f} ₽.".replace(",", " ")
+                           + " Можно увеличить бюджет, сдвинуть даты или выбрать другое направление — "
+                             "напишите, что поменять, и я пересоберу план.")
         if state.bundles:
             count = len(state.bundles)
             noun = "комплект" if count == 1 else ("комплекта" if count % 10 in {2, 3, 4} and count % 100 not in {12, 13, 14} else "комплектов")

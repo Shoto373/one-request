@@ -72,7 +72,8 @@ async def _parse_with(handler, **client_kw) -> tuple[list, LLMClient]:
 ], ids=["openai_like", "ollama_like", "reasoning_like"])
 async def test_same_agent_turn_on_different_providers(handler, kw) -> None:
     requirements, llm, seen = await _parse_with(handler, **kw)
-    assert {r.key: r.value for r in requirements} == {"origin": "Москва", "adults": 2}
+    # the model omitted «Сочи»: the explicit destination is added from the text
+    assert {r.key: r.value for r in requirements} == {"origin": "Москва", "adults": 2, "destination": "Сочи"}
     assert all(s.get("url", "").endswith("/chat/completions") and "/chat/completions/chat" not in s.get("url", "")
                for s in seen if "url" in s)
 
