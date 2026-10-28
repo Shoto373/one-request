@@ -55,6 +55,7 @@ docker compose up --build     # миграции и сид применяютс�
 | `TUTU_MCP_ENDPOINT` | `https://mcp.tutu.ru/mcp` | официальный endpoint Tutu MCP |
 | `TUTU_TIMEOUT_SECONDS` | `25` | таймаут вызова MCP |
 | `TUTU_MAX_CALLS` / `TUTU_MAX_PARALLEL` | `18` / `2` | наши защитные лимиты на один поиск |
+| `TUTU_CACHE` | `off` | `pinned` — первый ответ Туту на запрос записывается в Postgres и повторяется для тех же параметров (с исходным временем получения): так демонстрация показывает одни и те же реальные цены на каждом шаге. Включён на развёрнутом сервисе |
 | `LOG_LEVEL` | `INFO` | уровень логов (stdout, `docker compose logs app`) |
 
 ## Сидирование

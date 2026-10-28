@@ -142,3 +142,25 @@ def test_llm_flight_class_answer_survives_validation():
 
     parsed = ParsedRequest(requirements=[Requirement(key="flight_class", value="Эконом", kind="hard", source="user_text")])
     assert [(r.key, r.value) for r in validate_extraction(parsed, "Эконом").requirements] == [("flight_class", "economy")]
+
+
+def test_pinned_tutu_answer_is_replayed_without_a_session(monkeypatch):
+    from app.providers.tutu import cache
+    from app.providers.tutu.client import TutuMCPClient, TutuMCPError
+
+    stored = {("search_avia", "Москва"): {"data": {"offers": [{"offer_id": "o1"}]}, "error": None,
+                                          "fetched_at": "2026-10-28T19:00:00+00:00"},
+              ("search_avia", "Рязань"): {"data": None, "error": "origin has no avia_id", "fetched_at": "2026-10-28T19:00:00+00:00"}}
+    monkeypatch.setattr(cache, "enabled", lambda: True)
+    monkeypatch.setattr(cache, "get", lambda tool, args: stored.get((tool, args["origin"])))
+
+    async def run():
+        async with TutuMCPClient() as client:
+            hit = await client.call("search_avia", {"origin": "Москва"})
+            assert hit.data["offers"][0]["offer_id"] == "o1" and hit.fetched_at.startswith("2026-10-28")
+            with pytest.raises(TutuMCPError) as error:
+                await client.call("search_avia", {"origin": "Рязань"})
+            assert error.value.upstream_message == "origin has no avia_id"
+            assert client._session is None  # nothing went to the network
+
+    asyncio.run(run())

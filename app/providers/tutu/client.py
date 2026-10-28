@@ -14,6 +14,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
 from app.providers.base import ProviderResponseError, ProviderUnavailable, SearchResponse
+from app.providers.tutu import cache
 
 TUTU_READ_TOOLS = frozenset({
     "search_avia", "search_rail", "search_hotels", "get_offer_details",
@@ -50,10 +51,17 @@ class TutuMCPClient:
         self._session: ClientSession | None = None
         self._schemas: dict[str, set[str]] = {}
         self.server_version: str | None = None
+        self._connect_lock = asyncio.Lock()
 
     async def __aenter__(self) -> "TutuMCPClient":
         if not self.endpoint.startswith("https://") and os.getenv("TUTU_ALLOW_HTTP", "false").lower() != "true":
             raise TutuMCPError("Tutu MCP endpoint must use HTTPS")
+        if cache.enabled():
+            return self  # pinned answers need no session; connect on the first miss
+        await self._connect()
+        return self
+
+    async def _connect(self) -> None:
         self._stack = AsyncExitStack()
         try:
             streams = await self._stack.enter_async_context(streamablehttp_client(
@@ -71,7 +79,6 @@ class TutuMCPClient:
             missing = {"search_avia", "search_rail", "search_hotels", "get_offer_details"} - self._schemas.keys()
             if missing:
                 raise TutuMCPError("Tutu MCP does not expose required read-only tools: " + ", ".join(sorted(missing)))
-            return self
         except Exception as exc:
             with suppress(BaseException):
                 await self._stack.aclose()
@@ -96,6 +103,29 @@ class TutuMCPClient:
     async def call(self, tool: str, args: dict[str, Any]) -> SearchResponse:
         if tool not in TUTU_READ_TOOLS:
             raise TutuMCPError(f"Tutu MCP operation is not allowlisted: {tool}", tool=tool)
+        pinned = cache.enabled()
+        if pinned:
+            hit = await asyncio.to_thread(cache.get, tool, args)
+            if hit is not None:
+                if hit["error"] is not None:
+                    raise TutuMCPError(f"Tutu MCP {tool} returned an error", tool=tool, upstream_message=hit["error"])
+                return SearchResponse(provider="tutu", tool=tool, fetched_at=hit["fetched_at"], args=dict(args),
+                                      data=hit["data"])
+            async with self._connect_lock:
+                if self._session is None:
+                    await self._connect()
+        try:
+            response = await self._call_live(tool, args)
+        except TutuMCPError as exc:
+            if pinned and exc.upstream_message and not exc.retryable:
+                await asyncio.to_thread(cache.put, tool, args, error=exc.upstream_message,
+                                        fetched_at=datetime.now(timezone.utc).isoformat())
+            raise
+        if pinned:
+            await asyncio.to_thread(cache.put, tool, args, data=response.data, fetched_at=response.fetched_at)
+        return response
+
+    async def _call_live(self, tool: str, args: dict[str, Any]) -> SearchResponse:
         if self._session is None:
             raise TutuMCPError("Tutu MCP session is not initialized", tool=tool)
         if tool not in self._schemas:
