@@ -136,6 +136,8 @@ children_ages (list of ints), pets ({{"kind":"dog|cat|other"}}), pet_weight_kg (
 budget_per_person_rub (int), budget_scope (trip|person), transport (flight|train|either), max_stops (int),
 travel_time_preference (short), max_duration_min (int minutes), trip_style (short text, e.g. "тёплое море"),
 lodging_stars (int 1..5), meal_preference (all_inclusive|full_board|half_board|breakfast), room_preference (text),
+flight_class (economy|premium_economy|business|first; {{"outbound":...,"return":...}} when the user wants different
+classes there and back, e.g. "бизнес туда, эконом обратно"; "any" when the user does not care),
 assumption_child_flight_time, assumption_child_menu, budget_preference (low_cost).
 
 Rules: hard = explicitly required/strict; soft = explicit preference or qualitative wording; assumption = your clearly labeled
@@ -282,6 +284,19 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         )]
         state.stage = "clarify"
         return f"Пока можно искать поездки только по направлениям: {', '.join(names)}. Другие направления не подменяю."
+
+    @staticmethod
+    def _city_names(state: TripState) -> TripState:
+        """Show origin/destination as city names, not catalog ids (EVN, W_1A2B); search resolves names back."""
+        from app.catalog.store import get_catalog
+        from app.planning.query import resolve_city
+        cat = get_catalog()
+        for r in state.requirements:
+            if r.key in {"origin", "destination"} and isinstance(r.value, str) and r.value in cat.cities:
+                name = cat.cities[r.value].name
+                if name and name != r.value and resolve_city(cat, name) == r.value:
+                    r.value = name
+        return state
 
     def _record(self, trace: list[dict[str, Any]], item: dict[str, Any]) -> None:
         if len(trace) >= self.max_steps:
@@ -934,6 +949,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                 reply = contextual_question.question
             else:
                 candidate, reply = await self._continue_changed(candidate, trace)
+        candidate = self._city_names(candidate)
         trace.append(self._state_diff(before, candidate))
         return candidate, reply, trace
 
@@ -1037,5 +1053,6 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                                  "output": {"checks": [c.model_dump(mode="json") for c in validated_bundle.checks]}, "status": "ok"})
         else:
             raise InvalidAgentCommand(f"Unsupported command type: {command_type}")
+        candidate = self._city_names(candidate)
         trace.append(self._state_diff(before, candidate))
         return candidate, reply, trace

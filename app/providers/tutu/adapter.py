@@ -115,9 +115,13 @@ def transport_offer(
     else:
         first = ((next((leg for leg in legs if leg.get("label") == "outbound"), legs[0] if legs else {}).get("segments") or [{}])[0])
         title += str(first.get("voyage_no") or "Авиаперелёт туда и обратно")
+        cabin = {"S": "премиум-эконом", "C": "бизнес-класс", "F": "первый класс"}.get(str(search_args.get("service_class") or ""))
+        if cabin:
+            title += f" · {cabin}"
     summary = {
         "direction": direction,
         "transport": transport,
+        "service_class": search_args.get("service_class") if kind == "flight" else None,
         "price_amount": raw_amount,
         "price_basis": basis,
         "currency": "RUB",

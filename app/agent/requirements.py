@@ -82,6 +82,8 @@ def generate_date_options(ref_date: date | None = None) -> list[str]:
 
 
 QUESTION_TEXT = {
+    "flight_class": ("Каким классом летим?", "Класс обслуживания меняет цену билетов и условия перелёта.",
+                     ["Эконом", "Бизнес", "Бизнес туда, эконом обратно", "Неважно"]),
     "origin": ("Откуда планируете выезжать?", "Город выезда нужен для точного подбора билетов Туту.", ["Москва", "Санкт-Петербург", "Казань", "Екатеринбург"]),
     "destination": ("В какой город или курорт хотите отправиться?", "Подберём лучшие отели и маршруты.", ["Сочи", "Санкт-Петербург", "Калининград", "Париж", "Дубай"]),
     "dates": ("На какие даты или в каком месяце планируете поездку?", "Проверим реальное наличие мест на нужный период.", ["14–16 ноября (выходные)", "15–22 ноября (неделя)", "1–8 декабря (неделя)", "30 декабря – 6 января"]),
@@ -430,4 +432,11 @@ def missing_concrete_inputs(requirements: Iterable[Requirement]) -> list[OpenQue
                 why="Возраст влияет на цену билетов и размещение.",
                 options=QUESTION_TEXT["children_ages"][2],
             ))
+    from app.providers.tutu.planner import tutu_live_enabled
+    transport = _present(reqs, "transport")
+    if (tutu_live_enabled() and not q and (transport.value if transport else None) != "train"
+            and _present(reqs, "flight_class") is None
+            and not any(r.key == "flight_class" for r in reqs)):
+        text, why, options = QUESTION_TEXT["flight_class"]
+        q.append(OpenQuestion(key="flight_class", question=text, why=why, options=options))
     return q[:2]

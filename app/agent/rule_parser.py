@@ -201,7 +201,8 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
     elif "destination" in reqs and reqs["destination"].value in neg_dests:
         del reqs["destination"]
 
-    if "destination" not in reqs and not re.search(r"куда\s+(?:угодно|нибудь)|anywhere|somewhere", low):
+    if "destination" not in reqs and "flight_class" not in open_keys \
+            and not re.search(r"куда\s+(?:угодно|нибудь)|anywhere|somewhere", low):
         # a capitalized place after «в/to» that the catalog does not know: keep it, the agent will say there is no data
         for m in FOREIGN_HINT.finditer(text):
             word = m.group(1)
@@ -211,7 +212,8 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
                 reqs["destination"] = _req("destination", word, "hard", m.group(0))
                 break
 
-    if "destination" not in reqs and not re.search(r"куда\s+(?:угодно|нибудь)|anywhere|somewhere", low):
+    if "destination" not in reqs and "flight_class" not in open_keys \
+            and not re.search(r"куда\s+(?:угодно|нибудь)|anywhere|somewhere", low):
         # User answering the destination question directly (e.g. clicking "Париж", "Дубай", "Сочи")
         dest_ans = text.strip().strip(".!?;,: ")
         if len(dest_ans.split()) <= 4 and dest_ans.lower() not in {"да", "нет", "yes", "no"}:
@@ -356,11 +358,47 @@ def rule_parse(text: str, state: TripState, now: datetime) -> ParsedRequest:
     elif (m := re.search(r"в\s+центр\w*|центр\w*\s+париж|центр\w*\s+город", low)):
         put(_req("room_preference", "центр", "soft", text[m.start():m.end()], label="В центре города"))
 
-    if re.search(r"дорог\w*|люкс|luxury|премиум|premium|элитн", low):
-        q = re.search(r"дорог\w*|люкс|luxury|премиум|premium|элитн\w*", text, re.I)
+    if re.search(r"(?<!не)дорог\w*|люкс|luxury|(?<!эконом )премиум(?![\s-]*эконом)|premium|элитн", low):
+        q = re.search(r"(?<!не)дорог\w*|люкс|luxury|премиум|premium|элитн\w*", text, re.I)
         put(_req("budget_preference", "luxury", "soft", q.group(0)))
     elif (m := re.search(r"недорог\w*|дешев\w*|дёшев\w*|подешевле|бюджетн\w*|эконом\w*|cheap\w*|budget\s+trip|low[\s-]cost", low)):
         put(_req("budget_preference", "low_cost", "soft", text[m.start():m.end()]))
+
+    # --- flight cabin class («бизнес туда, эконом обратно») ---
+    cabin_words = r"(бизнес\w*|business|эконом\w*-?\s*класс\w*|эконом\w*|economy|премиум[\s-]*эконом\w*|комфорт\w*|premium|перв\w+\s+класс\w*|first\s+class)"
+    cabins = []
+    if "flight_class" in open_keys and re.fullmatch(r"\s*(неважно|любой|вс[её]\s+равно|any)[.!]?\s*", low):
+        put(_req("flight_class", "any", "soft", text.strip()))
+    if "flight_class" in open_keys or re.search(r"класс|бизнес|business|economy|туда|обратно", low):
+        for m in re.finditer(cabin_words, low):
+            word = m.group(0)
+            cls = ("first" if word.startswith(("перв", "first")) else "premium_economy" if word.startswith(("прем", "комф", "premium"))
+                   else "business" if word.startswith(("бизн", "business")) else "economy")
+            around = low[max(0, m.start() - 25):m.end() + 25]
+            after = low[m.end():m.end() + 25]
+            before = low[max(0, m.start() - 25):m.start()]
+            side = None
+            for chunk in (after, before):
+                if re.search(r"\bтуда\b|\bthere\b|outbound", chunk):
+                    side = "outbound"
+                elif re.search(r"обратно|\bback\b|return", chunk):
+                    side = "return"
+                if side:
+                    break
+            if word.startswith(("эконом", "economy")) and not (side or "flight_class" in open_keys
+                                                               or re.search(r"класс|class", around)):
+                continue  # «эконом» alone is a budget wish, not a cabin
+            cabins.append((cls, side, m))
+    if cabins:
+        budget = reqs.get("budget_preference")
+        if budget and str(budget.quote or "").lower().startswith("эконом"):
+            del reqs["budget_preference"]  # «эконом» here is the cabin, not a cheap-trip wish
+        sides = {side: cls for cls, side, _ in cabins if side}
+        quote = text[cabins[0][2].start():cabins[-1][2].end()]
+        if len(sides) == 2 and sides["outbound"] != sides["return"]:
+            put(_req("flight_class", {"outbound": sides["outbound"], "return": sides["return"]}, "hard", quote))
+        else:
+            put(_req("flight_class", cabins[0][0], "hard", quote))
 
     # --- transport and route preferences ---
     if (m := re.search(r"поезд(?!к)\w*|\bжд\b|ж/д|by\s+train|\btrain\b", low)):

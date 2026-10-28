@@ -369,7 +369,11 @@ def build_bundles(requirements: dict[str, Any], state: Any = None) -> list[dict[
 
     Returns ``[]`` when the request cannot be resolved or nothing is feasible; the reasons
     are logged (and available from ``build_trip_bundles`` / ``explain_no_bundles``).
+    With TRAVEL_DATA_PROVIDER=tutu the trip is searched live (real fares and hotel rates).
     """
+    from app.providers.tutu.planner import build_tutu_bundles, tutu_live_enabled
+    if tutu_live_enabled():
+        return build_tutu_bundles(requirements, state)
     cat = get_catalog()
     query, problems = query_from_requirements(cat, requirements, state)
     if query is None:

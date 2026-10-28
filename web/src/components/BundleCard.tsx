@@ -106,7 +106,7 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
             <div className="flex flex-wrap items-center gap-1.5 text-[14px] font-semibold leading-snug">
               <span>{offerTitle(o)}</span>
               {markSynthetic && o.synthetic && <SyntheticBadge />}
-              {o.kind === 'hotel' && o.provider === 'ostrovok' && (
+              {o.kind === 'hotel' && (o.provider === 'ostrovok' || o.source_url?.includes('ostrovok.ru')) && (
                 <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 border border-orange-200">
                   {`Островок ${o.variant?.rating ? `★ ${o.variant.rating}` : ''}`}
                 </span>

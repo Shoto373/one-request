@@ -98,7 +98,7 @@ async def test_anywhere_keeps_configured_sochi_destination_and_asks_for_origin(m
         TripState(session_id=uuid4()), "I want to go anywhere warm in November",
     )
     destination = next(r for r in result.requirements if r.key == "destination")
-    assert destination.value == "AER" and destination.source == "product_scope"
+    assert destination.value == "Сочи" and destination.source == "product_scope"  # city name, not catalog id
     assert len(result.open_questions) == 1 and result.open_questions[0].key == "origin"
     assert not calls
 

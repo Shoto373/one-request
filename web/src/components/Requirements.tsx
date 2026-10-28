@@ -23,7 +23,7 @@ const FIELD: Record<string, string> = {
   travel_time_preference: 'Время в дороге', max_duration_min: 'Максимум в пути', trip_style: 'Стиль поездки',
   lodging_stars: 'Категория отеля', meal_preference: 'Питание', room_preference: 'Номер',
   assumption_child_flight_time: 'Время перелёта с ребёнком', assumption_child_menu: 'Питание ребёнка',
-  travel_year: 'Год поездки',
+  travel_year: 'Год поездки', flight_class: 'Класс перелёта',
 }
 
 function shortDate(value: unknown): string {
@@ -44,6 +44,16 @@ function valueText(r: Requirement, configuredDestinations: Record<string, string
     if (start || end) return `${shortDate(start)} — ${shortDate(end)}`
   }
   if (r.key === 'travel_start_date') return shortDate(value)
+  if (r.key === 'flight_class') {
+    const cabin = (v: unknown) => ({ economy: 'эконом', premium_economy: 'премиум-эконом', business: 'бизнес', first: 'первый',
+      Y: 'эконом', S: 'премиум-эконом', C: 'бизнес', F: 'первый', any: 'неважно' } as Record<string, string>)[String(v)] ?? String(v)
+    if (typeof value === 'object') {
+      const v = value as Record<string, unknown>
+      return `туда ${cabin(v.outbound)}, обратно ${cabin(v.return)}`
+    }
+    const text = cabin(value)
+    return text.charAt(0).toUpperCase() + text.slice(1)
+  }
   if (r.key === 'adults' && typeof value === 'number') return `${value} ${value === 1 ? 'взрослый' : 'взрослых'}`
   if (r.key === 'children_count' && typeof value === 'number') return `${value} ${value === 1 ? 'ребёнок' : 'детей'}`
   if (r.key === 'children_ages' && Array.isArray(value)) return value.map((age) => `${age} лет`).join(', ')

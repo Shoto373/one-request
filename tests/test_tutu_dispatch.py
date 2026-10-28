@@ -7,7 +7,7 @@ from app.cart.service import CartError
 from app.planning import build, replan, validate
 
 
-def test_build_stays_on_catalog_in_tutu_mode(monkeypatch):
+def test_live_build_uses_existing_track_a_entrypoint(monkeypatch):
     called = []
 
     async def fake(requirements, state):
@@ -16,8 +16,33 @@ def test_build_stays_on_catalog_in_tutu_mode(monkeypatch):
 
     monkeypatch.setenv("TRAVEL_DATA_PROVIDER", "tutu")
     monkeypatch.setattr("app.providers.tutu.planner.build_tutu_bundles", fake)
-    assert build.build_bundles({"origin": "MOW"}, {"version": 1}) == []
-    assert called == []
+    result = build.build_bundles({"origin": "MOW"}, {"version": 1})
+    assert asyncio.run(result) == [{"id": "b-live", "items": [], "total_rub": 0}]
+    assert called == [({"origin": "MOW"}, {"version": 1})]
+
+
+def test_flight_class_maps_to_tutu_service_class():
+    from app.providers.tutu.planner import _service_classes
+
+    assert _service_classes({"flight_class": "business"}) == ("C", "C")
+    assert _service_classes({"flight_class": {"outbound": "business", "return": "economy"}}) == ("C", "Y")
+    assert _service_classes({"flight_class": "any"}) == (None, None)
+    assert _service_classes({}) == (None, None)
+
+
+def test_rule_parser_reads_cabin_per_direction():
+    from datetime import datetime
+    from uuid import uuid4
+    from app.agent.rule_parser import rule_parse
+    from app.state.models import OpenQuestion, TripState
+
+    parsed = rule_parse("хочу бизнес класс туда и эконом обратно", TripState(session_id=uuid4()), datetime(2026, 10, 28))
+    values = {r.key: r.value for r in parsed.requirements}
+    assert values["flight_class"] == {"outbound": "business", "return": "economy"}
+    assert "budget_preference" not in values  # «эконом» here is the cabin
+    asked = TripState(session_id=uuid4(), open_questions=[OpenQuestion(key="flight_class", question="?")])
+    parsed = rule_parse("Бизнес", asked, datetime(2026, 10, 28))
+    assert [(r.key, r.value) for r in parsed.requirements] == [("flight_class", "business")]
 
 
 def test_catalog_offers_labelled_tutu_are_not_revalidated_at_tutu(monkeypatch):

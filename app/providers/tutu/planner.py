@@ -200,6 +200,36 @@ def _explicitly_non_russian(place: Any) -> bool:
     return bool(country and country not in {"россия", "russia", "российская федерация", "russian federation"})
 
 
+_SERVICE_CLASS = {"y": "Y", "economy": "Y", "эконом": "Y", "s": "S", "premium": "S", "premium_economy": "S",
+                  "комфорт": "S", "c": "C", "business": "C", "бизнес": "C", "f": "F", "first": "F", "первый": "F"}
+
+
+def _service_class(value: Any) -> str | None:
+    """IATA service class for search_avia from a requirement value (Y/S/C/F, economy/business/...)."""
+    if not isinstance(value, str):
+        return None
+    return _SERVICE_CLASS.get(value.strip().lower().replace(" ", "_").replace("-", "_"))
+
+
+def _service_classes(requirements: dict[str, Any]) -> tuple[str | None, str | None]:
+    """(outbound, return) flight classes; one value applies to both directions."""
+    value = requirements.get("flight_class")
+    if isinstance(value, dict):
+        return _service_class(value.get("outbound")), _service_class(value.get("return"))
+    return _service_class(value), _service_class(value)
+
+
+def _ostrovok_hotel_url(row: dict[str, Any], city_id: str, checkin, checkout, adults: int) -> str | None:
+    """Ostrovok page of a Tutu hotel (Tutu sells Ostrovok inventory); Ostrovok resolves the alias itself."""
+    from app.catalog.ostrovok_live import CITY_SLUG_MAP
+    alias, hotel_id = row.get("alias"), row.get("hotel_id") or row.get("hotel_geo_id")
+    if not alias or not hotel_id or city_id not in CITY_SLUG_MAP:
+        return None
+    country, city = CITY_SLUG_MAP[city_id]
+    return (f"https://ostrovok.ru/hotel/{country}/{city}/mid{hotel_id}/{alias}/"
+            f"?dates={checkin:%d.%m.%Y}-{checkout:%d.%m.%Y}&guests={adults}")
+
+
 def _party_for_avia(query: TripQuery) -> tuple[int, int, int]:
     adults = query.party.adults + sum(age >= 12 for age in query.party.children_ages)
     children = sum(2 <= age <= 11 for age in query.party.children_ages)
@@ -274,20 +304,32 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
     place_errors: list[TutuPlaceResolutionError] = []
     hard_lodging_rejections: list[str] = []
     flight_rows: list[dict[str, Any]] = []
+    flight_out_rows: list[dict[str, Any]] = []
+    flight_back_rows: list[dict[str, Any]] = []
     outbound_rows: list[dict[str, Any]] = []
     return_rows: list[dict[str, Any]] = []
     search_facts: dict[str, dict[str, Any]] = {}
     async with TutuMCPClient() as client:
         tasks: dict[str, Any] = {}
         if "flight" in query.kinds:
-            avia_args = {
-                "origin": origin_name, "destination": destination_name, "departure_date": query.depart_date.isoformat(),
-                "return_date": query.return_date.isoformat(), "adults": adults, "children": children,
-                "infants": infants, "page": 1, "page_size": 5, "sort": "price_asc", "view": "compact",
-            }
+            class_out, class_back = _service_classes(requirements)
+            base_avia = {"origin": origin_name, "destination": destination_name, "adults": adults, "children": children,
+                         "infants": infants, "page": 1, "page_size": 5, "sort": "price_asc", "view": "compact"}
             if query.limits_hard and query.max_stops == 0:
-                avia_args["direct_only"] = True
-            tasks["avia"] = _mcp_call(client, "search_avia", avia_args)
+                base_avia["direct_only"] = True
+            if class_out == class_back:
+                avia_args = {**base_avia, "departure_date": query.depart_date.isoformat(),
+                             "return_date": query.return_date.isoformat()}
+                if class_out:
+                    avia_args["service_class"] = class_out
+                tasks["avia"] = _mcp_call(client, "search_avia", avia_args)
+            else:
+                # Different classes there and back (e.g. business out, economy back): two one-way searches.
+                tasks["avia_out"] = _mcp_call(client, "search_avia", {
+                    **base_avia, "departure_date": query.depart_date.isoformat(), "service_class": class_out or "Y"})
+                tasks["avia_back"] = _mcp_call(client, "search_avia", {
+                    **base_avia, "origin": destination_name, "destination": origin_name,
+                    "departure_date": query.return_date.isoformat(), "service_class": class_back or "Y"})
         if "train" in query.kinds:
             out_args = {"origin": origin_name, "destination": destination_name, "departure_date": query.depart_date.isoformat(),
                         "passengers": query.party.people, "page": 1, "page_size": 5, "sort": "price_asc", "view": "compact"}
@@ -307,7 +349,9 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                 source_errors.append(f"{key}: {getattr(result, 'upstream_message', None) or 'техническая ошибка поиска'}")
                 continue
             meta = result.data.get("meta") or {}
-            if is_worldwide_enabled():
+            if key.endswith("_back"):
+                pass  # the return search starts at the destination, which may be abroad
+            elif is_worldwide_enabled():
                 if _explicitly_non_russian(meta.get("from")):
                     raise TutuOriginOutsideRussia("Туту определил город отправления за пределами России. Укажите российский город отправления.")
             else:
@@ -318,6 +362,10 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                                  "resolved_to": meta.get("to")}
             if key == "avia":
                 flight_rows = _rows(result.data, "offers")
+            elif key == "avia_out":
+                flight_out_rows = _rows(result.data, "offers")
+            elif key == "avia_back":
+                flight_back_rows = _rows(result.data, "offers")
             elif key == "rail_out":
                 outbound_rows = _rows(result.data, "offers")
             elif key == "rail_back":
@@ -331,6 +379,17 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                                          resolved_places={"from": search_facts["avia"].get("resolved_from"),
                                                           "to": search_facts["avia"].get("resolved_to")})) is not None
         ]
+        def one_way_flights(rows: list[dict[str, Any]], key: str, direction: str) -> list[Any]:
+            return [
+                item for row in rows if not row.get("is_multi_pnr")
+                if (item := transport_offer(row, kind="flight", direction=direction,
+                                             search_args=search_facts[key]["args"],
+                                             fetched_at=search_facts[key]["fetched_at"],
+                                             resolved_places={"from": search_facts[key].get("resolved_from"),
+                                                              "to": search_facts[key].get("resolved_to")})) is not None
+            ]
+        flights_out = one_way_flights(flight_out_rows, "avia_out", "outbound") if flight_out_rows else []
+        flights_back = one_way_flights(flight_back_rows, "avia_back", "return") if flight_back_rows else []
         outbound = [
             item for row in outbound_rows
             if (item := transport_offer(row, kind="train", direction="outbound",
@@ -349,12 +408,18 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
         ]
         if query.limits_hard:
             flights = [item for item in flights if _transport_limit_issue(item, query) is None]
+            flights_out = [item for item in flights_out if _transport_limit_issue(item, query) is None]
+            flights_back = [item for item in flights_back if _transport_limit_issue(item, query) is None]
             outbound = [item for item in outbound if _transport_limit_issue(item, query) is None]
             inbound = [item for item in inbound if _transport_limit_issue(item, query) is None]
         transport_choices: list[tuple[str, list[Any], int]] = []
         for item in flights[:5]:
             duration = int(item.variant.get("duration_min") or 0)
             transport_choices.append(("avia", [item], duration))
+        for out in flights_out[:3]:
+            for back in flights_back[:3]:
+                duration = int(out.variant.get("duration_min") or 0) + int(back.variant.get("duration_min") or 0)
+                transport_choices.append(("avia", [out, back], duration))
         for out in outbound[:3]:
             for back in inbound[:3]:
                 duration = int(out.variant.get("duration_min") or 0) + int(back.variant.get("duration_min") or 0)
@@ -382,11 +447,8 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
         hotel_details_errors: dict[str, str] = {}
         hotel_details_attempted = 0
         cat = get_catalog()
-        for checkin in arrival_dates[:4]:
-            ostrovok_list = search_ostrovok_hotels(cat, query.dest_city, checkin, query.return_date, query.party)
-            if ostrovok_list:
-                hotel_by_checkin[checkin.isoformat()] = ostrovok_list[:4]
-            else:
+        for checkin in arrival_dates[:3]:
+            if True:
                 hotel_args: dict[str, Any] = {
                     "city_name": destination_name, "check_in": checkin.isoformat(), "check_out": query.return_date.isoformat(),
                     **hotel_party, "page": 1, "page_size": 5, "view": "compact",
@@ -401,7 +463,7 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                     }
                     hotel_rows = _rows(response.data, "hotels")
                     normalized = []
-                    for row in hotel_rows[:2]:
+                    for row in hotel_rows[:3]:
                         details = None
                         hotel_id = row.get("hotel_id") or row.get("hotel_geo_id")
                         detail_args = {"product_type": "hotels", "hotel_id": hotel_id, "check_in": checkin.isoformat(),
@@ -423,10 +485,19 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                             pet_status = item.variant["terms"].get("pet_allowed")
                             if query.party.pets and pet_status is False:
                                 continue
+                            ostrovok_url = _ostrovok_hotel_url(row, query.dest_city, checkin, query.return_date,
+                                                               query.party.adults)
+                            if ostrovok_url:
+                                item.source_url = ostrovok_url
                             normalized.append(item)
                     hotel_by_checkin[checkin.isoformat()] = normalized
                 except Exception:
-                    pass
+                    log.warning("Tutu search_hotels failed for %s on %s", destination_name, checkin, exc_info=True)
+            if not hotel_by_checkin.get(checkin.isoformat()):
+                # Tutu has no hotels for this date: fall back to the Ostrovok catalog list.
+                ostrovok_list = search_ostrovok_hotels(cat, query.dest_city, checkin, query.return_date, query.party)
+                if ostrovok_list:
+                    hotel_by_checkin[checkin.isoformat()] = ostrovok_list[:4]
 
         candidates: list[tuple[int, int, int, str, list[Any]]] = []
         for mode, transports, duration in transport_choices:
@@ -503,6 +574,22 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
             selected.append((label, top))
             if len(selected) == 3:
                 break
+
+        # Same transport often wins every pool: offer other real hotels so there is a choice.
+        def hotel_ids(candidate) -> set[str]:
+            return {i.item_id for i in candidate[4] if i.kind == "hotel"}
+
+        def hotel_stars(candidate) -> int:
+            return max((int(i.variant.get("stars") or 0) for i in candidate[4] if i.kind == "hotel"), default=0)
+
+        used_hotels = set().union(*(hotel_ids(c) for _, c in selected)) if selected else set()
+        for label, key in (("Отель выше классом", lambda x: (-hotel_stars(x), x[0])), ("Другой отель", lambda x: x[0])):
+            pool = [c for c in candidates if not (hotel_ids(c) & used_hotels)]
+            if not pool or len(selected) >= 4:
+                break
+            top = sorted(pool, key=key)[0]
+            selected.append((label, top))
+            used_hotels |= hotel_ids(top)
 
         bundles: list[dict[str, Any]] = []
         fetched_at = datetime.now(timezone.utc).isoformat()
@@ -610,7 +697,18 @@ async def build_tutu_bundles(requirements: dict[str, Any], state: Any = None) ->
     query = _parse_query(requirements, state)
     catalog = get_catalog()
     try:
-        return await _search_tutu_core(requirements, state)
+        try:
+            return await _search_tutu_core(requirements, state)
+        except (TutuOriginOutsideRussia, TutuPlaceResolutionError, TutuSearchEmpty):
+            raise
+        except (Exception, asyncio.CancelledError) as exc:
+            # The MCP handshake sometimes drops (ExceptionGroup or a CancelledError from the transport's
+            # cancel scope): retry once with a fresh session. A real cancellation of this task still propagates.
+            task = asyncio.current_task()
+            if isinstance(exc, asyncio.CancelledError) and task is not None and task.cancelling():
+                raise
+            log.warning("Tutu live search failed (%s), retrying once", type(exc).__name__)
+            return await _search_tutu_core(requirements, state)
     except TutuOriginOutsideRussia:
         raise
     except BaseException as exc:
