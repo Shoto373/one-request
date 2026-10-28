@@ -132,9 +132,9 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 rounded bg-black/[0.04] hover:bg-black/[0.08] px-2 py-0.5 text-[11px] text-brand font-medium transition"
-                  title="Открыть страницу отеля на Островке"
+                  title={o.source_url.includes('ostrovok.ru') ? 'Открыть страницу отеля на Островке' : 'Открыть это предложение на Туту'}
                 >
-                  <span>Островок</span>
+                  <span>{o.source_url.includes('ostrovok.ru') ? 'Островок' : 'Туту'}</span>
                   <span className="text-[10px]">↗</span>
                 </a>
               )}

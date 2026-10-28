@@ -223,11 +223,54 @@ def _ostrovok_hotel_url(row: dict[str, Any], city_id: str, checkin, checkout, ad
     """Ostrovok page of a Tutu hotel (Tutu sells Ostrovok inventory); Ostrovok resolves the alias itself."""
     from app.catalog.ostrovok_live import CITY_SLUG_MAP
     alias, hotel_id = row.get("alias"), row.get("hotel_id") or row.get("hotel_geo_id")
-    if not alias or not hotel_id or city_id not in CITY_SLUG_MAP:
+    if not alias or not hotel_id:
         return None
-    country, city = CITY_SLUG_MAP[city_id]
+    if city_id in CITY_SLUG_MAP:
+        country, city = CITY_SLUG_MAP[city_id]
+    else:
+        info = get_catalog().cities.get(city_id)
+        if info is None or info.country_code != "RU" or not info.name_en:
+            return None
+        country, city = "russia", re.sub(r"[^a-z0-9]+", "_", info.name_en.lower()).strip("_")
     return (f"https://ostrovok.ru/hotel/{country}/{city}/mid{hotel_id}/{alias}/"
             f"?dates={checkin:%d.%m.%Y}-{checkout:%d.%m.%Y}&guests={adults}")
+
+
+_OSTROVOK_PAGES: dict[str, str | None] = {}
+
+
+async def _resolve_ostrovok_pages(hotels: list[Any]) -> None:
+    """Follow Ostrovok's redirect to the hotel's real page; keep the Tutu offer link when Ostrovok
+    does not recognise the hotel (it then redirects to the city page)."""
+    import httpx
+    from urllib.parse import urlsplit
+
+    async def resolve(client: httpx.AsyncClient, url: str) -> str | None:
+        page = url.split("?")[0]
+        if page not in _OSTROVOK_PAGES:
+            try:
+                response = await client.get(url)
+                final = urlsplit(str(response.url))
+                _OSTROVOK_PAGES[page] = (f"https://ostrovok.ru{final.path}"
+                                         if response.status_code == 200 and "/mid" in final.path else None)
+            except Exception:
+                return None  # network trouble: do not cache, keep the built link this time
+        return _OSTROVOK_PAGES[page]
+
+    targets = [h for h in hotels if h.source_url and "ostrovok.ru/hotel/" in h.source_url]
+    if not targets:
+        return
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                             "Chrome/124.0 Safari/537.36", "Accept-Language": "ru-RU,ru;q=0.9"}
+    async with httpx.AsyncClient(follow_redirects=True, timeout=6, headers=headers) as client:
+        pages = await asyncio.gather(*(resolve(client, h.source_url) for h in targets))
+    for hotel, page in zip(targets, pages):
+        query = hotel.source_url.split("?", 1)[1] if "?" in hotel.source_url else ""
+        if page:
+            hotel.source_url = page + (f"?{query}" if query else "")
+        elif page is None and hotel.source_url.split("?")[0] in _OSTROVOK_PAGES:
+            # Ostrovok does not know this hotel: link the same offer on Tutu, where the price matches.
+            hotel.source_url = hotel.variant.get("terms", {}).get("search_results_url") or hotel.source_url
 
 
 def _return_departure(transports: list[Any]) -> datetime | None:
@@ -546,6 +589,8 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                 if ostrovok_list:
                     hotel_by_checkin[checkin.isoformat()] = ostrovok_list[:4]
 
+        await _resolve_ostrovok_pages([h for hotels in hotel_by_checkin.values() for h in hotels
+                                       if getattr(h, "provider", None) == "tutu"])
         candidates: list[tuple[int, int, int, str, list[Any]]] = []
         for mode, transports, duration in transport_choices:
             checkin = _local_arrival(transports[0], city_tz)
