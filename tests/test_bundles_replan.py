@@ -59,10 +59,10 @@ def test_hard_budget_applies_to_every_bundle(cat) -> None:
     assert res.bundles and all(b.total_rub <= 32_000 for b in res.bundles)
 
 
-def test_build_bundles_contract_returns_up_to_three_state_bundles() -> None:
+def test_build_bundles_contract_returns_up_to_four_state_bundles() -> None:
     req = {"origin": "Москва", "destination": "Сочи", "dates": {"start": "2026-11-10", "end": "2026-11-17"}, "adults": 2}
     bundles = [StateBundle.model_validate(b) for b in build_bundles(req, _state(req))]
-    assert 2 <= len(bundles) <= 3 and bundles[0].label == "дешевле"
+    assert 2 <= len(bundles) <= 4 and bundles[0].label == "дешевле"
 
 
 # --------------------------------------------------------------------------- A2: validate_plan

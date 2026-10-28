@@ -403,7 +403,9 @@ def validate_bundle(bundle: dict[str, Any], state: Any = None) -> list[dict[str,
     A bundle with no item from the track A catalog (test fixtures, hand-made bundles)
     has nothing to re-check here: its stored checks are returned unchanged.
     """
-    if any(item.get("provider") == "tutu" for item in bundle.get("items") or []):
+    # Only offers from the live Tutu adapter carry ``revalidation``; catalog offers are
+    # also labelled provider="tutu" (for booking links) but cannot be re-searched there.
+    if any(item.get("provider") == "tutu" and item.get("revalidation") for item in bundle.get("items") or []):
         from app.providers.tutu.revalidation import validate_tutu_bundle
         return validate_tutu_bundle(bundle, state)
     cat = get_catalog()

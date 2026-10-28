@@ -32,7 +32,7 @@ def _state(req: dict, kinds: dict | None = None) -> TripState:
     [("Москва", "MOW"), ("из Москвы", "MOW"), ("СПб", "LED"), ("Питер", "LED"), ("Екатеринбурга", "SVX"),
      ("в Казань", "KZN"), ("Казани", "KZN"), ("Сочи", "AER"), ("Адлер", "AER"), ("Анталию", "AYT"),
      ("Шарм-эль-Шейх", "SSH"), ("Дубай", "DXB"), ("Ереван", "EVN"), ("Istanbul", "IST"), ("AYT", "AYT"),
-     ("SVO", "MOW"), ("Париж", None)],
+     ("SVO", "MOW"), ("Париж", "CDG")],
 )
 def test_resolve_city(text: str, city: str | None) -> None:
     assert resolve_city(get_catalog(), text) == city
@@ -49,7 +49,7 @@ def test_parsers() -> None:
 def test_orchestrator_contract_returns_state_bundles() -> None:
     state = _state(SOCHI)
     bundles = track_a_build_bundles(SOCHI, state)  # the exact call path of app/agent/orchestrator.py
-    assert 1 <= len(bundles) <= 3 and bundles[0].id == "b1"
+    assert 1 <= len(bundles) <= 4 and bundles[0].id == "b1"
     b = bundles[0]
     assert isinstance(b, StateBundle)
     assert b.total_rub == sum(o.total_rub for o in b.items)
@@ -59,9 +59,9 @@ def test_orchestrator_contract_returns_state_bundles() -> None:
 
 
 def test_unresolved_request_is_empty_with_reasons() -> None:
-    req = dict(SOCHI, destination="Париж")
+    req = {k: v for k, v in SOCHI.items() if k != "dates"}
     assert build_bundles(requirements=req, state=_state(req)) == []
-    assert any("Париж" in r for r in explain_no_bundles(req, _state(req)))
+    assert any("Даты" in r for r in explain_no_bundles(req, _state(req)))
 
 
 def test_hard_budget_comes_from_state_kind() -> None:

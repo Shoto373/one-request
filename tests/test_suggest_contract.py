@@ -68,12 +68,12 @@ def test_accepting_alternative_builds_its_bundle() -> None:
     assert bundles and bundles[0]["total_rub"] == alt["total_rub"]
 
 
-def test_outside_catalog_has_no_alternatives() -> None:
+def test_explicit_world_destination_needs_no_alternatives() -> None:
     paris = {"origin": "Москва", "destination": "Париж", "dates": {"start": "2026-11-10", "end": "2026-11-17"},
              "adults": 2}
     result = suggest_destinations(paris, _state(paris))
     assert not result["destinations"] and not result["alternatives"]
-    assert "Париж" in result["notes"][0]
+    assert "изменения не нужны" in result["notes"][0]
 
 
 def test_missing_inputs_are_reported() -> None:

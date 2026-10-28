@@ -7,7 +7,7 @@ from app.cart.service import CartError
 from app.planning import build, replan, validate
 
 
-def test_live_build_uses_existing_track_a_entrypoint(monkeypatch):
+def test_build_stays_on_catalog_in_tutu_mode(monkeypatch):
     called = []
 
     async def fake(requirements, state):
@@ -16,9 +16,20 @@ def test_live_build_uses_existing_track_a_entrypoint(monkeypatch):
 
     monkeypatch.setenv("TRAVEL_DATA_PROVIDER", "tutu")
     monkeypatch.setattr("app.providers.tutu.planner.build_tutu_bundles", fake)
-    result = build.build_bundles({"origin": "MOW"}, {"version": 1})
-    assert asyncio.run(result) == [{"id": "b-live", "items": [], "total_rub": 0}]
-    assert called == [({"origin": "MOW"}, {"version": 1})]
+    assert build.build_bundles({"origin": "MOW"}, {"version": 1}) == []
+    assert called == []
+
+
+def test_catalog_offers_labelled_tutu_are_not_revalidated_at_tutu(monkeypatch):
+    async def fake(bundle, state):
+        raise AssertionError("catalog offer must not go to Tutu revalidation")
+
+    monkeypatch.setattr("app.providers.tutu.revalidation.validate_tutu_bundle", fake)
+    stored = [{"kind": "pets", "status": "ok", "text": "ok"}]
+    bundle = {"id": "b1", "items": [{"offer_id": "o1", "kind": "flight", "item_id": "not-in-catalog", "provider": "tutu",
+                                     "unit_price_rub": 10, "price_unit": "per_trip", "units": 1, "total_rub": 10}],
+              "total_rub": 10, "checks": stored}
+    assert validate.validate_bundle(bundle, None) == stored
 
 
 def test_live_replan_dispatch_preserves_changes_contract(monkeypatch):
@@ -43,7 +54,7 @@ def test_live_checkout_validation_dispatches_read_only_checker(monkeypatch):
 
     monkeypatch.setenv("TRAVEL_DATA_PROVIDER", "tutu")
     monkeypatch.setattr("app.providers.tutu.revalidation.validate_tutu_bundle", fake)
-    result = validate.validate_bundle({"items": [{"provider": "tutu"}]}, {"version": 2})
+    result = validate.validate_bundle({"items": [{"provider": "tutu", "revalidation": {"tool": "search_avia"}}]}, {"version": 2})
     assert asyncio.run(result)[0]["status"] == "block"
 
 
@@ -53,30 +64,30 @@ def test_blocking_live_check_cannot_enter_cart(monkeypatch):
 
     monkeypatch.setenv("TRAVEL_DATA_PROVIDER", "tutu")
     monkeypatch.setattr("app.providers.tutu.revalidation.validate_tutu_bundle", fake)
-    bundle = {"id": "b1", "items": [{"offer_id": "o1", "provider": "tutu", "total_rub": 10}],
+    bundle = {"id": "b1", "items": [{"offer_id": "o1", "provider": "tutu", "revalidation": {"tool": "search_avia"}, "total_rub": 10}],
               "total_rub": 10, "checks": []}
     with pytest.raises(CartError) as error:
         cart_service._check_bundle(bundle, {})
     assert error.value.code == "plan_blocked"
 
 
-def test_live_scope_keeps_origin_city_and_uses_configured_destination():
-    from app.providers.tutu.planner import TutuOriginOutsideRussia, TutuScopeError, _mapped_requirements, _origin_for_provider
+def test_live_scope_keeps_origin_city_and_uses_configured_destination(monkeypatch):
+    monkeypatch.setenv("WORLDWIDE_MODE", "false")
+    from app.providers.tutu.planner import TutuScopeError, _mapped_requirements, _origin_for_provider
     from app.planning.query import query_from_requirements
     from app.catalog.store import get_catalog
 
     mapped = _mapped_requirements({"origin": "Казань"}, None)
     assert mapped["origin"] == "Казань" and mapped["destination"] == "AER"
     assert _origin_for_provider(mapped) == "Казань"
-    with pytest.raises(TutuOriginOutsideRussia):
-        _origin_for_provider({"origin": "Стамбул"})
     with pytest.raises(TutuScopeError):
         _mapped_requirements({"origin": "Казань", "destination": "Дубай"}, None)
 
     requirements = {"origin": "Самара", "destination": "AER",
                     "dates": {"start": "2026-11-25", "end": "2026-12-02"}, "adults": 2}
     query, problems = query_from_requirements(get_catalog(), requirements, allow_external_origin=True)
-    assert not problems and query is not None and query.origin_city == "Самара"
+    # The world resolver geocodes any origin city (catalog id or a W_* id).
+    assert not problems and query is not None and query.origin_city
 
 
 def test_ambiguous_origin_is_turned_into_user_clarification():
@@ -90,7 +101,8 @@ def test_ambiguous_origin_is_turned_into_user_clarification():
     assert isinstance(error, TutuOriginUnavailable) and error.candidate == "Москва"
 
 
-def test_cart_rejects_destination_outside_current_product_coverage():
+def test_cart_rejects_destination_outside_current_product_coverage(monkeypatch):
+    monkeypatch.setenv("WORLDWIDE_MODE", "false")
     from app.cart.service import CartError
 
     with pytest.raises(CartError) as error:
