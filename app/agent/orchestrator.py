@@ -173,7 +173,9 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         validated = validate_extraction(parsed, text)
         # Safety net: a model sometimes drops an explicit destination («Неделя в Дубае…»). If the text
         # names a catalog destination (not after «из»), it is added only when the model returned none.
-        if any(r.key == "destination" for r in validated.requirements) or "destination" in validated.remove_keys:
+        if (any(r.key == "destination" for r in validated.requirements) or "destination" in validated.remove_keys
+                or any(r.key == "destination" and r.value not in (None, "") for r in state.requirements)
+                or any(q.key == "origin" for q in state.open_questions)):
             return validated
         place = self._named_destination(text)
         if place is None:

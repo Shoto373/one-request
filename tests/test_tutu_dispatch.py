@@ -164,3 +164,22 @@ def test_pinned_tutu_answer_is_replayed_without_a_session(monkeypatch):
             assert client._session is None  # nothing went to the network
 
     asyncio.run(run())
+
+
+def test_destination_safety_net_ignores_an_origin_answer():
+    from uuid import uuid4
+    from app.agent.orchestrator import Orchestrator
+    from app.agent.requirements import ParsedRequest
+    from app.state.models import OpenQuestion, Requirement, TripState
+
+    class Model:
+        async def chat_json(self, *_args, **_kw):
+            return ParsedRequest(requirements=[Requirement(key="origin", value="Москва", kind="hard",
+                                                           source="user_text", quote="Москва")])
+
+    asked = TripState(session_id=uuid4(), open_questions=[OpenQuestion(key="origin", question="?")],
+                      requirements=[Requirement(key="destination", value="Шарм-эль-Шейх", kind="hard", source="user_text")])
+    parsed = asyncio.run(Orchestrator(Model()).parse_request("Москва", asked))
+    assert [(r.key, r.value) for r in parsed.requirements] == [("origin", "Москва")]
+    fresh = asyncio.run(Orchestrator(Model()).parse_request("Неделя в Дубае", TripState(session_id=uuid4())))
+    assert ("destination", "Дубай") in [(r.key, r.value) for r in fresh.requirements]
