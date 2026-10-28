@@ -691,7 +691,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             raw_destinations = []
         # объяснения направлений — параллельно: каждое ограничено LLM_EXPLAIN_TIMEOUT_SECONDS
         candidates = list(await asyncio.gather(*(
-            self._enrich_candidate(raw, trace) for raw in raw_destinations[:3] if raw.get("feasible") is True)))
+            self._enrich_candidate(raw, trace) for raw in raw_destinations[:4] if raw.get("feasible") is True)))
         alternatives = await self._validated_alternatives(result.alternatives)
         if explicit_destination:
             alternatives = [alternative for alternative in alternatives if all(

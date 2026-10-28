@@ -44,11 +44,21 @@ function providerTerms(o: Offer): string[] {
     const bParts: string[] = []
     if (baggage.carry_on_kg) bParts.push(`ручная кладь ${baggage.carry_on_kg} кг`)
     if (baggage.checked_baggage_kg) bParts.push(`багаж ${baggage.checked_baggage_kg} кг`)
+    // Tutu: {baggage: {kg, pieces}, cabin_baggage: {kg, pieces, dimensions}}
+    const piece = (value: unknown, label: string): string | null => {
+      if (!value || typeof value !== 'object') return null
+      const b = value as Record<string, unknown>
+      const pieces = typeof b.pieces === 'number' ? b.pieces : null
+      const kg = typeof b.kg === 'number' && b.kg > 0 ? b.kg : null
+      if (pieces === 0 && !kg) return `без ${label === 'ручная кладь' ? 'ручной клади' : 'багажа'}`
+      return `${label}${kg ? ` ${kg} кг` : ''}${pieces && pieces > 1 ? ` × ${pieces}` : ''}`
+    }
+    const cabin = piece(baggage.cabin_baggage, 'ручная кладь')
+    const checked = piece(baggage.baggage, 'багаж')
     if (bParts.length) {
       facts.push(bParts.join(', '))
-    } else {
-      const details = Object.entries(baggage).map(([key, value]) => `${formatFact(key)}: ${String(value)}`).join(', ')
-      if (details) facts.push(`багаж: ${details}`)
+    } else if (cabin || checked) {
+      facts.push([cabin, checked].filter(Boolean).join(', '))
     }
   }
   return facts
@@ -105,7 +115,12 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 text-[14px] font-semibold leading-snug">
               <span>{offerTitle(o)}</span>
-              {markSynthetic && o.synthetic && <SyntheticBadge />}
+              {o.variant?.estimate ? (
+                <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
+                  title={String(o.variant?.note ?? 'Ориентировочная оценка агента')}>
+                  только предложение
+                </span>
+              ) : markSynthetic && o.synthetic && <SyntheticBadge />}
               {o.kind === 'hotel' && (o.provider === 'ostrovok' || o.source_url?.includes('ostrovok.ru')) && (
                 <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700 border border-orange-200">
                   {`Островок ${o.variant?.rating ? `★ ${o.variant.rating}` : ''}`}
@@ -150,7 +165,7 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
                                 : 'bg-blue-200/80 text-blue-900'
                             }`}
                           >
-                            {isTransfer ? 'Трансфер' : 'Авиа / Поезд'}
+                            {isTransfer ? 'Трансфер' : o.kind === 'train' ? 'Поезд' : 'Авиа'}
                           </span>
                           <span>
                             {String(leg.from ?? '')} → {String(leg.to ?? '')}
@@ -245,22 +260,19 @@ export function OfferRow({ o, last, markSynthetic = true, checks = [] }: { o: Of
               {fact}
             </span>
           ))}
-          {o.source_url && (
+          {o.variant?.estimate ? (
+            <span className="ml-auto text-[11px] text-ink-muted">ориентировочная цена такси, не бронируется</span>
+          ) : null}
+          {o.source_url && o.kind !== 'hotel' && o.kind !== 'transfer' && (
             <a
               className="text-brand font-medium hover:underline ml-auto"
               href={o.source_url}
               target="_blank"
               rel="noreferrer"
             >
-              {o.provider === 'ostrovok' || o.kind === 'hotel'
-                ? (o.kind === 'transfer' ? 'трансфер на Островке' : 'перейти на Островок')
-                : o.kind === 'transfer'
-                  ? 'трансфер на Островке'
-                  : o.provider === 'yandex_go'
-                    ? 'маршрут в Яндекс Go'
-                    : o.kind === 'flight'
-                      ? (o.variant?.flight_no ? `билеты на рейс ${o.variant.flight_no}` : 'билеты на рейс')
-                      : 'билеты на Туту'}
+              {o.kind === 'flight'
+                ? (o.variant?.flight_no ? `билеты на рейс ${o.variant.flight_no}` : 'билеты на рейс')
+                : 'билеты на Туту'}
             </a>
           )}
         </div>

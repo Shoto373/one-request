@@ -230,6 +230,53 @@ def _ostrovok_hotel_url(row: dict[str, Any], city_id: str, checkin, checkout, ad
             f"?dates={checkin:%d.%m.%Y}-{checkout:%d.%m.%Y}&guests={adults}")
 
 
+def _return_departure(transports: list[Any]) -> datetime | None:
+    """Departure of the way back: the second offer, or the return leg of a round-trip flight."""
+    if len(transports) > 1:
+        return transports[1].times.start
+    legs = transports[0].variant.get("legs") or []
+    back = next((leg for leg in legs if leg.get("label") == "return"), None)
+    segments = (back or {}).get("segments") or []
+    raw = (segments[0].get("departure_at") if segments else None) or (back or {}).get("departure_at")
+    try:
+        return datetime.fromisoformat(raw) if raw else None
+    except ValueError:
+        return None
+
+
+def _estimated_transfer(cat: Any, hub_id: str, query: TripQuery, at: datetime, direction: str,
+                        hotel: Any, mode: str):
+    """Taxi estimate between the arrival hub and the hotel; not bookable, clearly marked as an estimate."""
+    from math import asin, cos, radians, sin, sqrt
+    from app.catalog.models import Offer, OfferTimes
+
+    hub = cat.hubs.get(hub_id) if hub_id else None
+    city = cat.cities.get(query.dest_city)
+    km = 20.0
+    if hub is not None and city is not None and (hub.city_id == query.dest_city or hub_id in city.hub_ids):
+        dlat, dlon = radians(city.coord.lat - hub.coord.lat), radians(city.coord.lon - hub.coord.lon)
+        a = sin(dlat / 2) ** 2 + cos(radians(hub.coord.lat)) * cos(radians(city.coord.lat)) * sin(dlon / 2) ** 2
+        km = max(5.0, round(2 * 6371 * asin(sqrt(a)) * 1.3, 1))  # road ≈ 1.3 × straight line
+    minutes = int(15 + km * 1.5)
+    cars = 2 if query.party.people > 4 else 1
+    price = int(round((800 + 40 * km) / 10) * 10)
+    place = "вокзал" if mode == "rail" else "аэропорт"
+    title = (f"Трансфер {place} → отель (ориентировочно), ~{km:g} км, ~{minutes} мин" if direction == "to_hotel"
+             else f"Трансфер отель → {place} (ориентировочно), ~{km:g} км, ~{minutes} мин")
+    start = at if direction == "to_hotel" else at - timedelta(minutes=minutes)
+    return Offer(
+        offer_id=f"est_transfer_{direction}_{hashlib.sha256(hotel.offer_id.encode()).hexdigest()[:10]}_{start:%Y%m%d%H%M}",
+        kind="transfer", item_id=f"estimate:transfer:{query.dest_city}:{direction}", title=title,
+        variant={"title": title, "mode": "taxi", "estimate": True, "direction": direction, "distance_km": km,
+                 "duration_min": minutes, "provider": "Оценка агента",
+                 "note": "Только предложение: ориентировочная цена такси, не бронируется и не входит в оформление."},
+        quantity=cars, unit_price_rub=price, price_unit="per_vehicle", units=1, total_rub=price * cars,
+        times=OfferTimes(start=start, end=start + timedelta(minutes=minutes)),
+        synthetic=True, provider="estimate", data_mode="estimated", source_url=None,
+        source_refs=[f"estimate:transfer:{hub_id or query.dest_city}"],
+    )
+
+
 def _party_for_avia(query: TripQuery) -> tuple[int, int, int]:
     adults = query.party.adults + sum(age >= 12 for age in query.party.children_ages)
     children = sum(2 <= age <= 11 for age in query.party.children_ages)
@@ -533,11 +580,21 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
 
                 pickup = transports[0].times.end + timedelta(minutes=30)
                 to_hotel = _best_transfer(cat, arr_hub, hotel.item_id, query, pickup, "to_hotel", prefer_mode="taxi")
-                return_transport = transports[1] if len(transports) > 1 else transports[0]
-                be_at_hub = return_transport.times.start - timedelta(minutes=90)
-                to_hub = _best_transfer(cat, dep_hub, hotel.item_id, query, be_at_hub, "to_hub", prefer_mode="taxi")
+                return_start = _return_departure(transports)
+                be_at_hub = return_start - timedelta(minutes=90) if return_start else None
+                to_hub = (_best_transfer(cat, dep_hub, hotel.item_id, query, be_at_hub, "to_hub", prefer_mode="taxi")
+                          if be_at_hub else None)
+                # Live hotels are not in the catalog, so there is no bookable transfer: show an estimate.
+                if to_hotel is None:
+                    to_hotel = _estimated_transfer(cat, arr_hub, query, pickup, "to_hotel", hotel, mode)
+                if to_hub is None and be_at_hub is not None:
+                    to_hub = _estimated_transfer(cat, dep_hub, query, be_at_hub, "to_hub", hotel, mode)
 
-                items = [*transports, *([to_hotel] if to_hotel else []), hotel, *([to_hub] if to_hub else [])]
+                # Timeline order: there, transfer, hotel, transfer, back.
+                outbound_items = transports[:1]
+                back_items = transports[1:]
+                items = [*outbound_items, *([to_hotel] if to_hotel else []), hotel,
+                         *([to_hub] if to_hub else []), *back_items]
                 subtotal = sum(item.total_rub for item in items)
                 refundable = sum(
                     item.variant.get("refundable") is True or item.variant.get("terms", {}).get("free_cancellation") is True if item.kind == "hotel"
@@ -599,9 +656,14 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
             checks = [Check(kind="availability", status="ok", refs=refs,
                             text="Транспорт подтверждён поиском Tutu MCP; отель подобран на Островке.").model_dump(mode="json")]
             transfers_in_bundle = [i for i in items if i.kind == "transfer"]
-            if transfers_in_bundle:
+            estimated_transfer = any(t.variant.get("estimate") for t in transfers_in_bundle)
+            if transfers_in_bundle and estimated_transfer:
+                checks.append(Check(kind="transfer_fit", status="warn", refs=[f"offer:{t.offer_id}" for t in transfers_in_bundle],
+                                    text="Трансфер — только предложение агента: ориентировочная цена такси по расстоянию, "
+                                         "не бронируется и оплачивается на месте.").model_dump(mode="json"))
+            elif transfers_in_bundle:
                 checks.append(Check(kind="transfer_fit", status="ok", refs=[f"offer:{t.offer_id}" for t in transfers_in_bundle],
-                                    text=f"Трансфер Яндекс Go ({transfers_in_bundle[0].variant.get('tariff_name', 'Комфорт')}) включён в сумму поездки (в отель и обратно).").model_dump(mode="json"))
+                                    text=f"Трансфер ({transfers_in_bundle[0].variant.get('tariff_name', 'Комфорт')}) включён в сумму поездки (в отель и обратно).").model_dump(mode="json"))
             else:
                 checks.append(Check(kind="transfer_fit", status="warn", refs=refs,
                                     text="Трансфер не подобран для данного маршрута.").model_dump(mode="json"))
@@ -630,7 +692,7 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                 checks.append(Check(kind="availability", status="warn", refs=refs,
                                     text="ЖД-сумма — цена за место, умноженная на состав для одного выбранного тарифа; отдельная детская цена и вместимость конкретного тарифа не подтверждены.").model_dump(mode="json"))
             if not query.limits_hard:
-                limit_issues = [issue for item in transports
+                limit_issues = [issue for item in items if item.kind in ("flight", "train")
                                 if (issue := _transport_limit_issue(item, query)) is not None]
                 if limit_issues:
                     checks.append(Check(kind="transport_preference", status="warn", refs=refs,
@@ -676,9 +738,12 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                 label=label, items=items, total_rub=subtotal,
                 checks=checks,
                 advantages=[Claim(text=f"Фактический маршрут и цена получены от Туту; сравнение основано на найденных вариантах.", refs=refs)],
-                tradeoffs=[Claim(text="В стоимость входят только позиции Туту в карточке; трансфер не найден и отдельно не посчитан.", refs=refs)],
+                tradeoffs=[Claim(text=("Билеты и отель — реальные цены Туту; трансфер — ориентировочная оценка агента."
+                                       if estimated_transfer else "В стоимость входят только позиции Туту в карточке."), refs=refs)],
                 risks=[Claim(text=check["text"], refs=check["refs"] or refs) for check in checks if check["status"] in {"warn", "block"}],
-                price_note="Сумма live-предложений за указанный состав и даты; трансфер не включён. Это не окончательная стоимость поездки.",
+                price_note=("Билеты и отель — актуальные цены за указанный состав и даты; трансфер — ориентировочная оценка."
+                            if estimated_transfer else
+                            "Сумма live-предложений за указанный состав и даты; трансфер не включён. Это не окончательная стоимость поездки."),
             )
             bundles.append(_wire(bundle))
         recorder = _trace_recorder.get()

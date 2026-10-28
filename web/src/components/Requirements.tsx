@@ -132,8 +132,15 @@ export default function Requirements({ requirements, busy, onEdit, onRemove, onC
   if (!requirements.length) return null
 
   return (
-    <section className="card overflow-hidden">
-        <div className="overflow-x-auto">
+    <details className="card group overflow-hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 text-sm font-semibold text-ink hover:bg-canvas/60 [&::-webkit-details-marker]:hidden">
+          <span>Условия поездки <span className="font-normal text-ink-muted">· {requirements.length}</span></span>
+          <span className="flex items-center gap-1 text-xs font-medium text-brand">
+            <span className="group-open:hidden">показать</span><span className="hidden group-open:inline">скрыть</span>
+            <Icon name="chevron" className="h-4 w-4 rotate-90 transition group-open:-rotate-90" />
+          </span>
+        </summary>
+        <div className="overflow-x-auto border-t border-black/[.06]">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead className="bg-canvas/80 text-[11px] uppercase tracking-wide text-ink-muted">
               <tr>
@@ -189,7 +196,7 @@ export default function Requirements({ requirements, busy, onEdit, onRemove, onC
             </tbody>
           </table>
         </div>
-    </section>
+    </details>
   )
 }
 

@@ -37,7 +37,7 @@ from app.tools.climate import climate_ref, get_climate
 
 DEFAULT_NIGHTS = 7
 START_DAYS = (10, 17, 3, 24)  # tried start days in the requested month
-TOP_N = 3
+TOP_N = 4
 
 MONTHS = {
     "январ": 1, "феврал": 2, "март": 3, "апрел": 4, "мая": 5, "май": 5, "июн": 6, "июл": 7,
@@ -195,6 +195,16 @@ def destination_query_from_requirements(
     problems, assumptions = [], []
 
     origin = resolve_city(cat, _pick(req, "origin", "origin_city", "from", "departure_city")[1])
+    if origin is not None and origin in cat.cities and "origin" not in cat.cities[origin].roles:
+        # A city without catalog routes (Рязань, Тула): estimate destinations from the nearest
+        # catalog hub; the live search later starts from the user's own city.
+        here = cat.cities[origin]
+        hubs = [c for c in cat.cities.values() if "origin" in c.roles]
+        if hubs:
+            near = min(hubs, key=lambda c: (c.coord.lat - here.coord.lat) ** 2 + (c.coord.lon - here.coord.lon) ** 2)
+            assumptions.append(f"направления оценены от ближайшего крупного города — {near.name}; "
+                               f"билеты ищутся из города {here.name}")
+            origin = near.id
     if origin is None or "origin" not in cat.cities[origin].roles:
         problems.append("origin: нужен распознанный город отправления.")
 

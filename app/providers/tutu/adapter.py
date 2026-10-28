@@ -1,6 +1,7 @@
 """Normalize the documented Tutu MCP responses into the project's Offer contract."""
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, time, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Literal
@@ -113,8 +114,12 @@ def transport_offer(
         first = ((leg.get("segments") or [{}])[0])
         title += f"Поезд {first.get('voyage_no') or row.get('train_number') or ''}".strip()
     else:
-        first = ((next((leg for leg in legs if leg.get("label") == "outbound"), legs[0] if legs else {}).get("segments") or [{}])[0])
-        title += str(first.get("voyage_no") or "Авиаперелёт туда и обратно")
+        segments = (next((leg for leg in legs if leg.get("label") == "outbound"), legs[0] if legs else {}).get("segments") or [{}])
+        numbers = [str(s.get("voyage_no")) for s in segments if s.get("voyage_no")]
+        title += " + ".join(numbers) if numbers else "Авиаперелёт туда и обратно"
+        stops = [re.split(r"\s+—\s+|,\s*", str(s.get("to") or ""))[0] for s in segments[:-1]]
+        if stops:
+            title += " · пересадка в " + ", ".join(stop for stop in stops if stop)
         cabin = {"S": "премиум-эконом", "C": "бизнес-класс", "F": "первый класс"}.get(str(search_args.get("service_class") or ""))
         if cabin:
             title += f" · {cabin}"
