@@ -867,7 +867,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                     f"• ✈️ Перелёт: {hub} ➔ {im0.destination_city} (~{f_dur_str}) — {f_price_str}\n"
                 )
 
-            msg += "Все детали и прямые ссылки на отели Островка — в карточках предложений ниже."
+            msg += " Все детали и прямые ссылки на отели — в карточках ниже."
             has_meal = any(r.key in {"meal_preference", "meal", "meals"} and r.value for r in state.requirements)
             if not has_meal:
                 msg += (
