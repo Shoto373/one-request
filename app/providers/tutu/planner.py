@@ -731,7 +731,7 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
             else:
                 checks.append(Check(kind="checkin_date", status="warn", refs=[hotel_ref],
                                     text="Время прибытия или время заселения не подтверждено для проверки покрытия проживания.").model_dump(mode="json"))
-            if any(item.data_mode == "estimated" for item in items):
+            if any(item.kind == "train" and item.data_mode == "estimated" for item in items):
                 checks.append(Check(kind="availability", status="warn", refs=refs,
                                     text="ЖД-сумма — цена за место, умноженная на состав для одного выбранного тарифа; отдельная детская цена и вместимость конкретного тарифа не подтверждены.").model_dump(mode="json"))
             if not query.limits_hard:

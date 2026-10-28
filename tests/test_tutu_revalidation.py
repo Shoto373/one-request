@@ -31,7 +31,21 @@ async def test_hotel_revalidation_requires_the_exact_rate_not_only_the_same_pric
               "checks": []}
     checks = await revalidation.validate_tutu_bundle(bundle)
     assert checks[-1]["status"] == "block"
-    assert "не вернуло то же предложение" in checks[-1]["text"]
+    assert "больше нет в продаже" in checks[-1]["text"]
+
+
+@pytest.mark.asyncio
+async def test_hotel_revalidation_accepts_same_room_when_rate_id_rotates(monkeypatch):
+    FakeMCP.response = {"rooms": [{"room_name": "Двухместный номер Standard",
+                                   "rates": [{"offerpack_hash": "new-hash", "price": {"amount": 20816.0, "currency": "RUB"}}]}]}
+    monkeypatch.setattr(revalidation, "TutuMCPClient", FakeMCP)
+    bundle = {"items": [{"offer_id": "offer-1", "provider": "tutu", "provider_offer_id": "selected-rate",
+                         "kind": "hotel", "title": "Hotel", "revalidation": {"args": {"hotel_id": "hotel-7"}},
+                         "variant": {"terms": {"offerpack_hash": "selected-rate", "rate_price_amount": 20816,
+                                               "room_name": "Двухместный номер Standard"}}}],
+              "checks": []}
+    checks = await revalidation.validate_tutu_bundle(bundle)
+    assert checks[-1]["status"] == "ok"
 
 
 @pytest.mark.asyncio
