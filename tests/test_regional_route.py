@@ -60,3 +60,16 @@ def test_extracted_city_value_is_canonical_but_quote_is_the_users() -> None:
     out = {r.key: r for r in validate_extraction(parsed, "Рязань Питер").requirements}
     assert out["destination"].value == "Санкт-Петербург" and out["destination"].quote == "Питер"
     assert out["origin"].value == "Рязань"
+
+
+def test_display_names_do_not_depend_on_the_llm() -> None:
+    """GigaChat often keeps the user's spelling: abbreviations are expanded deterministically."""
+    from app.planning.query import display_city_name
+
+    cat = get_catalog()
+    assert display_city_name(cat, "LA") == "Лос-Анджелес"
+    assert display_city_name(cat, "nyc") == "Нью-Йорк"
+    assert display_city_name(cat, "нск") == "Новосибирск"
+    assert display_city_name(cat, "рязань") == "Рязань"
+    assert display_city_name(cat, "ростов-на-дону") == "Ростов-на-Дону"
+    assert display_city_name(cat, "Кёниг") == "Калининград"

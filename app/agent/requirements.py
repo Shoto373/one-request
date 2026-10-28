@@ -171,9 +171,9 @@ def validate_extraction(parsed: ParsedRequest, text: str) -> ParsedRequest:
         if req.key in {"origin", "destination"} and isinstance(req.value, str):
             # Show «Санкт-Петербург», not «Питер»: the quote keeps the user's own words.
             from app.catalog.store import get_catalog
-            from app.planning.query import canonical_city_name
+            from app.planning.query import display_city_name
 
-            canonical = canonical_city_name(get_catalog(), req.value)
+            canonical = display_city_name(get_catalog(), req.value)
             if canonical and canonical != req.value:
                 req = req.model_copy(update={"value": canonical})
         valid[req.key] = req
