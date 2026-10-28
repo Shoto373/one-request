@@ -526,7 +526,7 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                 raise place_errors[0]
             failed = "; ".join(source_errors)
             if failed:
-                raise TutuMCPError("Не удалось выполнить live-поиск: " + failed)
+                raise TutuMCPError("Не удалось выполнить поиск билетов: " + failed)
             if query.limits_hard:
                 raise TutuSearchEmpty("Туту не вернул транспорт, подтверждённо соответствующий жёстким ограничениям времени или пересадок.")
             raise TutuSearchEmpty("Туту не вернул предложений на указанные даты и состав. Это означает отсутствие результата поиска на Туту, а не отсутствие поездок вообще.")
@@ -699,7 +699,7 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
             subtotal, duration, _flex, _mode, items = candidate
             refs = [f"offer:{item.offer_id}" for item in items]
             checks = [Check(kind="availability", status="ok", refs=refs,
-                            text="Транспорт подтверждён поиском Tutu MCP; отель подобран на Островке.").model_dump(mode="json")]
+                            text="Билеты и отель найдены в реальном поиске на выбранные даты и состав.").model_dump(mode="json")]
             transfers_in_bundle = [i for i in items if i.kind == "transfer"]
             estimated_transfer = any(t.variant.get("estimate") for t in transfers_in_bundle)
             if transfers_in_bundle and estimated_transfer:
@@ -788,7 +788,7 @@ async def _search_tutu_core(requirements: dict[str, Any], state: Any = None) -> 
                 risks=[Claim(text=check["text"], refs=check["refs"] or refs) for check in checks if check["status"] in {"warn", "block"}],
                 price_note=("Билеты и отель — актуальные цены за указанный состав и даты; трансфер — ориентировочная оценка."
                             if estimated_transfer else
-                            "Сумма live-предложений за указанный состав и даты; трансфер не включён. Это не окончательная стоимость поездки."),
+                            "Актуальные цены билетов и отеля за указанный состав и даты; трансфер не включён."),
             )
             bundles.append(_wire(bundle))
         recorder = _trace_recorder.get()
@@ -848,7 +848,7 @@ async def replan_tutu(state: Any, changes: dict[str, Any]) -> dict[str, Any]:
     matching = next((b for b in results if b.get("label") == old.label), results[0] if results else None)
     if matching is None:
         return {"bundle": None, "bundles": [], "kept": [], "replaced": [],
-                "notes": ["После нового live-поиска подходящего комплекта не найдено."],
+                "notes": ["После нового поиска подходящего комплекта не найдено."],
                 "price_delta_rub": None, "input_changes": changes}
     # The user selected this conceptual bundle; keep its identity across a trip
     # version while each concrete supplier Offer receives its own new identity.
@@ -866,7 +866,7 @@ async def replan_tutu(state: Any, changes: dict[str, Any]) -> dict[str, Any]:
                              "why": "объект тот же, но supplier Offer после пересборки другой"})
         else:
             replaced.append({"ref": f"offer:—→{item.offer_id}", "from": {}, "to": {"offer_id": item.offer_id},
-                             "why": "новая позиция из live-поиска"})
+                             "why": "новое предложение из актуального поиска"})
     removed = [item for item in old.items if not any(n.kind == item.kind and n.item_id == item.item_id for n in new_items)]
     replaced.extend({"ref": f"offer:{item.offer_id}→—", "from": {"offer_id": item.offer_id}, "to": {},
                      "why": "предложение больше не входит в новый комплект"} for item in removed)
@@ -874,6 +874,6 @@ async def replan_tutu(state: Any, changes: dict[str, Any]) -> dict[str, Any]:
         "bundle": matching, "bundles": [matching], "selected_bundle_id": matching["id"],
         "kept": kept, "replaced": replaced,
         "price_delta_rub": int(matching["total_rub"]) - int(old.total_rub),
-        "notes": ["Пересборка выполнена новым ограниченным поиском Туту MCP; стоимость означает сумму позиций комплекта, без трансфера."],
+        "notes": ["План пересобран новым поиском на изменённые условия."],
         "input_changes": changes,
     }

@@ -204,11 +204,16 @@ def deterministic_claims(facts: list[EvidenceFact]) -> list[Claim]:
         value = fact.value
         if isinstance(value, float) and value.is_integer():
             value = int(value)
-        rendered = f"{value}{' ' + fact.unit if fact.unit else ''}"
-        qualifier = "Климатическая статистика" if fact.kind == "climate_statistic" else "По данным подбора"
-        if fact.synthetic:
-            qualifier = "Сгенерированные условия; " + qualifier.lower()
-        claims.append(Claim(text=f"{qualifier}: {fact.label.lower()} — {rendered}.", refs=[fact.ref]))
+        shown = f"{value:,}".replace(",", " ") if isinstance(value, int) and abs(value) >= 10000 else value
+        rendered = f"{shown}{' ' + fact.unit if fact.unit else ''}"
+        label = fact.label[:1].upper() + fact.label[1:]
+        if fact.kind == "climate_statistic":
+            text = f"В среднем за месяц: {fact.label[:1].lower() + fact.label[1:]} — {rendered}."
+        elif fact.synthetic:
+            text = f"Ориентировочно: {fact.label[:1].lower() + fact.label[1:]} — {rendered}."
+        else:
+            text = f"{label} — {rendered}."
+        claims.append(Claim(text=text, refs=[fact.ref]))
     return claims
 
 

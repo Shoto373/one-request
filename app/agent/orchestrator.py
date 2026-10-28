@@ -537,7 +537,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             blocks = [c.text for b in bundles for c in b.checks if c.status == "block"]
             return state, "Пересборка вернула блокирующие проверки: " + "; ".join(blocks) + ". Исправьте условия и пересоберите план."
         delta_text = f"{float(delta):+,.0f} ₽".replace(",", " ") if delta is not None else "не рассчитана инструментом"
-        return state, f"Комплект перепроверен инструментом A. Сохранено: {', '.join(kept) if kept else 'нет'}; заменено: {', '.join(replaced) if replaced else 'нет'}. Разница стоимости: {delta_text}. Выберите актуальный вариант."
+        return state, f"План пересобран под новые условия. Сохранено: {', '.join(kept) if kept else 'нет'}; заменено: {', '.join(replaced) if replaced else 'нет'}. Разница стоимости: {delta_text}. Выберите актуальный вариант."
 
     async def _continue_changed(self, state: TripState, trace: list[dict[str, Any]]) -> tuple[TripState, str]:
         return await self._replan(state, trace) if state.pending_replan else await self._continue(state, trace)
@@ -562,7 +562,6 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
     @staticmethod
     def _explain_bundle(bundle: StateBundle) -> StateBundle:
         """Keep only source-backed claims and add a deterministic total claim."""
-        check_source = "Tutu MCP" if any(item.provider == "tutu" for item in bundle.items) else "A"
         offer_refs = {f"offer:{item.offer_id}" for item in bundle.items}
         bundle.checks = [
             check.model_copy(update={"id": check.id or f"check:{bundle.id}:{index}",
@@ -592,14 +591,14 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         bundle.advantages = [c for c in bundle.advantages if supported(c)]
         bundle.tradeoffs = [c for c in bundle.tradeoffs if supported(c)]
         bundle.risks = [c for c in bundle.risks if supported(c)]
-        bundle.advantages.extend(
-            Claim(text=f"Проверка {check_source} «{check.kind}»: пройдена.", refs=[check.id])
-            for check in bundle.checks if check.status == "ok" and check.id
-        )
-        bundle.risks.extend(
-            Claim(text=f"Проверка {check_source} «{check.kind}»: предупреждение.", refs=[check.id])
-            for check in bundle.checks if check.status == "warn" and check.id
-        )
+        # Show what each check actually found (its own text), never internal check codes.
+        seen = {c.text for c in [*bundle.advantages, *bundle.risks]}
+        for check in bundle.checks:
+            if not check.id or not check.text or check.text in seen or check.status not in {"ok", "warn"}:
+                continue
+            seen.add(check.text)
+            target = bundle.advantages if check.status == "ok" else bundle.risks
+            target.append(Claim(text=check.text, refs=[check.id]))
         kinds = {item.kind for item in bundle.items}
         parts = []
         if kinds & {"flight", "train"}:
@@ -607,7 +606,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         if "hotel" in kinds:
             parts.append("отель на Островке")
         if "transfer" in kinds:
-            parts.append("трансфер Яндекс Go")
+            parts.append("трансфер")
         composition = ", ".join(parts)
         if not bundle.advantages and offer_refs:
             bundle.advantages = [Claim(text=f"Состав комплекта: {composition or 'готовый сценарий поездки'}.", refs=sorted(offer_refs))]
@@ -1038,7 +1037,7 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
             blocking = [c.text for c in validated_bundle.checks if c.status == "block"]
             if not validated_bundle.checks:
                 candidate.stage = "assemble"
-                reply = "Инструмент A не вернул подтверждение проверок. Корзину пока нельзя создавать."
+                reply = "Не удалось подтвердить проверки плана. Оформление пока недоступно — попробуйте ещё раз."
             elif blocking:
                 candidate.stage = "assemble"
                 reply = "План нельзя оформить: " + "; ".join(blocking)
