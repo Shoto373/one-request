@@ -14,7 +14,7 @@ REQUIREMENT_KEYS = {
     "origin", "destination", "dates", "travel_start_date", "travel_month", "duration_nights", "date_flex_days",
     "adults", "children_count", "children_ages", "pets", "pet_weight_kg", "budget_total_rub",
     "budget_per_person_rub", "budget_scope", "budget_preference", "transport", "max_stops", "travel_time_preference",
-    "max_duration_min", "trip_style", "lodging_stars", "meal_preference", "room_preference",
+    "max_duration_min", "trip_style", "lodging_stars", "meal_preference", "room_preference", "flight_class",
     "assumption_child_flight_time", "assumption_child_menu",
 }
 
@@ -28,7 +28,26 @@ ALIASES = {
     "budget_rub": "budget_total_rub", "budget": "budget_total_rub", "max_budget": "budget_total_rub",
     "transport_mode": "transport", "max_travel_time": "max_duration_min", "style": "trip_style",
     "stars": "lodging_stars", "meal": "meal_preference", "meals": "meal_preference",
+    "cabin_class": "flight_class", "service_class": "flight_class", "travel_class": "flight_class", "cabin": "flight_class",
 }
+
+_CABINS = (("перв", "first"), ("first", "first"), ("f", "first"), ("прем", "premium_economy"), ("комф", "premium_economy"),
+           ("premium", "premium_economy"), ("s", "premium_economy"), ("бизн", "business"), ("business", "business"),
+           ("c", "business"), ("эконом", "economy"), ("economy", "economy"), ("y", "economy"),
+           ("неваж", "any"), ("любой", "any"), ("any", "any"))
+
+
+def _cabin(value: Any) -> Any:
+    """economy|premium_economy|business|first|any from model wording («Эконом», «бизнес-класс», «Y»)."""
+    if isinstance(value, dict):
+        return {side: _cabin(value.get(side)) for side in ("outbound", "return")}
+    if not isinstance(value, str):
+        return value
+    low = value.strip().lower()
+    for prefix, cabin in _CABINS:
+        if low == prefix or (len(prefix) > 1 and low.startswith(prefix)):
+            return cabin
+    return value
 MONTHS_RU_GEN = [
     "", "января", "февраля", "марта", "апреля", "мая", "июня",
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
@@ -117,6 +136,8 @@ def _canonical(req: Requirement) -> Requirement | None:
             clean = re.sub(r"[^\d]", "", val)
             if clean:
                 val = int(clean)
+    elif key == "flight_class":
+        val = _cabin(val)
     elif key == "destination" and isinstance(val, str) and val.strip():
         from app.planning.landmarks import resolve_landmark
         lm = resolve_landmark(val)

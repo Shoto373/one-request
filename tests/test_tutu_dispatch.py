@@ -134,3 +134,11 @@ def test_cart_rejects_destination_outside_current_product_coverage(monkeypatch):
         cart_service._check_bundle({"items": [{"total_rub": 10}], "total_rub": 10},
                                    {"requirements": [{"key": "destination", "value": "DXB"}]})
     assert error.value.code == "destination_not_covered"
+
+
+def test_llm_flight_class_answer_survives_validation():
+    from app.agent.requirements import ParsedRequest, validate_extraction
+    from app.state.models import Requirement
+
+    parsed = ParsedRequest(requirements=[Requirement(key="flight_class", value="Эконом", kind="hard", source="user_text")])
+    assert [(r.key, r.value) for r in validate_extraction(parsed, "Эконом").requirements] == [("flight_class", "economy")]
