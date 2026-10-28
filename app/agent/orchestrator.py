@@ -6,7 +6,7 @@ import importlib
 import inspect
 import logging
 import re
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from functools import wraps
 from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
@@ -359,12 +359,35 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
         # one active clarification so the parser and UI cannot disagree on its key.
         return questions[:1]
 
+    @staticmethod
+    def _complete_dates(requirements: list[Requirement]) -> list[Requirement]:
+        """Join split date facts into one {start, end}: «6–13 декабря» may arrive as
+        travel_start_date + dates{end}, or a start date plus a number of nights."""
+        def iso(value: Any) -> date | None:
+            try:
+                return date.fromisoformat(str(value)[:10]) if value else None
+            except ValueError:
+                return None
+
+        by_key = {r.key: r for r in requirements if r.kind != "unknown" and r.value not in (None, "")}
+        dates_req, start_req, nights_req = by_key.get("dates"), by_key.get("travel_start_date"), by_key.get("duration_nights")
+        value = dates_req.value if dates_req and isinstance(dates_req.value, dict) else {}
+        start = iso(value.get("start") or value.get("from")) or iso(start_req.value if start_req else None)
+        end = iso(value.get("end") or value.get("to"))
+        if start and not end and nights_req and isinstance(nights_req.value, int) and nights_req.value > 0:
+            end = start + timedelta(days=nights_req.value)
+        if not (start and end and start < end) or (value.get("start") and value.get("end")):
+            return requirements
+        base = dates_req or start_req
+        joined = base.model_copy(update={"key": "dates", "value": {"start": start.isoformat(), "end": end.isoformat()}})
+        return [r for r in requirements if r.key not in {"dates", "travel_start_date"}] + [joined]
+
     def _merge(self, state: TripState, parsed: ParsedRequest) -> TripState:
         requirements, suppressed = merge_requirement_changes(
             state.requirements, parsed.requirements, remove_keys=parsed.remove_keys,
             suppressed_assumptions=state.suppressed_assumptions,
         )
-        requirements = self._year_resolve(requirements, suppressed)
+        requirements = self._complete_dates(self._year_resolve(requirements, suppressed))
         # Remove the previous automatic Moscow assumption from legacy sessions.
         # User-provided origins remain intact; only the destination is fixed.
         requirements = [r for r in requirements if not (r.key == "origin" and r.source == "product_scope")]
@@ -705,7 +728,8 @@ Never produce offer ids, prices, feasibility, weather, visa, or search results. 
                                         "alternative_ids": [a.get("id") for a in alternatives],
                                         "notes": result.notes}, "status": "ok"})
         if candidates:
-            return state, f"Подобрал {len(candidates)} выполнимых направлени(е/я). Выберите одно, чтобы собрать комплект."
+            return state, (f"Подобрал {len(candidates)} " + ("направление" if len(candidates) == 1 else "направления" if len(candidates) < 5 else "направлений")
+                           + ", куда поездка точно собирается. Выберите одно — соберу билеты и отель.")
         if alternatives:
             labels = "; ".join(a.get("label", a["id"]) for a in alternatives)
             return state, f"Под все жёсткие условия вариантов нет. Инструмент расчёта подтвердил изменения: {labels}. Ничего не изменено — выберите конкретный вариант."

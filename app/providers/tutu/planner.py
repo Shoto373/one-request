@@ -149,7 +149,10 @@ def _parse_query(requirements: dict[str, Any], state: Any) -> TripQuery:
     req = _mapped_requirements(requirements, state)
     query, problems = query_from_requirements(get_catalog(), req, state, allow_external_origin=True)
     if query is None:
-        raise TutuSearchEmpty("Для поиска Туту нужны точные даты и состав поездки. " + " ".join(problems))
+        text = " ".join(problems).lower()
+        what = [w for k, w in (("дат", "точные даты туда и обратно"), ("отправлени", "город отправления"),
+                               ("направлени", "город поездки")) if k in text]
+        raise TutuSearchEmpty("Чтобы найти билеты, уточните " + (", ".join(what) or "даты и состав поездки") + ".")
     return query
 
 
