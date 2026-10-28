@@ -1,180 +1,147 @@
-# О!дин запрос (трек «О!дин запрос»)
+# О!дин запрос — AI-агент путешествий
 
-AI-агент для путешествий. Из одного сообщения («к тёплому морю в ноябре, недорого, с ребёнком») он делает готовую поездку: спрашивает только то, без чего нельзя, предлагает направления, собирает и сравнивает комплекты (дорога туда и обратно, трансферы, отель), проверяет стыковки, пересобирает план при изменении условий и доводит до имитированной оплаты.
+Пользователь пишет одно сообщение своими словами («к тёплому морю в декабре, недорого, вдвоём, без долгих перелётов»), а агент доводит его до оформленной (имитированной) покупки поездки целиком. По пути агент:
+- уточняет только недостающее;
+- предлагает направления с погодой, ценой и временем в пути;
+- находит реальные билеты и отели;
+- сравнивает 3–4 комплекта и объясняет компромиссы и риски;
+- проверяет состыковки;
+- пересобирает план, когда условия меняются;
+- помогает после покупки.
 
-- Видео-скринкаст: _TBD_
-- Развёрнутый сервис: нет, только локальный запуск
+- **Работающий сервис:** https://3-pointers-team.online
+- **Скринкаст:** _ссылка_
+- **Трек:** «О!дин запрос», хакатон Островка
 
-> **По умолчанию используются демо-данные, оплата всегда имитируется.** Для live-режима Туту задайте `TRAVEL_DATA_PROVIDER=tutu`. Прототип поддерживает отдых только в Сочи; город отправления вводит пользователь, а фактическую доступность Туту проверяет отдельно для каждого маршрута. Live-ответы помечаются источником и временем получения; демо и live не подменяют друг друга.
+## Как агент закрывает задачи кейса
+
+| Задача кейса | Что делает агент | Где в коде |
+|---|---|---|
+| Понимание запроса и уточнение | Выделяет явные и скрытые требования: бюджет, состав, животное, класс перелёта, питание, «без долгих перелётов». Свои догадки помечает отдельно, и их можно убрать одним кликом. Спрашивает только то, без чего поиск невозможен, не больше двух вопросов за ход, с готовыми вариантами ответа. Короткие ответы («Эконом», «8 кг», «Москва») относит к заданному вопросу. | `app/agent/orchestrator.py` (`parse_request`), `app/agent/requirements.py`, `app/agent/rule_parser.py` |
+| Вдохновение и выбор направления | Если направление не названо, предлагает до 4 направлений, где поездка реально собирается. У каждого: климат за месяц (воздух, море, дожди), ориентировочная цена всей поездки, время в пути и визовый режим. Если ничего не подходит, называет минимальные изменения условий, а не выдумывает. | `app/planning/destinations.py`, `app/planning/suggest.py`, `app/planning/alternatives.py` |
+| Подбор и сравнение | Живой поиск: перелёты (с классом обслуживания, отдельно туда и обратно), поезда и отели через официальный Tutu MCP. Комплекты «дешевле», «быстрее», «отель выше классом», «другой отель» сравниваются по цене, времени в пути, пересадкам, багажу, условиям отмены, питанию и стыковкам по времени. | `app/providers/tutu/planner.py`, `app/providers/tutu/adapter.py` |
+| Объяснение выбора | У каждого комплекта есть плюсы, компромиссы и риски. Каждое утверждение ссылается на конкретное предложение или проверку: фразы LLM без такой опоры отбрасываются (`_explain_bundle`). | `app/agent/explain.py`, `app/agent/orchestrator.py` |
+| Сборка поездки и покупка | Таймлайн по порядку: дорога туда → трансфер → отель → трансфер → обратно. Проверки: прибытие и время заезда, круглосуточная стойка, выезд и обратная дорога, вместимость, питомец, бюджет. Перед оплатой каждое предложение ищется заново и сверяется по номеру рейса, времени, номеру в отеле и цене. Корзина и заказ хранят неизменяемый снимок, повторная оплата не создаёт второй заказ. | `app/providers/tutu/revalidation.py`, `app/cart/` |
+| Пересборка плана | «А если на два дня позже?», «бюджет меньше», «с нами едет собака»: агент меняет только затронутые условия, повторяет поиск и показывает, что сохранилось, что заменилось и насколько изменилась цена. | `app/agent/orchestrator.py` (`_replan`), `app/planning/replan.py` |
+| Работа после покупки | Напоминания (онлайн-регистрация, вылет, заселение, крайний срок бесплатной отмены), запрос раннего заезда, расчёт и подтверждение переноса дат. | `app/cart/aftercare.py` |
+| Память | Профиль в браузере: в следующей поездке агент помнит город вылета, состав и питание как догадки, которые можно убрать. | `app/profile.py` |
+| Метрики | Фиксированные сценарии с независимыми проверками: доля доведённых до конца сценариев, число уточнений, ошибки состыковок. Страница `/metrics`. | `eval/`, `app/metrics/` |
+
+## Откуда данные (честно)
+
+| Данные | Источник | Реальные? |
+|---|---|---|
+| Авиабилеты (цена на весь состав, класс, пересадки, багаж) | официальный [Tutu MCP](https://mcp.tutu.ru/mcp), `search_avia` | да, живой поиск |
+| Поезда | Tutu MCP, `search_rail` | да; сумма = цена места × состав, поэтому помечается предупреждением |
+| Отели (цена за весь срок, номер, питание, отмена) | Tutu MCP, `search_hotels` + `get_offer_details`; Туту продаёт отели из базы Островка | да. Ссылка ведёт на страницу этого отеля на Островке, если Островок его узнал, иначе на это же предложение на Туту. Цена на сайте Островка может отличаться от цены Туту |
+| Трансфер до отеля | оценка агента по расстоянию аэропорт/вокзал → центр | **нет**: подписан «только предложение», без ссылки, не бронируется |
+| Климат по месяцам | Open-Meteo, статистика 2021–2025 (средние, не прогноз) | да |
+| Города, аэропорты, визы для граждан РФ | Wikidata, OurAirports, справочник виз | да |
+| Ориентировочная цена направления на шаге выбора | демо-каталог (`data/seed/catalog`, `seed = 42`) | **нет**: показывается как «≈ примерно»; точные цены появляются после выбора направления |
+| Оплата и бронирование | — | **имитация**: деньги не списываются, бронь не создаётся |
+
+Если живой поиск не нашёл маршрут или не ответил, агент не подставляет выдуманные цены. Он говорит об этом прямо или задаёт вопрос, например: «Из Рязани нет рейсов — искать вылет из Москвы?».
+
+Из инструментов Tutu MCP агенту разрешены только читающие (`app/providers/tutu/client.py`, allowlist). Регистрация пассажиров, создание заказа и оплата у поставщика не вызываются.
+
+Атрибуция: © участники OpenStreetMap (ODbL); Weather data by Open-Meteo.com (CC BY 4.0); Wikidata (CC0); OurAirports (public domain).
+
+## Архитектура
+
+```
+React (web/)  ──POST /api/sessions/{id}/messages──►  FastAPI (app/main.py)  ──►  Postgres
+   ▲  SSE: step → state → message → done              │  блокировка сессии, idempotency по request_id,
+   │                                                   │  optimistic concurrency по version
+   └───────────────────────────────────────────────────┤
+                                                       ▼
+                                   Orchestrator.prepare_turn (app/agent/orchestrator.py)
+                                   1. parse_request — LLM (быстрая модель) → изменения требований в JSON;
+                                      при сбое LLM — разбор правилами (rule_parser.py)
+                                   2. validate_extraction — только известные ключи, цитаты из текста
+                                   3. merge + сборка дат, догадки агента помечены отдельно
+                                   4. нет направления → suggest_destinations
+                                      есть направление → build_bundles (живой поиск Туту)
+                                      был выбран комплект и условия изменились → replan
+                                   5. объяснения: LLM формулирует, код оставляет только подтверждённое
+                                   6. атомарное сохранение: состояние + сообщения + трейс шагов
+```
+
+Принципы:
+- **Цифры считает код, а не LLM.** Модель извлекает требования и формулирует объяснения. Цены, суммы, стыковки и проверки вычисляются детерминированно и сверяются (сумма позиций = итог комплекта).
+- **Работает без ключа LLM.** Если ключа нет или провайдер не ответил, запрос разбирают правила, и весь путь до оплаты проходит.
+- **Прозрачность.** Каждый шаг агента (разбор, вызовы инструментов, результаты) сохраняется и виден в интерфейсе («Шаги агента») и через `GET /api/sessions/{id}/trace`.
+- **Надёжность.** У каждого изменения есть `request_id` (повтор не применяется дважды). Устаревшая версия плана даёт 409. Обрыв соединения не теряет уже принятый ход.
 
 ## Быстрый старт
 
 ```bash
 git clone https://github.com/ostrovok-hackathon-2026/5-ukazatelei.git
 cd 5-ukazatelei
-cp .env.example .env      # по желанию впишите LLM_API_KEY (любой OpenAI-совместимый провайдер)
-docker compose up --build
+cp .env.example .env          # впишите LLM_API_KEY (любой OpenAI-совместимый провайдер), по желанию
+docker compose up --build     # миграции и сид применяются автоматически
 # открыть http://localhost:8080
 ```
 
-Больше ничего ставить не нужно: миграции и сид каталога применяются при старте контейнера `app`.
+Режим данных задаёт `TRAVEL_DATA_PROVIDER`:
+- `tutu` — живой поиск, так работает развёрнутый сервис;
+- `demo` — офлайн-каталог для разработки и тестов, без сети.
 
-**Работает и без ключа LLM.** Если `LLM_API_KEY` не задан или провайдер не отвечает (лимит, таймаут, битый ответ), агент переходит в офлайн-режим: запрос разбирают правила (`app/agent/rule_parser.py` — города, даты, состав, дети, животные, бюджет, транспорт, по-русски и по-английски), а подбор, проверки, пересборка и оплата работают как обычно. В шапке появляется метка «офлайн-режим». С ключом агент понимает свободные формулировки лучше, без ключа проходит весь путь до покупки на демо-сценариях.
-
-Сборка с нуля занимает около _N_ мин (замер ниже, в разделе [Проверка чистого запуска](#проверка-чистого-запуска)).
-
-## Зависимости и переменные окружения
-
-Рекомендованные ресурсы:
-- 2 CPU cores
-- 4 GB RAM
-- около 2 GB диска под образы
-
-Нужны только Docker и Docker Compose v2. Сервисы в `docker-compose.yml`:
-- `app`: Python 3.12, FastAPI и собранный React-фронт. Порт 8080, один воркер, процесс работает не от root.
-- `db`: PostgreSQL 16 (`postgres:16.6-alpine`), данные в volume `pgdata`.
-
-Кэш и очереди не используются. LLM подключается через внешний OpenAI-совместимый API, своих моделей в репозитории нет.
+Нужны только Docker и Docker Compose v2. Рекомендуется 2 CPU, 4 GB RAM и около 2 GB диска.
 
 | Переменная | По умолчанию | Назначение |
 |---|---|---|
-| `APP_PORT` | `8080` | Порт приложения в контейнере |
-| `DATABASE_URL` | `postgresql://app:app@db:5432/trip` | Подключение к БД |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `app` / `app` / `trip` | Инициализация Postgres |
-| `LOG_LEVEL` | `INFO` | Уровень логов (stdout, `docker compose logs app`) |
-| `LLM_BASE_URL` | `https://api.openai.com/v1` | Любой OpenAI-совместимый API |
-| `LLM_API_KEY` | пусто | Ключ LLM. Без него агент работает в офлайн-режиме (разбор правилами); для локальной Ollama не нужен |
-| `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | Основная и быстрая модели |
-| `LLM_TIMEOUT_SECONDS` | `30` | Таймаут одного запроса к LLM |
-| `LLM_EXPLAIN_TIMEOUT_SECONDS` | `20` | Сколько ждать от LLM формулировку объяснения; дольше — берутся детерминированные утверждения по фактам |
-| `LLM_JSON_MODE` | `auto` | `auto` — JSON-режим, если провайдер поддерживает (иначе отключается сам); `off` — не отправлять `response_format` |
-| `TRAVEL_DATA_PROVIDER` | `demo` | `demo` или `tutu`; при ошибке live-поиска нет тихого возврата к демо |
-| `TUTU_MCP_ENDPOINT` | `https://mcp.tutu.ru/mcp` | Streamable HTTP endpoint официального Tutu MCP |
-| `TUTU_TIMEOUT_SECONDS` | `25` | Таймаут вызова MCP |
-| `TUTU_MAX_CALLS` | `18` | Наш защитный бюджет MCP-вызовов на операцию поиска, не лимит поставщика |
-| `TUTU_MAX_PARALLEL` | `2` | Наша максимальная параллельность запросов |
+| `TRAVEL_DATA_PROVIDER` | `demo` | `tutu` — реальные билеты и отели, `demo` — офлайн-каталог |
+| `LLM_BASE_URL` / `LLM_API_KEY` | OpenAI / пусто | любой OpenAI-совместимый API; без ключа работает разбор правилами |
+| `LLM_MODEL` / `LLM_MODEL_FAST` | `gpt-4o-mini` | основная и быстрая модели |
+| `DATABASE_URL` | `postgresql://app:app@db:5432/trip` | Postgres 16 |
+| `TUTU_MCP_ENDPOINT` | `https://mcp.tutu.ru/mcp` | официальный endpoint Tutu MCP |
+| `TUTU_MAX_CALLS` / `TUTU_MAX_PARALLEL` | `18` / `2` | наши защитные лимиты на один поиск |
 
-## Сидирование
+## Как проверить за 5 минут
 
-Делать ничего не нужно. При старте `app` по порядку:
-1. применяются миграции `db/migrations/*.sql`;
-2. загружается сид `data/seed/*.json`;
-3. каталог поездок (`data/seed/catalog/*.json`) читается в память.
+1. «Хочу к тёплому морю в декабре на неделю, недорого, вдвоём, без долгих перелётов». Агент спросит город вылета.
+2. «Из Рязани, 6–13 декабря». Появятся направления с погодой, ценой и временем в пути.
+3. Выберите Шарм-эль-Шейх. Агент спросит класс перелёта, ответьте «Эконом». В Рязани нет аэропорта, агент предложит Москву, ответьте «Москва». Появятся комплекты с реальными рейсами и отелями.
+4. «А если на два дня позже?» Агент покажет, что сохранилось, что заменилось и насколько изменилась цена.
+5. Выберите комплект → «Оформить». Пройдёт перепроверка цен, имитация оплаты, затем откроется заказ с напоминаниями и ранним заездом.
 
-Повторный запуск ничего не дублирует. Начать с чистой БД: `make reset && make up` (или `docker compose down -v && docker compose up --build`).
+Другие запросы:
+- «Из Москвы в Париж 6–8 декабря вдвоём, бизнес туда, эконом обратно»;
+- «Из Москвы в Санкт-Петербург на поезде 14–16 ноября»;
+- «Неделя в Дубае на троих за 30 000» — честный ответ про невыполнимый бюджет;
+- английский: «Somewhere warm in December for two».
 
-Каталог собран заранее и лежит в репозитории, при запуске ничего не скачивается. Пересборка каталога из снимков описана в [`pipeline/README.md`](pipeline/README.md).
-
-## Маршруты и доступ
-
-- `/` — чат с агентом и «холст поездки»: требования, направления, сравнение комплектов, таймлайн с проверками
-- `/checkout/:cartId` — оформление (имитация оплаты)
-- `/orders/:id` — заказ: неизменяемый снимок состава и цен
-- `/metrics` — страница метрик по фиксированным сценариям, `/api/metrics` — то же в JSON
-- `/health` — `200`, `{"status":"ok"}`; `/api/status` — настроен ли LLM
-- `/api/*` — REST и SSE, контракт описан ниже, в разделе [Для разработчиков](#для-разработчиков)
-
-Учётных записей нет. Сессия поездки создаётся автоматически и хранится в браузере, кнопка «Заново» начинает новую. На оплате подойдут любые имя и email: деньги не списываются.
-
-## Демо-сценарий
-
-1. «Хочу к тёплому морю в ноябре, недорого, с ребёнком, без долгих перелётов». Агент показывает понятые требования (свои догадки помечает отдельно) и спрашивает город вылета, даты и возраст ребёнка. Потом предлагает три **выполнимых** направления с погодой, ценой всей поездки и временем в пути.
-2. Выбор направления: три проверенных комплекта («дешевле», «удобнее», «гибче отмена»), у каждого общая цена и компромисс.
-3. Таймлайн комплекта: ночной прилёт → проверка круглосуточной стойки отеля → предупреждение и вариант.
-4. «А если на два дня позже и с нами собака?» Видно, что **сохранено** и что **заменено**, почему и на сколько изменилась цена.
-5. Корзина → имитация оплаты → заказ-снимок. Повторное нажатие «Оплатить» второго заказа не создаёт.
-6. Невозможный запрос («Неделя в Дубае на троих за 30 000»): честный ответ и два минимальных изменения, а не выдуманная покупка.
-7. Поездом: «Из Москвы в Казань на выходные поездом».
-8. Метрики по фиксированным сценариям: страница `/metrics`, см. [Метрики](#метрики).
-
-Что ещё проверено: запрос на английском, «куда угодно», противоречия («дёшево, но 5 звёзд»), направления вне каталога («таких данных нет, ближайшее — …»), правки одного и того же плана из двух вкладок (409 и перечитывание), обрыв связи посреди ответа агента.
-
-## Данные: что реальное, а что синтетическое
-
-Каталог демо-сценариев небольшой и согласованный: 3 города отправления (Москва, Санкт-Петербург, Екатеринбург) × 8 направлений. Он нужен для офлайн-режима; это не покрытие live-поиска Туту. Единственное направление отдыха прототипа хранится в [`app/product_coverage.json`](app/product_coverage.json). Сейчас там Сочи (`AER`). Город отправления — пользовательский параметр, в live-режиме его разрешает и проверяет Туту. Москва не подставляется автоматически.
-
-| Что | Реальное | Сгенерировано |
-|---|---|---|
-| Города, координаты, визовый режим для граждан РФ | Wikidata, справочник виз | — |
-| Аэропорты и вокзалы | OurAirports, Wikidata | — |
-| Климат по месяцам (воздух, море, дожди) | Open-Meteo, статистика 2021–2025 (это средние значения, а не прогноз) | — |
-| Отели | название и координаты из OpenStreetMap | звёзды, номера, цены по ночам, питание, правила с животными, стойка регистрации, политика отмены |
-| Рейсы | геометрия реальных аэропортов | расписания, номера рейсов, тарифы, багаж, цены |
-| Поезда | реальные вокзалы | расписания, классы, цены |
-| Трансферы | реальное расстояние хаб ↔ отель | классы машин, цены, время в пути |
-| Оплата | — | имитация: деньги не списываются, заказ хранит снимок |
-
-У каждого предложения есть флаг `synthetic` и ссылки на источник (`source_refs`). В интерфейсе синтетические позиции помечены «демо-данные». Генерация детерминированная (`seed = 42`), подробности в [`pipeline/README.md`](pipeline/README.md).
-
-Атрибуция: © участники OpenStreetMap (ODbL); Weather data by Open-Meteo.com (CC BY 4.0); Wikidata (CC0); OurAirports (public domain).
-
-### Live-данные Туту
-
-Официальный endpoint `https://mcp.tutu.ru/mcp` использует MCP Streamable HTTP. Бэкенд инициализирует MCP-сессию и сверяет доступные инструменты со схемой при подключении. В live-режиме разрешены только `search_avia`, `search_rail`, `search_hotels` и `get_offer_details`. Инструменты регистрации пассажиров/создания заказов, ресурсы и прочие операции не доступны внутреннему агенту. Направление отдыха ограничено конфигурацией `app/product_coverage.json` (сейчас только Сочи); для поездки агент передаёт введённый город отправления в параметры поиска туда и обратно. Если Туту не разрешает город или возвращает неоднозначность, агент уточняет город и не переключает его сам.
-
-`origin` и `destination` — отдельные поля требования, параметров поиска и нормализованного Offer. Destination policy централизован в `app/product_coverage.json`; `/api/status` публикует покрытие UI, а агент и команды выбора проверяют тот же конфиг. Расширение на несколько городов отдыха потребует добавить выбор направления в интерфейс и проверку фактического покрытия в конфигурации, не менять клиент MCP или общий нормализатор. Широкий поиск направлений по России не включён.
-
-- Авиа: поиск туда-обратно, цена для переданного состава.
-- ЖД: поиск туда и обратно отдельно. Показанная сумма основана на цене выбранного тарифа на одно место, умноженной на состав; детский тариф и наличие мест этого тарифа для всего состава могут быть неизвестны, поэтому такая позиция помечается как оценка и предупреждение.
-- Отель: запрос на фактические даты и взрослых/возраст детей; при наличии вызываются детали тарифа. Цена — за весь срок проживания, не цена за ночь. Неизвестные правила/условия так и показываются.
-- Пересборка повторяет ограниченный поиск с полными текущими требованиями. Разница считается кодом из новых и предыдущих сумм.
-- Официальный MCP не предоставил инструмент поиска трансферов в проверенной выдаче. Трансфер остаётся открытым пунктом и не включён в сумму комплекта.
-- Перед локальной имитацией checkout делается read-only поиск/получение деталей. Если точная позиция и цена не найдены в ограниченной выдаче либо источник недоступен, checkout блокируется. Это не резервирует предложение и не гарантирует поставщицкую цену.
-- Ссылка поставщика показывается, только когда её вернул MCP. Она ведёт к поставщику; внутренний заказ проекта — снимок для демонстрации, без создания брони или списания денег.
-
-Подробности официального доступа и его условий: [Tutu MCP](https://mcp.tutu.ru/mcp), [статья команды Туту](https://habr.com/ru/companies/tuturu/articles/1081246/).
-
-Ограниченный read-only smoke отдельно от обычного pytest. Укажите город отправления; даты по умолчанию выбираются на четыре недели вперёд. Скрипт не вызывает бронирование или оплату:
+## Тесты и метрики
 
 ```bash
-docker compose exec app python -m scripts.tutu_live_smoke --live --origin Екатеринбург --departure 2026-11-25 --return-date 2026-12-02
-docker compose exec app python -m scripts.tutu_planner_smoke --live --origin Казань --departure 2026-11-25 --return-date 2026-12-02
+make test        # pytest в тестовом образе; интеграционные — на отдельной БД trip_test
+make eval        # фиксированные сценарии через настоящий подбор без LLM + независимые проверки
+make eval-e2e    # сквозной прогон по запущенному API с реальным LLM, отчёт в eval/reports/
+make rehearsal   # 10 «чужих» запросов из eval/rehearsal.txt — агент не должен ломаться
 ```
 
-```bash
-TRAVEL_DATA_PROVIDER=tutu python -m scripts.tutu_live_smoke --live
-# Можно закрепить будущие даты явно:
-TRAVEL_DATA_PROVIDER=tutu python -m scripts.tutu_live_smoke --live --departure 2026-11-22 --return-date 2026-11-29
-# Вызов нормализующего planner и пересборка с полным накопленным diff:
-TRAVEL_DATA_PROVIDER=tutu python -m scripts.tutu_planner_smoke --live --departure 2026-11-22 --return-date 2026-11-29
-```
+Тесты покрывают:
+- API и SSE-контракт;
+- корзину и оплату;
+- ход агента;
+- разбор запроса правилами;
+- совместимость с разными LLM-провайдерами;
+- сборку комплектов и перепроверку перед оплатой;
+- живой поиск Туту.
 
-Скрипт не вызывает checkout, резервирование, регистрацию пассажиров или оплату. Интеграционные вызовы к поставщику не входят в обычный набор тестов.
+Метрики по сценариям: страница `/metrics` и `GET /api/metrics`.
 
-## Метрики
+## Деплой
 
-Фиксированные сценарии лежат в `eval/scenarios`, `eval/sprint3` и `eval/sprint4`. В каждом есть запрос, скриптовые ответы пользователя (это не LLM, которая со всем соглашается) и условия успеха. Проверяются бюджет, состав гостей в номере и цене, даты, животное во всех позициях, отсутствие позиций со старыми датами после пересборки, а для невозможных запросов — честный отказ.
+На сервере работает pull-CI/CD: `deploy/cd.sh`, его запускает systemd-таймер каждые 2 минуты. Новый коммит в `main` проходит тесты, затем собирается образ, выкатывается и проходит проверку здоровья. Если проверка не прошла, разворачивается предыдущая версия. HTTPS даёт nginx с сертификатом Let's Encrypt. Подробности: [`deploy/README.md`](deploy/README.md).
 
-Страница `http://localhost:8080/metrics` (и JSON `GET /api/metrics`) прогоняет сценарии через настоящий подбор без LLM и показывает результат независимых проверок. Первый вызов считается несколько секунд.
+## Ограничения
 
-```bash
-make eval        # та же регрессия в тестовом образе
-make eval-e2e    # по запущенному API с реальным LLM, отчёт в eval/reports/
-```
-
-Репетиция защиты: `make rehearsal` прогоняет 10 «чужих» запросов из `eval/rehearsal.txt` (их нет в фиксированных сценариях) и проверяет, что агент не ломается.
-
-Успех — это доля сценариев, где выполнены условия, а не доля покупок: для невозможного запроса честный отказ тоже успех.
-
-## Проверка чистого запуска
-
-_Заполняется по результату замера._
-
-## Разработка
-
-```bash
-make up        # всё в Docker
-make down
-make logs
-make test      # тесты; интеграционные — на отдельной БД trip_test
-make reset     # снести вместе с БД
-make web-dev   # фронт с hot-reload на :5173, API → :8080
-make web-mock  # фронт на моках, бэкенд и LLM не нужны
-```
-
-В режиме моков (`make web-mock`) сбои воспроизводятся тегом в сообщении: `#ошибка` — LLM не ответила, `#обрыв` — поток оборвался без ответа, `#конфликт` — план изменили в другой вкладке.
-
-Без Docker: `pip install -r requirements.txt`, `DATABASE_URL` на свой Postgres 16, `uvicorn app.main:app --port 8080 --workers 1`.
+- Город отправления — российский: так покрывает поиск Туту. Направления — по всему миру.
+- Цена отеля — цена продажи на Туту, на сайте Островка она может отличаться: партнёрского API Островка у команды нет.
+- Трансфер — ориентировочная оценка, не бронируется.
+- Ориентировочная цена направления на шаге выбора берётся из демо-каталога. Реальные цены появляются после выбора направления.
+- Оплата и бронирование имитируются.
 
 ## Для разработчиков
 
@@ -241,7 +208,7 @@ curl -N -X POST "$BASE_URL/api/sessions/$SESSION_ID/messages" \
 curl -fsS "$BASE_URL/api/sessions/$SESSION_ID"
 ```
 
-The last call returns the persisted state and messages. Track A's `build_bundles`, destination suggestions and `replan(requirements, state, bundle_id, changes)` are wired through B adapters. The replan input contains the whole current requirement set, original selected bundle and accumulated diff since it was selected. Climate refs such as `climate:AYT:11.sea_temp` resolve to `{value,label,unit,kind,source,source_refs}` in the destination `sources` map for UI tooltips. Monthly climate values are statistics, not forecasts.
+The last call returns the persisted state and messages. The replan input contains the whole current requirement set, original selected bundle and accumulated diff since it was selected. Climate refs such as `climate:AYT:11.sea_temp` resolve to `{value,label,unit,kind,source,source_refs}` in the destination `sources` map for UI tooltips. Monthly climate values are statistics, not forecasts.
 
 SSE `step` payloads use `{step_type,name,input,output,status}`, `state` uses `{state: TripState}`, `message` uses `{role,text}`, `replay` indicates a completed request whose current state must be fetched, and `done` uses `{ok,version?}`. Commands use the same SSE event schema. `TripState.open_questions` items have `{key,question,why,options}`; removed assumptions appear in `suppressed_assumptions` so the UI can remove them without the next turn restoring them. Mutations require `request_id`: the same ID and body is applied once; reusing it with different content is rejected. An in-flight duplicate gets HTTP 409 `request_in_progress`; a completed retry gets an SSE `replay` acknowledgment, never a stale state replay. For either 409, GET the session and ask the user before retrying an edit against a newer version. On an SSE disconnect the accepted request continues to commit; retry once with the same ID or poll the request-status endpoint. SSE replay is not implemented.
 
@@ -264,10 +231,3 @@ pytest -q
 ```
 
 Unit tests use mocked LLM responses and in-memory test stores. PostgreSQL integration tests are skipped unless `TEST_DATABASE_URL` points to a dedicated test database. Never point it at the shared/development database. The real `build_bundles` regression uses the integrated track A module. Checkout tests (`tests/test_cart.py`) also need `TEST_DATABASE_URL`; `make test` creates `trip_test` in the compose db and runs everything.
-
-### Integration handoff
-
-- **A:** implement `app.planning.suggest.suggest_destinations(requirements: dict, state: TripState) -> {destinations, alternatives, notes, required_inputs}`. A candidate has `feasible: true` only after A verifies it. Each alternative needs a stable `id`, `label`, `confirmed: true`, exact `changes`, refs and resolvable `evidence` (`ref,value,label,kind,source,source_refs`); B does not calculate alternatives. Assumptions are excluded from filter inputs; A may read them from state for ranking only.
-- **A / B replan contract:** `app.planning.replan.replan(requirements, state, bundle_id, changes)` returns A's single `bundle` (or `None`), `kept`, `replaced`, `notes`, `price_delta_rub`, `alternatives`, and echoed `input_changes`. `requirements` is the full current set; `state` carries the original selected bundle; `changes` is the accumulated typed diff from the requirements at selection time. B adapts the result to the agent state shape and verifies bundle totals and price delta; A remains responsible for search, checks and price calculations. Keep/replacement entries need offer IDs and a reason so B can distinguish a retained catalog object from a repriced offer.
-- **C request recovery:** send one `request_id` UUID per user mutation and reuse it only for byte-equivalent retries. On HTTP 409 `version_conflict`, reload `GET /api/sessions/{id}` and get user confirmation before applying their edit to the new version. On `request_in_progress`, poll `GET /requests/{request_id}`; on `completed`, reload session and trace. The endpoint does not replay prior SSE. A changed request body needs a fresh ID. An accepted request continues after client disconnect and commits atomically with messages/state/trace.
-- **C:** consume `open_questions`, `advantages`, `tradeoffs`, `risks` and history; send commands through POST and parse SSE from `fetch`. For explicit agent stages, send `select_bundle` with `{bundle_id}` then `request_checkout` with `{}` and the latest `expected_version`; create the cart with `{session_id, version, bundle_id}` only after a non-blocking validation result. The cart and checkout endpoints independently enforce current version, offer availability/prices and blocking checks. Checkout remains C-owned. Keep one app worker because per-session serialization locks are process-local.
