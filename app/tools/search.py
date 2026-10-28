@@ -210,10 +210,14 @@ def search_transport(
         hub_data = find_nearest_hub(cat, origin_city)
         if hub_data.get("distance_km", 0) > 0:
             hub_city = hub_data["hub_city"]
-            ensure_flights_on_date(cat, hub_city, dest_city, day)
             hub_flights = []
-            for f in cat.flights_by_route_day.get((hub_city, dest_city, day), []):
-                hub_flights += flight_offers(f, party)
+            if "flight" in kinds:
+                ensure_flights_on_date(cat, hub_city, dest_city, day)
+                for f in cat.flights_by_route_day.get((hub_city, dest_city, day), []):
+                    hub_flights += flight_offers(f, party)
+            if "train" in kinds:  # e.g. Рязань -> Москва -> «Сапсан» -> Санкт-Петербург
+                for t in cat.trains_by_route_day.get((hub_city, dest_city, day), []):
+                    hub_flights += train_offers(t, party)
             for hf in hub_flights:
                 out.append(make_intermodal_outbound(hf, hub_data, party, origin_city, dest_city))
 
@@ -222,10 +226,14 @@ def search_transport(
             hub_data_in = find_nearest_hub(cat, dest_city)
             if hub_data_in.get("distance_km", 0) > 0:
                 hub_city_in = hub_data_in["hub_city"]
-                ensure_flights_on_date(cat, origin_city, hub_city_in, day)
                 hub_flights_in = []
-                for f in cat.flights_by_route_day.get((origin_city, hub_city_in, day), []):
-                    hub_flights_in += flight_offers(f, party)
+                if "flight" in kinds:
+                    ensure_flights_on_date(cat, origin_city, hub_city_in, day)
+                    for f in cat.flights_by_route_day.get((origin_city, hub_city_in, day), []):
+                        hub_flights_in += flight_offers(f, party)
+                if "train" in kinds:
+                    for t in cat.trains_by_route_day.get((origin_city, hub_city_in, day), []):
+                        hub_flights_in += train_offers(t, party)
                 for hf in hub_flights_in:
                     out.append(make_intermodal_inbound(hf, hub_data_in, party, origin_city, dest_city))
 

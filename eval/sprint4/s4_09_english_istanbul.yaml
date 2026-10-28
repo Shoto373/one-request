@@ -7,8 +7,8 @@ actions: []
 expected:
   final_stage: compare
   requirements:
-    - {key: origin, kind: hard, value: Saint Petersburg}
-    - {key: destination, kind: hard, value: Istanbul}
+    - {key: origin, kind: hard, value: Санкт-Петербург}
+    - {key: destination, kind: hard, value: Стамбул}
     - {key: dates, kind: hard, value: {start: '2026-11-10', end: '2026-11-14'}}
     - {key: adults, kind: hard, value: 2}
   checks: [offers_exist_in_catalog, party_in_every_offer, dates_match_requirements, snapshot_total_matches_items]

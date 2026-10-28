@@ -125,6 +125,82 @@ def resolve_city(cat: Catalog, value: Any) -> str | None:
 
 
 
+# Informal names and abbreviations of cities outside the catalog: the display name must not depend on
+# the LLM (GigaChat often keeps «LA» or «нск» as written).
+CITY_DISPLAY_ALIASES = {
+    "la": "Лос-Анджелес", "l a": "Лос-Анджелес", "лос анджелес": "Лос-Анджелес", "los angeles": "Лос-Анджелес",
+    "nyc": "Нью-Йорк", "ny": "Нью-Йорк", "нью йорк": "Нью-Йорк", "new york": "Нью-Йорк", "нй": "Нью-Йорк",
+    "sf": "Сан-Франциско", "сан франциско": "Сан-Франциско", "san francisco": "Сан-Франциско",
+    "vegas": "Лас-Вегас", "лас вегас": "Лас-Вегас", "las vegas": "Лас-Вегас",
+    "london": "Лондон", "berlin": "Берлин", "vienna": "Вена", "madrid": "Мадрид", "lisbon": "Лиссабон",
+    "нск": "Новосибирск", "новосиб": "Новосибирск", "нн": "Нижний Новгород", "нижний": "Нижний Новгород",
+    "влад": "Владивосток", "краснодар": "Краснодар", "крд": "Краснодар", "ростов": "Ростов-на-Дону",
+    "ростов на дону": "Ростов-на-Дону", "челяба": "Челябинск", "кёниг": "Калининград", "кениг": "Калининград",
+    "кенигсберг": "Калининград", "минводы": "Минеральные Воды", "мин воды": "Минеральные Воды",
+    "дубаи": "Дубай", "стамбуле": "Стамбул",
+}
+
+
+def _display_case(text: str) -> str:
+    """«рязань» -> «Рязань», «нижний новгород» -> «Нижний Новгород», «ростов-на-дону» stays readable."""
+    small = {"на", "де", "ла", "да", "дель", "on", "de", "la"}
+    words = []
+    for i, word in enumerate(text.split()):
+        parts = [p if (j and p in small) else p[:1].upper() + p[1:] for j, p in enumerate(word.split("-"))]
+        words.append("-".join(parts) if i == 0 or word not in small else word)
+    return " ".join(words)
+
+
+def display_city_name(cat: Catalog, value: Any) -> str | None:
+    """Full, properly spelled city name for showing requirements: catalog name, known alias, or the
+    user's text with capital letters. None only for empty input."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    canonical = canonical_city_name(cat, value)
+    if canonical:
+        return canonical
+    key = _norm(value)
+    if key in CITY_DISPLAY_ALIASES:
+        return CITY_DISPLAY_ALIASES[key]
+    raw = value.strip()
+    return _display_case(raw) if raw == raw.lower() else raw
+
+
+def canonical_city_name(cat: Catalog, value: Any) -> str | None:
+    """Full city name for informal input («Питер» -> «Санкт-Петербург», «мск», «SVO», «Анталию»).
+
+    Uses only the catalog and fixed aliases: unlike ``resolve_city`` it never registers a new city
+    and never geocodes, so it is safe to call on every extracted requirement.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    from app.catalog.world_resolver import init_world_catalog
+
+    init_world_catalog(cat)
+    if raw.upper() in cat.cities:
+        return cat.cities[raw.upper()].name
+    if raw.upper() in cat.hubs:
+        return cat.cities[cat.hubs[raw.upper()].city_id].name
+    text = _norm(raw)
+    cid = CITY_ALIASES.get(text)
+    if cid is None:
+        for city in cat.cities.values():
+            if city.id.startswith("W_"):
+                continue
+            for name in (_norm(city.name), _norm(city.name_en)):
+                stems = [name[:-1]] if len(name) >= 5 else []
+                if len(name) >= 7:
+                    stems.append(name[:-2])
+                if text == name or any(text.startswith(s) for s in stems):
+                    cid = city.id
+                    break
+            if cid:
+                break
+    city = cat.cities.get(cid) if cid else None
+    return city.name if city else None
+
+
 def _to_date(value: Any) -> date | None:
     if isinstance(value, date):
         return value

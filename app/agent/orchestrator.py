@@ -128,7 +128,9 @@ Open questions, in priority order: {questions}
 Assumption keys the user removed; do not restore them: {suppressed}
 Product coverage: {cov_info}. All destinations worldwide are supported (ski resorts, Alps, seaside, cities, etc.). The user chooses the origin city; never assume Moscow. If the origin is missing, ask for it. If the user names a destination, region or place (e.g. "Альпы", "Инсбрук", "Париж", "Пхукет", "Сочи"), extract it as destination and/or trip_style. If the user names a famous landmark, sight, or attraction (e.g. "Триумфальная арка" / "триуфальную арку" / "Эйфелева башня" / "Лувр" -> Париж; "Колизей" / "Ватикан" -> Рим; "Саграда Фамилия" -> Барселона; "Биг Бен" -> Лондон; "Эрмитаж" / "Петергоф" -> Санкт-Петербург; "Бурдж-Халифа" -> Дубай; "Красная площадь" / "Кремль" -> Москва; "Кул Шариф" -> Казань), recognize the city where this landmark is located and set "destination" to that city (e.g. value: "Париж", quote: exact substring from text like "триуфальную арку").
 
-Supported keys and value formats: origin and destination (city name as written), dates ({{start,end}} ISO dates when
+Supported keys and value formats: origin and destination (the full official city name in Russian even when the user
+wrote a nickname, abbreviation or another language: «Питер» -> «Санкт-Петербург», «мск» -> «Москва», «Екб» -> «Екатеринбург»,
+«LA» -> «Лос-Анджелес», «NYC» -> «Нью-Йорк»; the quote keeps the user's own words), dates ({{start,end}} ISO dates when
 explicit), travel_start_date (one explicit departure date, ISO), travel_month (1..12), duration_nights (int), date_flex_days (int), adults (int), children_count (int),
 children_ages (list of ints), pets ({{"kind":"dog|cat|other"}}), pet_weight_kg (number), budget_total_rub (int),
 budget_per_person_rub (int), budget_scope (trip|person), transport (flight|train|either), max_stops (int),
