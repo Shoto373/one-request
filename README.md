@@ -1,4 +1,4 @@
-# О!дин запрос — AI-агент путешествий
+# О!дин запрос (One Request) — AI-агент путешествий
 
 > Проект создан на **хакатоне от О!стровка** (Ostrovok Hackathon 2026), трек «О!дин запрос».
 
@@ -18,8 +18,8 @@
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/Shoto373/5-ukazatelei.git
-cd 5-ukazatelei
+git clone https://github.com/Shoto373/one-request.git
+cd one-request
 cp .env.example .env          # необязательно: без .env берутся значения из .env.example
 docker compose up --build     # миграции и сид применяются автоматически, ~5 минут на первую сборку
 # открыть http://localhost:8080
